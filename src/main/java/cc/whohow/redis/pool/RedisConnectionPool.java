@@ -41,6 +41,17 @@ public class RedisConnectionPool implements Redis {
                 config.useSingleServer().getConnectionPoolSize());
     }
 
+    @SuppressWarnings("unchecked")
+    protected static <T> T getFieldValue(Object object, String name) {
+        try {
+            Field field = object.getClass().getDeclaredField(name);
+            field.setAccessible(true);
+            return (T) field.get(object);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new UnsupportedOperationException(e);
+        }
+    }
+
     protected RedisClientConfig newRedisClientConfig(Config config) {
         SingleServerConfig singleServerConfig = config.useSingleServer();
         RedisClientConfig redisConfig = new RedisClientConfig();
@@ -85,15 +96,18 @@ public class RedisConnectionPool implements Redis {
 
     @Override
     public void close() {
-        channelPool.close();
-        redisClient.shutdown();
+        try {
+            channelPool.close();
+        } finally {
+            redisClient.shutdown();
+        }
     }
 
-    static class Connection implements PooledRedisConnection {
-        final RedisConnectionPool connectionPool;
-        final RedisConnection connection;
+    protected static class Connection implements PooledRedisConnection {
+        protected final RedisConnectionPool connectionPool;
+        protected final RedisConnection connection;
 
-        Connection(RedisConnectionPool connectionPool, RedisConnection connection) {
+        public Connection(RedisConnectionPool connectionPool, RedisConnection connection) {
             this.connectionPool = connectionPool;
             this.connection = connection;
         }
@@ -106,17 +120,6 @@ public class RedisConnectionPool implements Redis {
         @Override
         public void close() {
             connectionPool.release(connection);
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    protected  <T> T getFieldValue(Object object, String name) {
-        try {
-            Field field = object.getClass().getDeclaredField(name);
-            field.setAccessible(true);
-            return (T) field.get(object);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            throw new UnsupportedOperationException(e);
         }
     }
 }
