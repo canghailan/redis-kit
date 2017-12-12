@@ -20,4 +20,11 @@
 * io.netty.buffer.ByteBuf
 
 ## Redis Cache
-* org.redisson.RedissonBucket
+* org.redisson.jcache.JCache
+* org.redisson.jcache.JCacheManager
+* org.redisson.jcache.JCachingProvider
+* org.redisson.jcache.JCacheEntry
+* org.redisson.jcache.JCacheEntryEvent
+* org.redisson.jcache.JCacheMBeanServerBuilder
+* org.redisson.jcache.bean.JCacheStatisticsMXBean
+* javax.cache.configuration.MutableConfiguration

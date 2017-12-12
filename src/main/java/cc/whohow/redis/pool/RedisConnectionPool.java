@@ -11,10 +11,13 @@ import org.redisson.client.RedisClient;
 import org.redisson.client.RedisClientConfig;
 import org.redisson.client.RedisConnection;
 import org.redisson.client.RedisException;
+import org.redisson.client.codec.Codec;
 import org.redisson.client.handler.RedisChannelInitializer;
 import org.redisson.client.protocol.CommandData;
+import org.redisson.client.protocol.RedisCommand;
 import org.redisson.config.Config;
 import org.redisson.config.SingleServerConfig;
+import org.redisson.misc.RedissonPromise;
 
 import java.lang.reflect.Field;
 
@@ -118,9 +121,17 @@ public class RedisConnectionPool implements Redis {
             return connection;
         }
 
-        public  <T, R> R execute(CommandData<T, R> command) {
-            connection.send(command);
-            return command.getPromise().syncUninterruptibly().getNow();
+        @Override
+        public <T> T execute(RedisCommand<T> command, Object... params) {
+            CommandData<T, T> commandData = new CommandData<>(new RedissonPromise<>(), null, command, params);
+            connection.send(commandData);
+            return commandData.getPromise().syncUninterruptibly().getNow();
+        }
+
+        public <T, R> R execute(Codec codec, RedisCommand<T> command, Object... params) {
+            CommandData<T, R> commandData = new CommandData<>(new RedissonPromise<>(), codec, command, params);
+            connection.send(commandData);
+            return commandData.getPromise().syncUninterruptibly().getNow();
         }
 
         @Override
