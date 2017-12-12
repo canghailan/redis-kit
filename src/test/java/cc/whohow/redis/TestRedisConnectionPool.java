@@ -1,37 +1,90 @@
 package cc.whohow.redis;
 
 import cc.whohow.redis.pool.RedisConnectionPool;
-import org.junit.Before;
-import org.junit.Test;
+import org.openjdk.jmh.annotations.*;
+import org.openjdk.jmh.runner.Runner;
+import org.openjdk.jmh.runner.options.Options;
+import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.redisson.client.protocol.RedisCommands;
 import org.redisson.config.Config;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
+@BenchmarkMode({Mode.Throughput, Mode.AverageTime})
+@Warmup(iterations = 3)
+//@Measurement(iterations = 10, time = 5, timeUnit = TimeUnit.SECONDS)
+//@Threads(5)
+@OutputTimeUnit(TimeUnit.MILLISECONDS)
 public class TestRedisConnectionPool {
-    private Config config;
+    static {
+        System.setProperty("jmh.ignoreLock", "true");
+    }
 
-    @Before
-    public void setup() throws Exception {
-        try (InputStream stream = new FileInputStream("redis.properties")) {
-            Properties properties = new Properties();
-            properties.load(stream);
-            config = new Config();
-            config.useSingleServer()
-                    .setAddress(properties.getProperty("address"))
-                    .setPassword(properties.getProperty("password", ""))
-                    .setDatabase(Integer.parseInt(properties.getProperty("database", "0")));
+    @State(Scope.Benchmark)
+    public static class BenchmarkState {
+        public Properties properties;
+        public Config config;
+        public Redis redis;
+        public JedisPool jedisPool;
+
+        @Setup
+        public void setup() throws Exception {
+            try (InputStream stream = new FileInputStream("redis.properties")) {
+                properties = new Properties();
+                properties.load(stream);
+
+                String host = properties.getProperty("host");
+                int port = Integer.parseInt(properties.getProperty("port", "6379"));
+                String password = properties.getProperty("password", "");
+                int database = Integer.parseInt(properties.getProperty("database", "0"));
+
+                config = new Config();
+                config.useSingleServer()
+                        .setAddress("redis://" + host + ":" + port)
+                        .setPassword(password)
+                        .setDatabase(database);
+                redis = new RedisConnectionPool(config);
+
+                jedisPool = new JedisPool("redis://:" + password + "@" + host + ":" + port + "/" + database);
+            }
+        }
+
+        @TearDown
+        public void tearDown() throws Exception {
+            redis.close();
+            jedisPool.close();
         }
     }
 
-    @Test
-    public void test() throws Exception {
-        try (Redis redis = new RedisConnectionPool(config)) {
-            try (PooledRedisConnection connection = redis.getPooledConnection()) {
-                System.out.println(connection.get().sync(RedisCommands.PING));
-            }
+    @Benchmark
+    public void testRedisConnectionPool(BenchmarkState state) throws Exception {
+        try (PooledRedisConnection connection = state.redis.getPooledConnection()) {
+            connection.get().sync(RedisCommands.PING);
+        }
+    }
+
+    @Benchmark
+    public void testJedis(BenchmarkState state) throws Exception {
+        try (Jedis jedis = state.jedisPool.getResource()) {
+            jedis.ping();
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        int[] threads = {1,2,4,8,32};
+        for (int n : threads) {
+            Options options = new OptionsBuilder()
+                    .include(TestRedisConnectionPool.class.getSimpleName())
+                    .forks(3)
+                    .threads(n)
+                    .result("threads-" + n + ".csv")
+                    .build();
+            new Runner(options).run();
         }
     }
 }

@@ -1,0 +1,4 @@
+export MAVEN_OPTS="-Xmx256m -Xss10m"
+#  set MAVEN_OPTS=-Xmx256m -Xss10m
+mvn clean package assembly:single
+java -jar redis-kit-1.0.0-test-jar-with-dependencies.jar
