@@ -31,6 +31,12 @@ public @interface AnnotationRedisCacheConfiguration {
 
     boolean inProcessCacheEnabled() default true;
 
+    int inProcessCacheMaxEntry() default -1;
+
+    long inProcessCacheExpiryForUpdate() default -1;
+
+    TimeUnit inProcessCacheExpiryForUpdateTimeUnit() default TimeUnit.SECONDS;
+
     boolean publishCacheEntryEventEnabled() default true;
 
     boolean statisticsEnabled() default true;
