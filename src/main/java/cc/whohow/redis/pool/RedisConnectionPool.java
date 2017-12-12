@@ -12,6 +12,7 @@ import org.redisson.client.RedisClientConfig;
 import org.redisson.client.RedisConnection;
 import org.redisson.client.RedisException;
 import org.redisson.client.handler.RedisChannelInitializer;
+import org.redisson.client.protocol.CommandData;
 import org.redisson.config.Config;
 import org.redisson.config.SingleServerConfig;
 
@@ -115,6 +116,11 @@ public class RedisConnectionPool implements Redis {
         @Override
         public RedisConnection get() {
             return connection;
+        }
+
+        public  <T, R> R execute(CommandData<T, R> command) {
+            connection.send(command);
+            return command.getPromise().syncUninterruptibly().getNow();
         }
 
         @Override

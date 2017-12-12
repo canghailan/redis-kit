@@ -1,6 +1,6 @@
 package cc.whohow.redis.cache;
 
-import org.redisson.api.RedissonClient;
+import cc.whohow.redis.Redis;
 
 import javax.cache.Cache;
 import javax.cache.CacheManager;
@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.Set;
 
 public class RedisCache<K, V> implements Cache<K, V> {
-    protected RedissonClient redissonClient;
+    protected Redis redis;
 
     @Override
     public V get(K key) {
