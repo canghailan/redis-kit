@@ -1,0 +1,5 @@
+"Benchmark","Mode","Threads","Samples","Score","Score Error (99.9%)","Unit"
+"cc.whohow.redis.TestRedisConnectionPool.testJedis","thrpt",2,60,8.795936,0.195716,"ops/ms"
+"cc.whohow.redis.TestRedisConnectionPool.testRedisConnectionPool","thrpt",2,60,6.165086,0.286151,"ops/ms"
+"cc.whohow.redis.TestRedisConnectionPool.testJedis","avgt",2,60,0.237901,0.005545,"ms/op"
+"cc.whohow.redis.TestRedisConnectionPool.testRedisConnectionPool","avgt",2,60,0.332695,0.018585,"ms/op"

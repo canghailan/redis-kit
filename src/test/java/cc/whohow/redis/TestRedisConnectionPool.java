@@ -76,7 +76,7 @@ public class TestRedisConnectionPool {
     }
 
     public static void main(String[] args) throws Exception {
-        int[] threads = {1,2,4,8,32};
+        int[] threads = {1,2,4,8,16,32,64,128,256};
         for (int n : threads) {
             Options options = new OptionsBuilder()
                     .include(TestRedisConnectionPool.class.getSimpleName())
