@@ -32,20 +32,20 @@ public class ConnectionPoolRedis implements Redis {
     public ConnectionPoolRedis(Config config) {
         this.config = config;
         this.redisClient = RedisClient.create(newRedisClientConfig(config));
-        this.bootstrap = getFieldValue(redisClient, "bootstrap");
+        this.bootstrap = unsafeGet(redisClient, "bootstrap");
         this.channelPool = new FixedChannelPool(
                 bootstrap,
                 new RedisChannelPoolInitializer(
                         bootstrap,
                         redisClient.getConfig(),
                         redisClient,
-                        getFieldValue(redisClient, "channels"),
+                        unsafeGet(redisClient, "channels"),
                         RedisChannelInitializer.Type.PLAIN),
                 config.useSingleServer().getConnectionPoolSize());
     }
 
     @SuppressWarnings("unchecked")
-    protected static <T> T getFieldValue(Object object, String name) {
+    protected static <T> T unsafeGet(Object object, String name) {
         try {
             Field field = object.getClass().getDeclaredField(name);
             field.setAccessible(true);
