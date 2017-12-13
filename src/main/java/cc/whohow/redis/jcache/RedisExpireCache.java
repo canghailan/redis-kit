@@ -1,7 +1,7 @@
 package cc.whohow.redis.jcache;
 
 import cc.whohow.redis.Redis;
-import org.redisson.client.codec.Codec;
+import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import org.redisson.client.protocol.RedisCommands;
 
 import java.util.Map;
@@ -12,9 +12,9 @@ import java.util.Map;
 public class RedisExpireCache<K, V> extends RedisCache<K, V> {
     protected final long ttl;
 
-    public RedisExpireCache(String name, Redis redis, Codec keyCodec, Codec valueCodec, long ttl) {
-        super(name, redis, keyCodec, valueCodec);
-        this.ttl = ttl;
+    public RedisExpireCache(RedisCacheConfiguration<K, V> configuration, Redis redis) {
+        super(configuration, redis);
+        this.ttl = configuration.getExpiryForUpdateTimeUnit().toMillis(configuration.getExpiryForUpdate());
     }
 
     @Override

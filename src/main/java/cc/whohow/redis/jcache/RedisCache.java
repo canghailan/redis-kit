@@ -1,6 +1,7 @@
 package cc.whohow.redis.jcache;
 
 import cc.whohow.redis.Redis;
+import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.redisson.client.codec.Codec;
@@ -28,18 +29,18 @@ import java.util.stream.Stream;
  * 普通Redis缓存，不支持过期时间
  */
 public class RedisCache<K, V> implements Cache<K, V> {
-    protected final String name;
+    protected final RedisCacheConfiguration<K, V> configuration;
     protected final Redis redis;
     protected final ByteBuf cacheKey;
     protected final Codec keyCodec;
     protected final Codec valueCodec;
 
-    public RedisCache(String name, Redis redis, Codec keyCodec, Codec valueCodec) {
-        this.name = name;
+    public RedisCache(RedisCacheConfiguration<K, V> configuration, Redis redis) {
+        this.configuration = configuration;
         this.redis = redis;
-        this.cacheKey = Unpooled.copiedBuffer(name, StandardCharsets.UTF_8).writeByte(':').asReadOnly();
-        this.keyCodec = keyCodec;
-        this.valueCodec = valueCodec;
+        this.cacheKey = Unpooled.copiedBuffer(configuration.getRedisKey(), StandardCharsets.UTF_8).writeByte(':').asReadOnly();
+        this.keyCodec = configuration.getKeyCodec();
+        this.valueCodec = configuration.getValueCodec();
     }
 
     public ByteBuf encodeKey(K key) {
@@ -186,7 +187,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public String getName() {
-        return name;
+        return configuration.getName();
     }
 
     @Override

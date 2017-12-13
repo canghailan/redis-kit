@@ -9,25 +9,37 @@ import java.util.concurrent.TimeUnit;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD})
 public @interface AnnotationRedisCacheConfiguration {
-    boolean redisCacheEnabled() default true;
-
     String name();
 
     Class<?> keyType();
 
     Class<?> valueType();
 
+    long expiryForUpdate() default -1;
+
+    TimeUnit expiryForUpdateTimeUnit() default TimeUnit.SECONDS;
+
+    boolean statisticsEnabled() default true;
+
+    boolean managementEnabled() default false;
+
+    // redis
+
+    boolean redisCacheEnabled() default true;
+
+    String redisKey();
+
     String[] keyTypeCanonicalName();
 
     String valueTypeCanonicalName();
 
-    String keyCodec();
+    String keyCodec() default "";
 
     String valueCodec();
 
-    long expiryForUpdate() default -1;
+    boolean publishCacheEntryEventEnabled() default true;
 
-    TimeUnit expiryForUpdateTimeUnit() default TimeUnit.SECONDS;
+    // in-process
 
     boolean inProcessCacheEnabled() default true;
 
@@ -36,10 +48,4 @@ public @interface AnnotationRedisCacheConfiguration {
     long inProcessCacheExpiryForUpdate() default -1;
 
     TimeUnit inProcessCacheExpiryForUpdateTimeUnit() default TimeUnit.SECONDS;
-
-    boolean publishCacheEntryEventEnabled() default true;
-
-    boolean statisticsEnabled() default true;
-
-    boolean managementEnabled() default false;
 }

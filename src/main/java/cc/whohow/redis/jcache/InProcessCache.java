@@ -1,5 +1,7 @@
 package cc.whohow.redis.jcache;
 
+import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import org.redisson.jcache.JCacheEntry;
 
 import javax.cache.Cache;
@@ -18,10 +20,26 @@ import java.util.Set;
  * 进程内缓存
  */
 public class InProcessCache<K, V> implements Cache<K, V> {
+    protected final RedisCacheConfiguration<K, V> configuration;
     protected final com.github.benmanes.caffeine.cache.Cache<K, V> cache;
 
-    public InProcessCache(com.github.benmanes.caffeine.cache.Cache<K, V> cache) {
-        this.cache = cache;
+    @SuppressWarnings("unchecked")
+    public InProcessCache(RedisCacheConfiguration<K, V> configuration) {
+        this.configuration = configuration;
+        Caffeine caffeine = Caffeine.newBuilder();
+        if (configuration.getInProcessCacheMaxEntry() > 0) {
+            caffeine.maximumSize(configuration.getInProcessCacheMaxEntry());
+        }
+        if (configuration.getInProcessCacheExpiryForUpdate() > 0) {
+            caffeine.expireAfterWrite(
+                    configuration.getInProcessCacheExpiryForUpdate(),
+                    configuration.getInProcessCacheExpiryForUpdateTimeUnit());
+        } else if (configuration.getExpiryForUpdate() > 0) {
+            caffeine.expireAfterWrite(
+                    configuration.getExpiryForUpdate(),
+                    configuration.getExpiryForUpdateTimeUnit());
+        }
+        this.cache = caffeine.build();
     }
 
     @Override

@@ -1,6 +1,7 @@
 package cc.whohow.redis.jcache;
 
-import com.github.benmanes.caffeine.cache.Cache;
+import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
+import cc.whohow.redis.jcache.listener.CacheEntryEventListener;
 
 import javax.cache.event.*;
 import java.util.Set;
@@ -14,17 +15,13 @@ import java.util.stream.StreamSupport;
  * @param <K>
  * @param <V>
  */
-public class TierInProcessCache<K, V> extends InProcessCache<K, V> implements
-        CacheEntryCreatedListener<K, V>,
-        CacheEntryExpiredListener<K, V>,
-        CacheEntryRemovedListener<K, V>,
-        CacheEntryUpdatedListener<K, V> {
-    public TierInProcessCache(Cache<K, V> cache) {
-        super(cache);
+public class TierInProcessCache<K, V> extends InProcessCache<K, V> implements CacheEntryEventListener<K, V> {
+    public TierInProcessCache(RedisCacheConfiguration<K, V> configuration) {
+        super(configuration);
     }
 
-    public V get(K key, Function<? super K, ? extends V> mappingFunction) {
-        return cache.get(key, mappingFunction);
+    public V get(K key, Function<? super K, ? extends V> mapping) {
+        return cache.get(key, mapping);
     }
 
     public void invalidate(K key) {
@@ -37,11 +34,6 @@ public class TierInProcessCache<K, V> extends InProcessCache<K, V> implements
 
     public void invalidateAll() {
         cache.invalidateAll();
-    }
-
-    @Override
-    public void onCreated(Iterable<CacheEntryEvent<? extends K, ? extends V>> cacheEntryEvents) throws CacheEntryListenerException {
-
     }
 
     @Override

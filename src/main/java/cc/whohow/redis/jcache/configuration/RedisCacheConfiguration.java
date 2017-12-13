@@ -1,6 +1,9 @@
 package cc.whohow.redis.jcache.configuration;
 
+import org.redisson.client.codec.Codec;
+
 import javax.cache.configuration.Configuration;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @see javax.cache.configuration.Configuration
@@ -12,9 +15,39 @@ public interface RedisCacheConfiguration<K, V> extends Configuration<K, V> {
         return true;
     }
 
+    String getName();
+
+    long getExpiryForUpdate();
+
+    TimeUnit getExpiryForUpdateTimeUnit();
+
     boolean isStatisticsEnabled();
 
     boolean isManagementEnabled();
 
-    long getExpiryForUpdate();
+    // redis
+
+    boolean isRedisCacheEnabled();
+
+    String getRedisKey();
+
+    Codec getKeyCodec();
+
+    Codec getValueCodec();
+
+    String[] getKeyTypeCanonicalName();
+
+    String getValueTypeCanonicalName();
+
+    boolean isPublishCacheEntryEventEnabled();
+
+    // in-process
+
+    boolean isInProcessCacheEnabled();
+
+    int getInProcessCacheMaxEntry();
+
+    long getInProcessCacheExpiryForUpdate();
+
+    TimeUnit getInProcessCacheExpiryForUpdateTimeUnit();
 }

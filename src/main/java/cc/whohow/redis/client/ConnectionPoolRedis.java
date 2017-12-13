@@ -21,6 +21,7 @@ import org.redisson.misc.RedissonPromise;
 import java.lang.reflect.Field;
 
 /**
+ * Netty ChannelPool based Redis Connection Pool
  * @see RedisClient
  */
 public class ConnectionPoolRedis implements Redis {
