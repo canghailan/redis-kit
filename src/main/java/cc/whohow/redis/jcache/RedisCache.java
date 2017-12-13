@@ -1,6 +1,5 @@
 package cc.whohow.redis.jcache;
 
-import cc.whohow.redis.PooledRedisConnection;
 import cc.whohow.redis.Redis;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -74,27 +73,19 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public V get(K key) {
-        ByteBuf encodedKey = encodeKey(key);
-        try (PooledRedisConnection connection = redis.getPooledConnection()) {
-            return connection.execute(valueCodec, RedisCommands.GET, encodedKey);
-        }
+        return redis.execute(valueCodec, RedisCommands.GET, encodeKey(key));
     }
 
     @Override
     public Map<K, V> getAll(Set<? extends K> keys) {
         Object[] encodedKeys = keys.stream().map(this::encodeKey).toArray();
-        try (PooledRedisConnection connection = redis.getPooledConnection()) {
-            List<? extends V> values = connection.execute(valueCodec, RedisCommands.MGET, encodedKeys);
-            return toMap(keys, values);
-        }
+        List<? extends V> values = redis.execute(valueCodec, RedisCommands.MGET, encodedKeys);
+        return toMap(keys, values);
     }
 
     @Override
     public boolean containsKey(K key) {
-        ByteBuf encodedKey = encodeKey(key);
-        try (PooledRedisConnection connection = redis.getPooledConnection()) {
-            return connection.execute(RedisCommands.EXISTS, encodedKey);
-        }
+        return redis.execute(RedisCommands.EXISTS, encodeKey(key));
     }
 
     @Override
@@ -104,20 +95,12 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public void put(K key, V value) {
-        ByteBuf encodedKey = encodeKey(key);
-        ByteBuf encodedValue = encodeValue(value);
-        try (PooledRedisConnection connection = redis.getPooledConnection()) {
-            connection.execute(RedisCommands.SET, encodedKey, encodedValue);
-        }
+        redis.execute(RedisCommands.SET, encodeKey(key), encodeValue(value));
     }
 
     @Override
     public V getAndPut(K key, V value) {
-        ByteBuf encodedKey = encodeKey(key);
-        ByteBuf encodedValue = encodeValue(value);
-        try (PooledRedisConnection connection = redis.getPooledConnection()) {
-            return connection.execute(valueCodec, RedisCommands.GETSET, encodedKey, encodedValue);
-        }
+        return redis.execute(valueCodec, RedisCommands.GETSET, encodeKey(key), encodeValue(value));
     }
 
     @Override
@@ -125,26 +108,17 @@ public class RedisCache<K, V> implements Cache<K, V> {
         Object[] encodedKeyValues = map.entrySet().stream()
                 .flatMap(e -> Stream.of(encodeKey(e.getKey()), encodeValue(e.getValue())))
                 .toArray();
-        try (PooledRedisConnection connection = redis.getPooledConnection()) {
-            connection.execute(RedisCommands.MSET, encodedKeyValues);
-        }
+        redis.execute(RedisCommands.MSET, encodedKeyValues);
     }
 
     @Override
     public boolean putIfAbsent(K key, V value) {
-        ByteBuf encodedKey = encodeKey(key);
-        ByteBuf encodedValue = encodeValue(value);
-        try (PooledRedisConnection connection = redis.getPooledConnection()) {
-            return connection.execute(RedisCommands.SETPXNX, encodedKey, encodedValue, "NX");
-        }
+        return redis.execute(RedisCommands.SETPXNX, encodeKey(key), encodeValue(value), "NX");
     }
 
     @Override
     public boolean remove(K key) {
-        ByteBuf encodedKey = encodeKey(key);
-        try (PooledRedisConnection connection = redis.getPooledConnection()) {
-            return connection.execute(RedisCommands.DEL, encodedKey) == 1L;
-        }
+        return redis.execute(RedisCommands.DEL, encodeKey(key)) == 1L;
     }
 
     @Override
@@ -164,11 +138,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public boolean replace(K key, V value) {
-        ByteBuf encodedKey = encodeKey(key);
-        ByteBuf encodedValue = encodeValue(value);
-        try (PooledRedisConnection connection = redis.getPooledConnection()) {
-            return connection.execute(RedisCommands.SETPXNX, encodedKey, encodedValue, "XX");
-        }
+        return redis.execute(RedisCommands.SETPXNX, encodeKey(key), encodeValue(value), "XX");
     }
 
     @Override
@@ -178,25 +148,20 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public void removeAll(Set<? extends K> keys) {
-        Object[] encodedKeys = keys.stream().map(this::encodeKey).toArray();
-        try (PooledRedisConnection connection = redis.getPooledConnection()) {
-            connection.execute(RedisCommands.DEL, encodedKeys);
-        }
+        redis.execute(RedisCommands.DEL, keys.stream().map(this::encodeKey).toArray());
     }
 
     @Override
     public void removeAll() {
         Codec codec = new ScanCodec(StringCodec.INSTANCE);
         ByteBuf pattern = cacheKey.copy().writeByte('*');
-        try (PooledRedisConnection connection = redis.getPooledConnection()) {
-            Long pos = 0L;
-            do {
-                ListScanResult<ScanObjectEntry> result = connection.execute(codec,
-                        RedisCommands.SCAN, pos, "MATCH", pattern, "COUNT", 100);
-                connection.execute(RedisCommands.DEL, result.getValues().stream().map(ScanObjectEntry::getBuf).toArray());
-                pos = result.getPos();
-            } while (pos != 0);
-        }
+        Long pos = 0L;
+        do {
+            ListScanResult<ScanObjectEntry> result = redis.execute(
+                    codec, RedisCommands.SCAN, pos, "MATCH", pattern, "COUNT", 100);
+            redis.execute(RedisCommands.DEL, result.getValues().stream().map(ScanObjectEntry::getBuf).toArray());
+            pos = result.getPos();
+        } while (pos != 0);
     }
 
     @Override

@@ -1,4 +1,4 @@
-package cc.whohow.redis.pool;
+package cc.whohow.redis.client;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -8,8 +8,8 @@ import org.redisson.client.RedisClient;
 import org.redisson.client.RedisClientConfig;
 import org.redisson.client.handler.RedisChannelInitializer;
 
-public class PooledRedisChannelInitializer extends RedisChannelInitializer implements ChannelPoolHandler {
-    public PooledRedisChannelInitializer(Bootstrap bootstrap, RedisClientConfig config, RedisClient redisClient, ChannelGroup channels, Type type) {
+public class RedisChannelPoolInitializer extends RedisChannelInitializer implements ChannelPoolHandler {
+    public RedisChannelPoolInitializer(Bootstrap bootstrap, RedisClientConfig config, RedisClient redisClient, ChannelGroup channels, Type type) {
         super(bootstrap, config, redisClient, channels, type);
     }
 

@@ -2,7 +2,7 @@ package cc.whohow.redis;
 
 import cc.whohow.redis.jcache.RedisCache;
 import cc.whohow.redis.jcache.RedisExpireCache;
-import cc.whohow.redis.pool.RedisConnectionPool;
+import cc.whohow.redis.client.ConnectionPoolRedis;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -35,7 +35,7 @@ public class TestRedisCache {
                     .setAddress("redis://" + host + ":" + port)
                     .setPassword(password)
                     .setDatabase(database);
-            redis = new RedisConnectionPool(config);
+            redis = new ConnectionPoolRedis(config);
 
             redisCache = new RedisCache<>("test", redis, StringCodec.INSTANCE, StringCodec.INSTANCE);
             redisExpireCache = new RedisExpireCache<>("test_ex", redis, StringCodec.INSTANCE, StringCodec.INSTANCE, 60_000);

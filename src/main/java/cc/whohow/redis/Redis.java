@@ -1,11 +1,12 @@
 package cc.whohow.redis;
 
-import org.redisson.client.RedisConnection;
+import org.redisson.client.codec.Codec;
+import org.redisson.client.protocol.RedisCommand;
 
 import java.io.Closeable;
 
 public interface Redis extends Closeable {
-    RedisConnection getConnection();
+    <T> T execute(RedisCommand<T> command, Object... params);
 
-    PooledRedisConnection getPooledConnection();
+    <T, R> R execute(Codec codec, RedisCommand<T> command, Object... params);
 }

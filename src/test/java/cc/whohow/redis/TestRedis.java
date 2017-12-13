@@ -1,6 +1,6 @@
 package cc.whohow.redis;
 
-import cc.whohow.redis.pool.RedisConnectionPool;
+import cc.whohow.redis.client.ConnectionPoolRedis;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.options.Options;
@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 //@Measurement(iterations = 10, time = 5, timeUnit = TimeUnit.SECONDS)
 //@Threads(5)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
-public class TestRedisConnectionPool {
+public class TestRedis {
     static {
         System.setProperty("jmh.ignoreLock", "true");
     }
@@ -48,7 +48,7 @@ public class TestRedisConnectionPool {
                         .setAddress("redis://" + host + ":" + port)
                         .setPassword(password)
                         .setDatabase(database);
-                redis = new RedisConnectionPool(config);
+                redis = new ConnectionPoolRedis(config);
 
                 jedisPool = new JedisPool("redis://:" + password + "@" + host + ":" + port + "/" + database);
             }
@@ -62,14 +62,12 @@ public class TestRedisConnectionPool {
     }
 
     @Benchmark
-    public void testRedisConnectionPool(BenchmarkState state) throws Exception {
-        try (PooledRedisConnection connection = state.redis.getPooledConnection()) {
-            connection.get().sync(RedisCommands.PING);
-        }
+    public void testRedisConnectionPool(BenchmarkState state) {
+        state.redis.execute(RedisCommands.PING);
     }
 
     @Benchmark
-    public void testJedis(BenchmarkState state) throws Exception {
+    public void testJedis(BenchmarkState state) {
         try (Jedis jedis = state.jedisPool.getResource()) {
             jedis.ping();
         }
@@ -79,7 +77,7 @@ public class TestRedisConnectionPool {
         int[] threads = {1,2,4,8,16,32,64,128,256};
         for (int n : threads) {
             Options options = new OptionsBuilder()
-                    .include(TestRedisConnectionPool.class.getSimpleName())
+                    .include(TestRedis.class.getSimpleName())
                     .forks(3)
                     .threads(n)
                     .result("threads-" + n + ".csv")

@@ -1,8 +1,6 @@
 package cc.whohow.redis.jcache;
 
-import cc.whohow.redis.PooledRedisConnection;
 import cc.whohow.redis.Redis;
-import io.netty.buffer.ByteBuf;
 import org.redisson.client.codec.Codec;
 import org.redisson.client.protocol.RedisCommands;
 
@@ -21,11 +19,7 @@ public class RedisExpireCache<K, V> extends RedisCache<K, V> {
 
     @Override
     public void put(K key, V value) {
-        ByteBuf encodedKey = encodeKey(key);
-        ByteBuf encodedValue = encodeValue(value);
-        try (PooledRedisConnection connection = redis.getPooledConnection()) {
-            connection.execute(RedisCommands.SETPXNX, encodedKey, encodedValue, "PX", ttl);
-        }
+        redis.execute(RedisCommands.SETPXNX, encodeKey(key), encodeValue(value), "PX", ttl);
     }
 
     @Override
@@ -40,11 +34,7 @@ public class RedisExpireCache<K, V> extends RedisCache<K, V> {
 
     @Override
     public boolean putIfAbsent(K key, V value) {
-        ByteBuf encodedKey = encodeKey(key);
-        ByteBuf encodedValue = encodeValue(value);
-        try (PooledRedisConnection connection = redis.getPooledConnection()) {
-            return connection.execute(RedisCommands.SETPXNX, encodedKey, encodedValue, "PX", ttl, "NX");
-        }
+        return redis.execute(RedisCommands.SETPXNX, encodeKey(key), encodeValue(value), "PX", ttl, "NX");
     }
 
     @Override
@@ -54,11 +44,7 @@ public class RedisExpireCache<K, V> extends RedisCache<K, V> {
 
     @Override
     public boolean replace(K key, V value) {
-        ByteBuf encodedKey = encodeKey(key);
-        ByteBuf encodedValue = encodeValue(value);
-        try (PooledRedisConnection connection = redis.getPooledConnection()) {
-            return connection.execute(RedisCommands.SETPXNX, encodedKey, encodedValue, "PX", ttl, "XX");
-        }
+        return redis.execute(RedisCommands.SETPXNX, encodeKey(key), encodeValue(value), "PX", ttl, "XX");
     }
 
     @Override

@@ -1,6 +1,5 @@
-package cc.whohow.redis.pool;
+package cc.whohow.redis.client;
 
-import cc.whohow.redis.PooledRedisConnection;
 import cc.whohow.redis.Redis;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -24,19 +23,19 @@ import java.lang.reflect.Field;
 /**
  * @see RedisClient
  */
-public class RedisConnectionPool implements Redis {
+public class ConnectionPoolRedis implements Redis {
     protected final Config config;
     protected final RedisClient redisClient;
     protected final Bootstrap bootstrap;
     protected final ChannelPool channelPool;
 
-    public RedisConnectionPool(Config config) {
+    public ConnectionPoolRedis(Config config) {
         this.config = config;
         this.redisClient = RedisClient.create(newRedisClientConfig(config));
         this.bootstrap = getFieldValue(redisClient, "bootstrap");
         this.channelPool = new FixedChannelPool(
                 bootstrap,
-                new PooledRedisChannelInitializer(
+                new RedisChannelPoolInitializer(
                         bootstrap,
                         redisClient.getConfig(),
                         redisClient,
@@ -81,21 +80,26 @@ public class RedisConnectionPool implements Redis {
     }
 
     @Override
-    public RedisConnection getConnection() {
-        Future<Channel> channel = channelPool.acquire().syncUninterruptibly();
-        if (channel.isSuccess()) {
-            return RedisConnection.getFrom(channel.getNow());
-        }
-        throw new RedisException("acquire connection error", channel.cause());
+    public <T> T execute(RedisCommand<T> command, Object... params) {
+        return execute(null, command, params);
     }
 
     @Override
-    public PooledRedisConnection getPooledConnection() {
-        return new Connection(this, getConnection());
-    }
-
-    public void release(RedisConnection connection) {
-        channelPool.release(connection.getChannel());
+    public <T, R> R execute(Codec codec, RedisCommand<T> command, Object... params) {
+        // TODO optimize
+        Future<Channel> channelFuture = channelPool.acquire().syncUninterruptibly();
+        if (channelFuture.isSuccess()) {
+            Channel channel = channelFuture.getNow();
+            try {
+                RedisConnection connection = RedisConnection.getFrom(channel);
+                CommandData<T, R> commandData = new CommandData<>(new RedissonPromise<>(), codec, command, params);
+                connection.send(commandData);
+                return commandData.getPromise().syncUninterruptibly().getNow();
+            } finally {
+                channelPool.release(channel);
+            }
+        }
+        throw new RedisException("acquire connection error", channelFuture.cause());
     }
 
     @Override
@@ -104,39 +108,6 @@ public class RedisConnectionPool implements Redis {
             channelPool.close();
         } finally {
             redisClient.shutdown();
-        }
-    }
-
-    protected static class Connection implements PooledRedisConnection {
-        protected final RedisConnectionPool connectionPool;
-        protected final RedisConnection connection;
-
-        public Connection(RedisConnectionPool connectionPool, RedisConnection connection) {
-            this.connectionPool = connectionPool;
-            this.connection = connection;
-        }
-
-        @Override
-        public RedisConnection get() {
-            return connection;
-        }
-
-        @Override
-        public <T> T execute(RedisCommand<T> command, Object... params) {
-            CommandData<T, T> commandData = new CommandData<>(new RedissonPromise<>(), null, command, params);
-            connection.send(commandData);
-            return commandData.getPromise().syncUninterruptibly().getNow();
-        }
-
-        public <T, R> R execute(Codec codec, RedisCommand<T> command, Object... params) {
-            CommandData<T, R> commandData = new CommandData<>(new RedissonPromise<>(), codec, command, params);
-            connection.send(commandData);
-            return commandData.getPromise().syncUninterruptibly().getNow();
-        }
-
-        @Override
-        public void close() {
-            connectionPool.release(connection);
         }
     }
 }

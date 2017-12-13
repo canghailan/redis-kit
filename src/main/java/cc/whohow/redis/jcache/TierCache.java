@@ -47,7 +47,7 @@ public class TierCache<K, V> implements Cache<K, V> {
 
     @Override
     public boolean containsKey(K key) {
-        return inProcessCache.containsKey(key) || redisCache.containsKey(key);
+        return redisCache.containsKey(key);
     }
 
     @Override
