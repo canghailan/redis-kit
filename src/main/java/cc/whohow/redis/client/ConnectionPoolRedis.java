@@ -19,9 +19,11 @@ import org.redisson.config.SingleServerConfig;
 import org.redisson.misc.RedissonPromise;
 
 import java.lang.reflect.Field;
+import java.net.URI;
 
 /**
  * Netty ChannelPool based Redis Connection Pool
+ *
  * @see RedisClient
  */
 public class ConnectionPoolRedis implements Redis {
@@ -78,6 +80,12 @@ public class ConnectionPoolRedis implements Redis {
                 .setDatabase(singleServerConfig.getDatabase())
                 .setPassword(singleServerConfig.getPassword());
         return redisConfig;
+    }
+
+    @Override
+    public URI getUri() {
+        SingleServerConfig singleServerConfig = config.useSingleServer();
+        return singleServerConfig.getAddress().resolve(String.valueOf(singleServerConfig.getDatabase()));
     }
 
     @Override

@@ -58,46 +58,4 @@ public class JCacheKeyJacksonCodec implements Codec {
     public Encoder getValueEncoder() {
         return null;
     }
-
-    static class StringEncoder implements Encoder {
-        @Override
-        public ByteBuf encode(Object in) throws IOException {
-            return null;
-        }
-    }
-
-    static class ObjectEncoder implements Encoder {
-        @Override
-        public ByteBuf encode(Object in) throws IOException {
-            return null;
-        }
-    }
-
-    static class JCacheKeyEncoder implements Encoder {
-        @Override
-        public ByteBuf encode(Object in) throws IOException {
-            return null;
-        }
-    }
-
-    static class StringDecoder implements Decoder<Object> {
-        @Override
-        public Object decode(ByteBuf buf, State state) throws IOException {
-            return null;
-        }
-    }
-
-    static class ObjectDecoder implements Decoder<Object> {
-        @Override
-        public Object decode(ByteBuf buf, State state) throws IOException {
-            return null;
-        }
-    }
-
-    static class JCacheKeyDecoder  implements Decoder<Object> {
-        @Override
-        public Object decode(ByteBuf buf, State state) throws IOException {
-            return null;
-        }
-    }
 }

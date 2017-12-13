@@ -12,8 +12,8 @@ import java.util.Map;
 public class RedisExpireCache<K, V> extends RedisCache<K, V> {
     protected final long ttl;
 
-    public RedisExpireCache(RedisCacheConfiguration<K, V> configuration, Redis redis) {
-        super(configuration, redis);
+    public RedisExpireCache(RedisCacheManager cacheManager, RedisCacheConfiguration<K, V> configuration, Redis redis) {
+        super(cacheManager, configuration, redis);
         this.ttl = configuration.getExpiryForUpdateTimeUnit().toMillis(configuration.getExpiryForUpdate());
     }
 

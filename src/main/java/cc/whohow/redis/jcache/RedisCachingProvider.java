@@ -6,15 +6,8 @@ import javax.cache.spi.CachingProvider;
 import java.net.URI;
 import java.util.Properties;
 
-public class JCachingProvider implements CachingProvider {
-    private JCacheManager cacheManager;
-
-    public void setCacheManager(JCacheManager cacheManager) {
-        if (this.cacheManager != null) {
-            throw new IllegalStateException();
-        }
-        this.cacheManager = cacheManager;
-    }
+public class RedisCachingProvider implements CachingProvider {
+    private RedisCacheManager cacheManager;
 
     @Override
     public CacheManager getCacheManager(URI uri, ClassLoader classLoader, Properties properties) {
@@ -28,7 +21,7 @@ public class JCachingProvider implements CachingProvider {
 
     @Override
     public URI getDefaultURI() {
-        return URI.create("cache:redis");
+        return URI.create("redis://");
     }
 
     @Override
@@ -44,6 +37,13 @@ public class JCachingProvider implements CachingProvider {
     @Override
     public CacheManager getCacheManager() {
         return cacheManager;
+    }
+
+    public void setCacheManager(RedisCacheManager cacheManager) {
+        if (this.cacheManager != null) {
+            throw new IllegalStateException();
+        }
+        this.cacheManager = cacheManager;
     }
 
     @Override

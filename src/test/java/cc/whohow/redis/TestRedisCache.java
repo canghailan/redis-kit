@@ -1,8 +1,8 @@
 package cc.whohow.redis;
 
-import cc.whohow.redis.jcache.RedisCache;
-import cc.whohow.redis.jcache.RedisExpireCache;
+import cc.whohow.redis.jcache.RedisCacheManager;
 import cc.whohow.redis.client.ConnectionPoolRedis;
+import cc.whohow.redis.jcache.configuration.MutableRedisCacheConfiguration;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -10,14 +10,17 @@ import org.junit.Test;
 import org.redisson.client.codec.StringCodec;
 import org.redisson.config.Config;
 
+import javax.cache.Cache;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 public class TestRedisCache {
     private Redis redis;
-    private RedisCache<String, String> redisCache;
-    private RedisExpireCache<String, String> redisExpireCache;
+    private RedisCacheManager redisCacheManager;
+    private Cache<String, String> redisCache;
+    private Cache<String, String> redisExpireCache;
 
     @Before
     public void setup() throws Exception {
@@ -37,13 +40,33 @@ public class TestRedisCache {
                     .setDatabase(database);
             redis = new ConnectionPoolRedis(config);
 
-            redisCache = new RedisCache<>("test", redis, StringCodec.INSTANCE, StringCodec.INSTANCE);
-            redisExpireCache = new RedisExpireCache<>("test_ex", redis, StringCodec.INSTANCE, StringCodec.INSTANCE, 60_000);
+            redisCacheManager = new RedisCacheManager(redis);
+
+            MutableRedisCacheConfiguration<String, String> config1 = new MutableRedisCacheConfiguration<>();
+            config1.setName("test");
+            config1.setRedisCacheEnabled(true);
+            config1.setRedisKey("test");
+            config1.setKeyCodec(StringCodec.INSTANCE);
+            config1.setValueCodec(StringCodec.INSTANCE);
+            config1.setInProcessCacheEnabled(false);
+            redisCache = redisCacheManager.createCache(config1.getName(), config1);
+
+            MutableRedisCacheConfiguration<String, String> config2 = new MutableRedisCacheConfiguration<>();
+            config2.setName("test-ex");
+            config2.setRedisCacheEnabled(true);
+            config2.setRedisKey("test-ex");
+            config2.setKeyCodec(StringCodec.INSTANCE);
+            config2.setValueCodec(StringCodec.INSTANCE);
+            config2.setExpiryForUpdate(60L);
+            config2.setExpiryForUpdateTimeUnit(TimeUnit.SECONDS);
+            config2.setInProcessCacheEnabled(false);
+            redisExpireCache = redisCacheManager.createCache(config2.getName(), config2);
         }
     }
 
     @After
     public void tearDown() throws Exception {
+        redisCacheManager.close();
         redis.close();
     }
 

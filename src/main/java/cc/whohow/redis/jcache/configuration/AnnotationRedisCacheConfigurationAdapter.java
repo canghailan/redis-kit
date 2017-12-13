@@ -1,7 +1,7 @@
 package cc.whohow.redis.jcache.configuration;
 
 import cc.whohow.redis.jcache.codec.JCacheKeyJacksonCodec;
-import cc.whohow.redis.jcache.codec.ObjectJacksonCodec;
+import cc.whohow.redis.jcache.codec.JacksonCodec;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import org.redisson.client.codec.*;
 import org.redisson.codec.JsonJacksonCodec;
@@ -95,7 +95,7 @@ public class AnnotationRedisCacheConfigurationAdapter<K, V> implements RedisCach
             if (keyType == byte[].class) {
                 return ByteArrayCodec.INSTANCE;
             }
-            return new ObjectJacksonCodec(keyType);
+            return new JacksonCodec(keyType);
         }
         Type[] keyType = Arrays.stream(getKeyTypeCanonicalName())
                 .map(TYPE_FACTORY::constructFromCanonical)

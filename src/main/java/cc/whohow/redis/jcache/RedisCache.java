@@ -29,23 +29,40 @@ import java.util.stream.Stream;
  * 普通Redis缓存，不支持过期时间
  */
 public class RedisCache<K, V> implements Cache<K, V> {
+    protected final RedisCacheManager cacheManager;
     protected final RedisCacheConfiguration<K, V> configuration;
     protected final Redis redis;
-    protected final ByteBuf cacheKey;
+    protected final ByteBuf redisKeyWithSeparator;
     protected final Codec keyCodec;
     protected final Codec valueCodec;
 
-    public RedisCache(RedisCacheConfiguration<K, V> configuration, Redis redis) {
+    public RedisCache(RedisCacheManager cacheManager, RedisCacheConfiguration<K, V> configuration, Redis redis) {
+        if (configuration.getName() == null ||
+                configuration.getRedisKey() == null ||
+                configuration.getRedisKey().contains(":") ||
+                configuration.getKeyCodec() == null ||
+                configuration.getValueCodec() == null) {
+            throw new IllegalArgumentException();
+        }
+        this.cacheManager = cacheManager;
         this.configuration = configuration;
         this.redis = redis;
-        this.cacheKey = Unpooled.copiedBuffer(configuration.getRedisKey(), StandardCharsets.UTF_8).writeByte(':').asReadOnly();
+        this.redisKeyWithSeparator = Unpooled.copiedBuffer(configuration.getRedisKey(), StandardCharsets.UTF_8).writeByte(':').asReadOnly();
         this.keyCodec = configuration.getKeyCodec();
         this.valueCodec = configuration.getValueCodec();
     }
 
+    public Codec getKeyCodec() {
+        return keyCodec;
+    }
+
+    public Codec getValueCodec() {
+        return valueCodec;
+    }
+
     public ByteBuf encodeKey(K key) {
         try {
-            return cacheKey.copy().writeBytes(keyCodec.getValueEncoder().encode(key));
+            return Unpooled.wrappedBuffer(redisKeyWithSeparator, keyCodec.getValueEncoder().encode(key));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -155,12 +172,14 @@ public class RedisCache<K, V> implements Cache<K, V> {
     @Override
     public void removeAll() {
         Codec codec = new ScanCodec(StringCodec.INSTANCE);
-        ByteBuf pattern = cacheKey.copy().writeByte('*');
+        ByteBuf pattern = redisKeyWithSeparator.copy().writeByte('*');
         Long pos = 0L;
         do {
             ListScanResult<ScanObjectEntry> result = redis.execute(
                     codec, RedisCommands.SCAN, pos, "MATCH", pattern, "COUNT", 100);
-            redis.execute(RedisCommands.DEL, result.getValues().stream().map(ScanObjectEntry::getBuf).toArray());
+            if (!result.getValues().isEmpty()) {
+                redis.execute(RedisCommands.DEL, result.getValues().stream().map(ScanObjectEntry::getBuf).toArray());
+            }
             pos = result.getPos();
         } while (pos != 0);
     }

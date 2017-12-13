@@ -6,7 +6,9 @@
 		</Console>
 	</Appenders>
 	<Loggers>
-		<Root level="debug">
+		<Logger name="cc.whohow" level="debug" />
+		<Logger name="org.redisson" level="debug" />
+		<Root level="error">
 			<AppenderRef ref="Console"/>
 		</Root>
 	</Loggers>

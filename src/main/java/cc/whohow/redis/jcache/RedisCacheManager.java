@@ -2,7 +2,6 @@ package cc.whohow.redis.jcache;
 
 import cc.whohow.redis.Redis;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
-import cc.whohow.redis.jcache.listener.RedisPubSubCacheEntryEventListener;
 
 import javax.cache.Cache;
 import javax.cache.CacheManager;
@@ -15,12 +14,16 @@ import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
 @SuppressWarnings("unchecked")
-public class JCacheManager implements CacheManager {
-    protected JCachingProvider cachingProvider;
+public class RedisCacheManager implements CacheManager {
+    protected final RedisCachingProvider cachingProvider;
     protected final Redis redis;
     protected final Map<String, Cache> caches = new ConcurrentHashMap<>();
 
-    public JCacheManager(JCachingProvider cachingProvider, Redis redis) {
+    public RedisCacheManager(Redis redis) {
+        this(new RedisCachingProvider(), redis);
+    }
+
+    public RedisCacheManager(RedisCachingProvider cachingProvider, Redis redis) {
         this.cachingProvider = cachingProvider;
         this.cachingProvider.setCacheManager(this);
         this.redis = redis;
@@ -33,12 +36,12 @@ public class JCacheManager implements CacheManager {
 
     @Override
     public URI getURI() {
-        return URI.create("cache:redis");
+        return redis.getUri();
     }
 
     @Override
     public ClassLoader getClassLoader() {
-        return JCacheManager.class.getClassLoader();
+        return RedisCacheManager.class.getClassLoader();
     }
 
     @Override
@@ -47,40 +50,45 @@ public class JCacheManager implements CacheManager {
     }
 
     @Override
-    public <K, V, C extends Configuration<K, V>> Cache<K, V> createCache(String cacheName, C configuration) throws IllegalArgumentException {
-        RedisCacheConfiguration<K, V> redisCacheConfiguration = (RedisCacheConfiguration<K, V>) configuration;
-        if (redisCacheConfiguration.isRedisCacheEnabled()) {
-            if (redisCacheConfiguration.isInProcessCacheEnabled()) {
-                return createTierCache(redisCacheConfiguration);
+    public synchronized <K, V, C extends Configuration<K, V>> Cache<K, V> createCache(String cacheName, C configuration) throws IllegalArgumentException {
+        if (caches.containsKey(cacheName)) {
+            throw new IllegalStateException();
+        }
+        Cache<K, V> cache = newCache((RedisCacheConfiguration<K, V>) configuration);
+        caches.put(cacheName, cache);
+        return cache;
+    }
+
+    public <K, V> Cache<K, V> newCache(RedisCacheConfiguration<K, V> configuration) {
+        if (configuration.isRedisCacheEnabled()) {
+            if (configuration.isInProcessCacheEnabled()) {
+                return newTierCache(configuration);
             } else {
-                return createRedisCache(redisCacheConfiguration);
+                return newRedisCache(configuration);
             }
         } else {
-            if (redisCacheConfiguration.isInProcessCacheEnabled()) {
-                return createInProcessCache(redisCacheConfiguration);
+            if (configuration.isInProcessCacheEnabled()) {
+                return newInProcessCache(configuration);
             } else {
                 throw new IllegalArgumentException();
             }
         }
     }
 
-    public <K, V> RedisCache<K, V> createRedisCache(RedisCacheConfiguration<K, V> configuration) {
+    public <K, V> RedisCache<K, V> newRedisCache(RedisCacheConfiguration<K, V> configuration) {
         if (configuration.getExpiryForUpdate() > 0) {
-            return new RedisExpireCache<>(configuration, redis);
+            return new RedisExpireCache<>(this, configuration, redis);
         } else {
-            return new RedisCache<>(configuration, redis);
+            return new RedisCache<>(this, configuration, redis);
         }
     }
 
-    public <K, V> InProcessCache<K, V> createInProcessCache(RedisCacheConfiguration<K, V> configuration) {
-        return new InProcessCache<>(configuration);
+    public <K, V> InProcessCache<K, V> newInProcessCache(RedisCacheConfiguration<K, V> configuration) {
+        return new InProcessCache<>(this, configuration);
     }
 
-    public <K, V> TierCache<K, V> createTierCache(RedisCacheConfiguration<K, V> configuration) {
-        return new TierCache<>(
-                createRedisCache(configuration),
-                new TierInProcessCache<>(configuration),
-                new RedisPubSubCacheEntryEventListener<>(configuration, redis));
+    public <K, V> TierCache<K, V> newTierCache(RedisCacheConfiguration<K, V> configuration) {
+        return new TierCache<>(this, configuration);
     }
 
     @Override
@@ -100,7 +108,7 @@ public class JCacheManager implements CacheManager {
 
     @Override
     public void destroyCache(String cacheName) {
-        Cache cache = caches.get(cacheName);
+        Cache cache = caches.remove(cacheName);
         if (cache != null) {
             cache.close();
         }

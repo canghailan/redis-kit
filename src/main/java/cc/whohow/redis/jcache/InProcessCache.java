@@ -20,11 +20,13 @@ import java.util.Set;
  * 进程内缓存
  */
 public class InProcessCache<K, V> implements Cache<K, V> {
+    protected final RedisCacheManager cacheManager;
     protected final RedisCacheConfiguration<K, V> configuration;
     protected final com.github.benmanes.caffeine.cache.Cache<K, V> cache;
 
     @SuppressWarnings("unchecked")
-    public InProcessCache(RedisCacheConfiguration<K, V> configuration) {
+    public InProcessCache(RedisCacheManager cacheManager, RedisCacheConfiguration<K, V> configuration) {
+        this.cacheManager = cacheManager;
         this.configuration = configuration;
         Caffeine caffeine = Caffeine.newBuilder();
         if (configuration.getInProcessCacheMaxEntry() > 0) {
@@ -139,7 +141,10 @@ public class InProcessCache<K, V> implements Cache<K, V> {
     @Override
     @SuppressWarnings("unchecked")
     public <C extends Configuration<K, V>> C getConfiguration(Class<C> clazz) {
-        return null;
+        if (clazz.isInstance(configuration)) {
+            return clazz.cast(configuration);
+        }
+        throw new IllegalArgumentException();
     }
 
     @Override
@@ -156,12 +161,12 @@ public class InProcessCache<K, V> implements Cache<K, V> {
 
     @Override
     public String getName() {
-        return null;
+        return configuration.getName();
     }
 
     @Override
     public CacheManager getCacheManager() {
-        return null;
+        return cacheManager;
     }
 
     @Override
