@@ -201,46 +201,4 @@ public class TestRedisCache {
         Assert.assertTrue(redisExpireCache.replace("a", "abc"));
         Assert.assertEquals("abc", redisExpireCache.get("a"));
     }
-
-    @Test
-    public void testPublishCacheKeyEvent() {
-        System.out.println(redis.execute(RedisCommands.PUBLISH,  "test", "test-1"));
-//        System.out.println(redis.execute(RedisCommands.PUBLISH,  "test-ex", "test-ex-2"));
-    }
-
-    @Test
-    public void testSubscribeCacheKeyEvent() throws Exception {
-        RedisPubSubConnection connection = redis.getPubSubConnection();
-        try {
-            connection.addListener(new RedisPubSubListener() {
-                @Override
-                public boolean onStatus(PubSubType type, String channel) {
-                    System.out.println("onStatus");
-                    System.out.println(type);
-                    System.out.println(channel);
-                    return false;
-                }
-
-                @Override
-                public void onPatternMessage(String pattern, String channel, Object message) {
-                    System.out.println("onPatternMessage");
-                    System.out.println(pattern);
-                    System.out.println(channel);
-                    System.out.println(message);
-                }
-
-                @Override
-                public void onMessage(String channel, Object msg) {
-                    System.out.println("onMessage");
-                    System.out.println(channel);
-                    System.out.println(msg);
-                }
-            });
-            connection.subscribe(StringCodec.INSTANCE, "test");
-            connection.subscribe(StringCodec.INSTANCE, "test-ex");
-            Thread.sleep(60_000L);
-        } finally {
-            connection.closeAsync();
-        }
-    }
 }

@@ -1,17 +1,14 @@
 package cc.whohow.redis.jcache.configuration;
 
 import cc.whohow.redis.jcache.codec.JCacheKeyJacksonCodec;
-import cc.whohow.redis.jcache.codec.JacksonCodec;
+import cc.whohow.redis.jcache.codec.ObjectArrayJacksonCodec;
+import cc.whohow.redis.jcache.codec.ObjectJacksonCodec;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import org.redisson.client.codec.*;
-import org.redisson.codec.JsonJacksonCodec;
 
-import java.lang.reflect.Type;
-import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 public class AnnotationRedisCacheConfigurationAdapter<K, V> implements RedisCacheConfiguration<K, V> {
-    protected static final TypeFactory TYPE_FACTORY = TypeFactory.defaultInstance();
     protected final AnnotationRedisCacheConfiguration cacheConfiguration;
 
     public AnnotationRedisCacheConfigurationAdapter(AnnotationRedisCacheConfiguration cacheConfiguration) {
@@ -80,31 +77,37 @@ public class AnnotationRedisCacheConfigurationAdapter<K, V> implements RedisCach
         String[] keyTypeCanonicalName = getKeyTypeCanonicalName();
         if (keyTypeCanonicalName == null || keyTypeCanonicalName.length == 0) {
             throw new IllegalStateException();
+        } else if (keyTypeCanonicalName.length == 1) {
+            return getDefaultCodec(keyTypeCanonicalName[0]);
+        } else {
+            return new JCacheKeyJacksonCodec(new ObjectArrayJacksonCodec(keyTypeCanonicalName));
         }
-        if (keyTypeCanonicalName.length == 1) {
-            Type keyType = TYPE_FACTORY.constructFromCanonical(keyTypeCanonicalName[0]);
-            if (keyType == String.class) {
-                return StringCodec.INSTANCE;
-            }
-            if (keyType == Integer.class || keyType == int.class) {
-                return IntegerCodec.INSTANCE;
-            }
-            if (keyType == Long.class || keyType == long.class) {
-                return LongCodec.INSTANCE;
-            }
-            if (keyType == byte[].class) {
-                return ByteArrayCodec.INSTANCE;
-            }
-            return new JacksonCodec(keyType);
-        }
-        Type[] keyType = Arrays.stream(getKeyTypeCanonicalName())
-                .map(TYPE_FACTORY::constructFromCanonical)
-                .toArray(Type[]::new);
-        return new JCacheKeyJacksonCodec(keyType);
     }
 
     public Codec getDefaultValueCodec() {
-        return JsonJacksonCodec.INSTANCE;
+        return getDefaultCodec(getValueTypeCanonicalName());
+    }
+
+    private Codec getDefaultCodec(String typeCanonicalName) {
+        if (typeCanonicalName == null || typeCanonicalName.isEmpty()) {
+            throw new IllegalArgumentException();
+        }
+        switch (typeCanonicalName) {
+            case "java.lang.String":
+                return StringCodec.INSTANCE;
+            case "int":
+                return IntegerCodec.INSTANCE;
+            case "java.lang.Integer":
+                return IntegerCodec.INSTANCE;
+            case "long":
+                return LongCodec.INSTANCE;
+            case "java.lang.Long":
+                return LongCodec.INSTANCE;
+            case "byte[]":
+                return ByteArrayCodec.INSTANCE;
+            default:
+                return new ObjectJacksonCodec(typeCanonicalName);
+        }
     }
 
     @Override

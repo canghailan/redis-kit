@@ -4,6 +4,8 @@ import cc.whohow.redis.Redis;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import org.redisson.client.RedisPubSubConnection;
 import org.redisson.client.RedisPubSubListener;
+import org.redisson.client.codec.StringCodec;
+import org.redisson.client.protocol.RedisCommands;
 import org.redisson.client.protocol.pubsub.PubSubType;
 
 import javax.cache.Cache;
@@ -18,11 +20,12 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @SuppressWarnings("unchecked")
 public class RedisCacheManager implements CacheManager, RedisPubSubListener<Object> {
+    protected final String redisCacheManagerChannel = "RedisCacheManager";
     protected final RedisCachingProvider cachingProvider;
     protected final Redis redis;
     protected final Map<String, Cache> caches = new ConcurrentHashMap<>();
-    protected final RedisPubSubConnection subscribeKeyConnection;
-    protected final Map<String, RedisPubSubListener> subscribeKeyCaches = new ConcurrentHashMap<>();
+    protected final RedisPubSubConnection pubSubConnection;
+    protected final Map<String, RedisPubSubListener> keyNotificationListeners = new ConcurrentHashMap<>();
 
     public RedisCacheManager(Redis redis) {
         this(new RedisCachingProvider(), redis);
@@ -32,8 +35,9 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
         this.cachingProvider = cachingProvider;
         this.cachingProvider.setCacheManager(this);
         this.redis = redis;
-        this.subscribeKeyConnection = redis.getPubSubConnection();
-        this.subscribeKeyConnection.addListener(this);
+        this.pubSubConnection = redis.getPubSubConnection();
+        this.pubSubConnection.addListener(this);
+        this.pubSubConnection.subscribe(StringCodec.INSTANCE, redisCacheManagerChannel);
     }
 
     @Override
@@ -58,6 +62,9 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
 
     @Override
     public synchronized <K, V, C extends Configuration<K, V>> Cache<K, V> createCache(String cacheName, C configuration) throws IllegalArgumentException {
+        if (redisCacheManagerChannel.equals(cacheName)) {
+            throw new IllegalArgumentException();
+        }
         if (caches.containsKey(cacheName)) {
             throw new IllegalStateException();
         }
@@ -66,8 +73,8 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
         caches.put(cacheName, cache);
         if (cache instanceof RedisPubSubListener) {
             RedisPubSubListener keyListener = (RedisPubSubListener) cache;
-            subscribeKeyCaches.put(redisCacheConfiguration.getName(), keyListener);
-            subscribeKeyConnection.subscribe(redisCacheConfiguration.getKeyCodec(), redisCacheConfiguration.getName());
+            keyNotificationListeners.put(redisCacheConfiguration.getName(), keyListener);
+            pubSubConnection.subscribe(redisCacheConfiguration.getKeyCodec(), redisCacheConfiguration.getName());
         }
         return cache;
     }
@@ -90,9 +97,17 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
 
     public <K, V> RedisCache<K, V> newRedisCache(RedisCacheConfiguration<K, V> configuration) {
         if (configuration.getExpiryForUpdate() > 0) {
-            return new RedisExpireCache<>(this, configuration, redis);
+            if (configuration.isKeyNotificationEnabled()) {
+                return new RedisKeyNotificationExpireCache<>(this, configuration, redis);
+            } else {
+                return new RedisExpireCache<>(this, configuration, redis);
+            }
         } else {
-            return new RedisCache<>(this, configuration, redis);
+            if (configuration.isKeyNotificationEnabled()) {
+                return new RedisKeyNotificationCache<>(this, configuration, redis);
+            } else {
+                return new RedisCache<>(this, configuration, redis);
+            }
         }
     }
 
@@ -122,8 +137,8 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
     @Override
     public void destroyCache(String cacheName) {
         try {
-            if (subscribeKeyCaches.remove(cacheName) != null) {
-                subscribeKeyConnection.unsubscribe(cacheName);
+            if (keyNotificationListeners.remove(cacheName) != null) {
+                pubSubConnection.unsubscribe(cacheName);
             }
         } finally {
             Cache cache = caches.remove(cacheName);
@@ -146,7 +161,8 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
     @Override
     public void close() {
         try {
-            subscribeKeyConnection.closeAsync().syncUninterruptibly();
+            keyNotificationListeners.clear();
+            pubSubConnection.closeAsync().syncUninterruptibly();
         } finally {
             for (Cache cache : caches.values()) {
                 try {
@@ -155,13 +171,12 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
                 }
             }
             caches.clear();
-            subscribeKeyCaches.clear();
         }
     }
 
     @Override
     public boolean isClosed() {
-        return subscribeKeyConnection.isClosed();
+        return pubSubConnection.isClosed();
     }
 
     @Override
@@ -173,27 +188,73 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
     }
 
     @Override
-    public boolean onStatus(PubSubType type, String name) {
-        RedisPubSubListener listener = subscribeKeyCaches.get(name);
-        if (listener != null) {
-            listener.onStatus(type, name);
+    public boolean onStatus(PubSubType type, String channel) {
+        if (!redisCacheManagerChannel.equals(channel)) {
+            RedisPubSubListener listener = keyNotificationListeners.get(channel);
+            if (listener != null) {
+                listener.onStatus(type, channel);
+            }
         }
         return false;
     }
 
     @Override
-    public void onPatternMessage(String pattern, String name, Object key) {
-        RedisPubSubListener listener = subscribeKeyCaches.get(name);
-        if (listener != null) {
-            listener.onPatternMessage(pattern, name, key);
+    public void onPatternMessage(String pattern, String channel, Object message) {
+        if (redisCacheManagerChannel.equals(channel)) {
+            onRedisCacheManagerMessage((String) message);
+        } else {
+            RedisPubSubListener listener = keyNotificationListeners.get(channel);
+            if (listener != null) {
+                listener.onPatternMessage(pattern, channel, message);
+            }
         }
     }
 
     @Override
-    public void onMessage(String name, Object key) {
-        RedisPubSubListener listener = subscribeKeyCaches.get(name);
-        if (listener != null) {
-            listener.onMessage(name, key);
+    public void onMessage(String channel, Object message) {
+        if (redisCacheManagerChannel.equals(channel)) {
+            onRedisCacheManagerMessage((String) message);
+        } else {
+            RedisPubSubListener listener = keyNotificationListeners.get(channel);
+            if (listener != null) {
+                listener.onMessage(channel, message);
+            }
+        }
+    }
+
+    public void sendRedisCacheManagerMessage(String command, String message) {
+        redis.execute(RedisCommands.PUBLISH, redisCacheManagerChannel, command + " " + message);
+    }
+
+    public void onRedisCacheManagerMessage(String message) {
+        String[] parsed = message.split(" ", 2);
+        switch (parsed[0]) {
+            case "CLEAR": {
+                clearCache(parsed[1]);
+                break;
+            }
+            case "INVALIDATE": {
+                invalidateCache(parsed[1]);
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+    }
+
+    public void clearCache(String cacheName) {
+        Cache cache = caches.get(cacheName);
+        if (cache != null) {
+            cache.clear();
+        }
+    }
+
+    public void invalidateCache(String cacheName) {
+        Cache cache = caches.get(cacheName);
+        if (cache != null && cache instanceof TierCache) {
+            TierCache tierCache = (TierCache) cache;
+            tierCache.invalidateAll();
         }
     }
 }

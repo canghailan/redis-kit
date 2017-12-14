@@ -5,7 +5,7 @@ import java.util.Arrays;
 public class JCacheKey {
     protected final Object[] cacheKeys;
 
-    public JCacheKey(Object[] cacheKeys) {
+    public JCacheKey(Object... cacheKeys) {
         this.cacheKeys = cacheKeys;
     }
 

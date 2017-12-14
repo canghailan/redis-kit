@@ -1,6 +1,6 @@
 package cc.whohow.redis.jcache.codec;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import cc.whohow.redis.jcache.JCacheKey;
 import io.netty.buffer.ByteBuf;
 import org.redisson.client.codec.Codec;
 import org.redisson.client.handler.State;
@@ -8,54 +8,55 @@ import org.redisson.client.protocol.Decoder;
 import org.redisson.client.protocol.Encoder;
 
 import java.io.IOException;
-import java.lang.reflect.Type;
 
 public class JCacheKeyJacksonCodec implements Codec {
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private final ObjectArrayJacksonCodec objectArrayJacksonCodec;
 
-    private final ObjectMapper objectMapper;
-    private final Type[] cacheKeyTypes;
+    private final Encoder encoder = new Encoder() {
+        @Override
+        public ByteBuf encode(Object in) throws IOException {
+            return objectArrayJacksonCodec.getValueEncoder().encode(((JCacheKey) in).getCacheKeys());
+        }
+    };
 
-    public JCacheKeyJacksonCodec(Type[] cacheKeyTypes) {
-        this(OBJECT_MAPPER, cacheKeyTypes);
-    }
+    private final Decoder<Object> decoder = new Decoder<Object>() {
+        @Override
+        public Object decode(ByteBuf buf, State state) throws IOException {
+            return new JCacheKey((Object[]) objectArrayJacksonCodec.getValueDecoder().decode(buf, state));
+        }
+    };
 
-    public JCacheKeyJacksonCodec(ObjectMapper objectMapper, Type[] cacheKeyTypes) {
-        this.objectMapper = objectMapper;
-        this.cacheKeyTypes = cacheKeyTypes;
-    }
-
-    public Type[] getCacheKeyTypes() {
-        return cacheKeyTypes;
+    public JCacheKeyJacksonCodec(ObjectArrayJacksonCodec objectArrayJacksonCodec) {
+        this.objectArrayJacksonCodec = objectArrayJacksonCodec;
     }
 
     @Override
     public Decoder<Object> getMapValueDecoder() {
-        throw new UnsupportedOperationException();
+        return getValueDecoder();
     }
 
     @Override
     public Encoder getMapValueEncoder() {
-        throw new UnsupportedOperationException();
+        return getValueEncoder();
     }
 
     @Override
     public Decoder<Object> getMapKeyDecoder() {
-        return null;
+        return getValueDecoder();
     }
 
     @Override
     public Encoder getMapKeyEncoder() {
-        return null;
+        return getValueEncoder();
     }
 
     @Override
     public Decoder<Object> getValueDecoder() {
-        return null;
+        return decoder;
     }
 
     @Override
     public Encoder getValueEncoder() {
-        return null;
+        return encoder;
     }
 }

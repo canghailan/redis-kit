@@ -1,5 +1,6 @@
 package cc.whohow.redis;
 
+import cc.whohow.redis.client.RedisPipeline;
 import cc.whohow.redis.client.RedisPooledConnection;
 import org.redisson.client.RedisPubSubConnection;
 import org.redisson.client.codec.Codec;

@@ -16,6 +16,7 @@ import javax.cache.processor.EntryProcessorResult;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 /**
  * 两级缓存
@@ -249,5 +250,17 @@ public class TierCache<K, V> implements Cache<K, V>, RedisPubSubListener<K> {
     @Override
     public void onMessage(String channel, K key) {
         inProcessCache.invalidate(key);
+    }
+
+    public void invalidate(K key) {
+        inProcessCache.invalidate(key);
+    }
+
+    public void invalidateAll(Set<? extends K> key) {
+        inProcessCache.invalidateAll(key);
+    }
+
+    public void invalidateAll() {
+        inProcessCache.invalidateAll();
     }
 }

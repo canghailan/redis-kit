@@ -1,6 +1,8 @@
 package cc.whohow.redis.jcache;
 
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
+import cc.whohow.redis.jcache.processor.CacheMutableEntry;
+import cc.whohow.redis.jcache.processor.EntryProcessorResultWrapper;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.redisson.jcache.JCacheEntry;
 
@@ -13,6 +15,7 @@ import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -148,15 +151,21 @@ public class InProcessCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    @Deprecated
     public <T> T invoke(K key, EntryProcessor<K, V, T> entryProcessor, Object... arguments) throws EntryProcessorException {
-        throw new UnsupportedOperationException();
+        return entryProcessor.process(new CacheMutableEntry<>(this, key), arguments);
     }
 
     @Override
-    @Deprecated
     public <T> Map<K, EntryProcessorResult<T>> invokeAll(Set<? extends K> keys, EntryProcessor<K, V, T> entryProcessor, Object... arguments) {
-        throw new UnsupportedOperationException();
+        Map<K, EntryProcessorResult<T>> results = new LinkedHashMap<>();
+        for (K key : keys) {
+            try {
+                results.put(key, new EntryProcessorResultWrapper<>(invoke(key, entryProcessor, arguments)));
+            } catch (RuntimeException e) {
+                results.put(key, new EntryProcessorResultWrapper<>(new EntryProcessorException(e)));
+            }
+        }
+        return results;
     }
 
     @Override

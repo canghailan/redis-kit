@@ -1,30 +1,40 @@
 package cc.whohow.redis.client;
 
 import cc.whohow.redis.Redis;
-import cc.whohow.redis.RedisPipeline;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.FixedChannelPool;
 import io.netty.util.concurrent.Future;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.redisson.api.RFuture;
 import org.redisson.client.*;
 import org.redisson.client.codec.Codec;
 import org.redisson.client.handler.RedisChannelInitializer;
 import org.redisson.client.protocol.CommandData;
+import org.redisson.client.protocol.CommandsData;
 import org.redisson.client.protocol.RedisCommand;
 import org.redisson.config.Config;
 import org.redisson.config.SingleServerConfig;
+import org.redisson.misc.RPromise;
 import org.redisson.misc.RedissonPromise;
 
 import java.lang.reflect.Field;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
- * Netty ChannelPool based Redis Connection Pool
+ * 基于Netty连接池的Redis连接池
  *
  * @see RedisClient
+ * @see ChannelPool
  */
 public class ConnectionPoolRedis implements Redis {
+    private static final Logger log = LogManager.getLogger();
+
     protected final Config config;
     protected final RedisClient redisClient;
     protected final Bootstrap bootstrap;
@@ -93,6 +103,7 @@ public class ConnectionPoolRedis implements Redis {
 
     @Override
     public <T, R> R execute(Codec codec, RedisCommand<T> command, Object... params) {
+        log.trace("{} {}", command, params);
         // TODO optimize
         Future<Channel> channelFuture = channelPool.acquire().syncUninterruptibly();
         if (channelFuture.isSuccess()) {
@@ -105,13 +116,14 @@ public class ConnectionPoolRedis implements Redis {
             } finally {
                 channelPool.release(channel);
             }
+        } else {
+            throw new RedisException("acquire connection error", channelFuture.cause());
         }
-        throw new RedisException("acquire connection error", channelFuture.cause());
     }
 
     @Override
     public RedisPipeline pipeline() {
-        return null;
+        return new Pipeline(this);
     }
 
     @Override
@@ -125,8 +137,9 @@ public class ConnectionPoolRedis implements Redis {
                 channelPool.release(channel);
                 throw e;
             }
+        } else {
+            throw new RedisException("acquire connection error", channelFuture.cause());
         }
-        throw new RedisException("acquire connection error", channelFuture.cause());
     }
 
     @Override
@@ -160,6 +173,47 @@ public class ConnectionPoolRedis implements Redis {
         @Override
         public void close() {
             channelPool.release(connection.getChannel());
+        }
+    }
+
+    static class Pipeline implements RedisPipeline {
+        private final ConnectionPoolRedis redis;
+        private final List<CommandData<?, ?>> commands = new ArrayList<>();
+
+        public Pipeline(ConnectionPoolRedis redis) {
+            this.redis = redis;
+        }
+
+        @Override
+        public <T> RPromise<T> execute(RedisCommand<T> command, Object... params) {
+            return execute(null, command, params);
+        }
+
+        @Override
+        public <T, R> RPromise<R>  execute(Codec codec, RedisCommand<T> command, Object... params) {
+            log.trace("pipeline {} {}", command, params);
+            CommandData<T, R> commandData = new CommandData<>(new RedissonPromise<>(), codec, command, params);
+            commands.add(commandData);
+            return commandData.getPromise();
+        }
+
+        @Override
+        public void sync() {
+            log.trace("pipeline ->");
+            Future<Channel> channelFuture = redis.channelPool.acquire().syncUninterruptibly();
+            if (channelFuture.isSuccess()) {
+                Channel channel = channelFuture.getNow();
+                try {
+                    RedisConnection connection = RedisConnection.getFrom(channel);
+                    CommandsData commandsData = new CommandsData(new RedissonPromise<>(), commands);
+                    connection.send(commandsData);
+                    commandsData.getPromise().syncUninterruptibly();
+                } finally {
+                    redis.channelPool.release(channel);
+                }
+            } else {
+                throw new RedisException("acquire connection error", channelFuture.cause());
+            }
         }
     }
 }

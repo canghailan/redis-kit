@@ -1,88 +1,94 @@
 package cc.whohow.redis;
 
 import cc.whohow.redis.client.ConnectionPoolRedis;
-import org.openjdk.jmh.annotations.*;
-import org.openjdk.jmh.runner.Runner;
-import org.openjdk.jmh.runner.options.Options;
-import org.openjdk.jmh.runner.options.OptionsBuilder;
+import cc.whohow.redis.client.RedisPipeline;
+import org.junit.Before;
+import org.junit.Test;
+import org.redisson.client.RedisPubSubConnection;
+import org.redisson.client.RedisPubSubListener;
+import org.redisson.client.codec.StringCodec;
 import org.redisson.client.protocol.RedisCommands;
+import org.redisson.client.protocol.pubsub.PubSubType;
 import org.redisson.config.Config;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
+import org.redisson.misc.RPromise;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.Properties;
-import java.util.concurrent.TimeUnit;
 
-@BenchmarkMode({Mode.Throughput, Mode.AverageTime})
-@Warmup(iterations = 3)
-//@Measurement(iterations = 10, time = 5, timeUnit = TimeUnit.SECONDS)
-//@Threads(5)
-@OutputTimeUnit(TimeUnit.MILLISECONDS)
 public class TestRedis {
-    static {
-        System.setProperty("jmh.ignoreLock", "true");
-    }
+    private Redis redis;
 
-    @State(Scope.Benchmark)
-    public static class BenchmarkState {
-        public Properties properties;
-        public Config config;
-        public Redis redis;
-        public JedisPool jedisPool;
+    @Before
+    public void setup() throws Exception {
+        try (InputStream stream = new FileInputStream("redis.properties")) {
+            Properties properties = new Properties();
+            properties.load(stream);
 
-        @Setup
-        public void setup() throws Exception {
-            try (InputStream stream = new FileInputStream("redis.properties")) {
-                properties = new Properties();
-                properties.load(stream);
+            String host = properties.getProperty("host");
+            int port = Integer.parseInt(properties.getProperty("port", "6379"));
+            String password = properties.getProperty("password", "");
+            int database = Integer.parseInt(properties.getProperty("database", "0"));
 
-                String host = properties.getProperty("host");
-                int port = Integer.parseInt(properties.getProperty("port", "6379"));
-                String password = properties.getProperty("password", "");
-                int database = Integer.parseInt(properties.getProperty("database", "0"));
-
-                config = new Config();
-                config.useSingleServer()
-                        .setAddress("redis://" + host + ":" + port)
-                        .setPassword(password)
-                        .setDatabase(database);
-                redis = new ConnectionPoolRedis(config);
-
-                jedisPool = new JedisPool("redis://:" + password + "@" + host + ":" + port + "/" + database);
-            }
-        }
-
-        @TearDown
-        public void tearDown() throws Exception {
-            redis.close();
-            jedisPool.close();
+            Config config = new Config();
+            config.useSingleServer()
+                    .setAddress("redis://" + host + ":" + port)
+                    .setPassword(password)
+                    .setDatabase(database);
+            redis = new ConnectionPoolRedis(config);
         }
     }
 
-    @Benchmark
-    public void testRedisConnectionPool(BenchmarkState state) {
-        state.redis.execute(RedisCommands.PING);
+    @Test
+    public void testPublish() {
+        System.out.println(redis.execute(RedisCommands.PUBLISH,  "test", "test-1"));
+//        System.out.println(redis.execute(RedisCommands.PUBLISH,  "test-ex", "test-ex-2"));
     }
 
-    @Benchmark
-    public void testJedis(BenchmarkState state) {
-        try (Jedis jedis = state.jedisPool.getResource()) {
-            jedis.ping();
+    @Test
+    public void testSubscribe() throws Exception {
+        RedisPubSubConnection connection = redis.getPubSubConnection();
+        try {
+            connection.addListener(new RedisPubSubListener() {
+                @Override
+                public boolean onStatus(PubSubType type, String channel) {
+                    System.out.println("onStatus");
+                    System.out.println(type);
+                    System.out.println(channel);
+                    return false;
+                }
+
+                @Override
+                public void onPatternMessage(String pattern, String channel, Object message) {
+                    System.out.println("onPatternMessage");
+                    System.out.println(pattern);
+                    System.out.println(channel);
+                    System.out.println(message);
+                }
+
+                @Override
+                public void onMessage(String channel, Object msg) {
+                    System.out.println("onMessage");
+                    System.out.println(channel);
+                    System.out.println(msg);
+                }
+            });
+            connection.psubscribe(StringCodec.INSTANCE, "*");
+            Thread.sleep(60_000L);
+        } finally {
+            connection.closeAsync();
         }
     }
 
-    public static void main(String[] args) throws Exception {
-        int[] threads = {1,2,4,8,16,32,64,128,256};
-        for (int n : threads) {
-            Options options = new OptionsBuilder()
-                    .include(TestRedis.class.getSimpleName())
-                    .forks(3)
-                    .threads(n)
-                    .result("threads-" + n + ".csv")
-                    .build();
-            new Runner(options).run();
-        }
+    @Test
+    public void testPipeline() {
+        RedisPipeline pipeline = redis.pipeline();
+        RPromise<String> ping = pipeline.execute(RedisCommands.PING);
+        RPromise<Long> dbsize = pipeline.execute(RedisCommands.DBSIZE);
+        RPromise<String> name = pipeline.execute(RedisCommands.CLIENT_GETNAME);
+        pipeline.sync();
+        System.out.println(ping.getNow());
+        System.out.println(dbsize.getNow());
+        System.out.println(name.getNow());
     }
 }
