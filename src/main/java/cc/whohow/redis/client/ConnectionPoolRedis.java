@@ -103,7 +103,7 @@ public class ConnectionPoolRedis implements Redis {
 
     @Override
     public <T, R> R execute(Codec codec, RedisCommand<T> command, Object... params) {
-        log.trace("{} {}", command, params);
+        log.trace("{}", command);
         // TODO optimize
         Future<Channel> channelFuture = channelPool.acquire().syncUninterruptibly();
         if (channelFuture.isSuccess()) {
@@ -191,7 +191,7 @@ public class ConnectionPoolRedis implements Redis {
 
         @Override
         public <T, R> RPromise<R>  execute(Codec codec, RedisCommand<T> command, Object... params) {
-            log.trace("pipeline {} {}", command, params);
+            log.trace("pipeline {}", command);
             CommandData<T, R> commandData = new CommandData<>(new RedissonPromise<>(), codec, command, params);
             commands.add(commandData);
             return commandData.getPromise();
