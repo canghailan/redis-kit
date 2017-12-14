@@ -24,16 +24,6 @@ public class AnnotationRedisCacheConfigurationAdapter<K, V> implements RedisCach
     }
 
     @Override
-    public long getExpiryForUpdate() {
-        return cacheConfiguration.expiryForUpdate();
-    }
-
-    @Override
-    public TimeUnit getExpiryForUpdateTimeUnit() {
-        return cacheConfiguration.expiryForUpdateTimeUnit();
-    }
-
-    @Override
     public boolean isStatisticsEnabled() {
         return cacheConfiguration.statisticsEnabled();
     }
@@ -44,13 +34,23 @@ public class AnnotationRedisCacheConfigurationAdapter<K, V> implements RedisCach
     }
 
     @Override
+    public long getExpiryForUpdate() {
+        return cacheConfiguration.expiryForUpdate();
+    }
+
+    @Override
+    public TimeUnit getExpiryForUpdateTimeUnit() {
+        return cacheConfiguration.expiryForUpdateTimeUnit();
+    }
+
+    @Override
     public boolean isRedisCacheEnabled() {
         return cacheConfiguration.redisCacheEnabled();
     }
 
     @Override
-    public String getRedisKey() {
-        return cacheConfiguration.redisKey();
+    public boolean isKeyNotificationEnabled() {
+        return cacheConfiguration.keyNotificationEnabled();
     }
 
     @Override
@@ -105,11 +105,6 @@ public class AnnotationRedisCacheConfigurationAdapter<K, V> implements RedisCach
 
     public Codec getDefaultValueCodec() {
         return JsonJacksonCodec.INSTANCE;
-    }
-
-    @Override
-    public boolean isPublishCacheEntryEventEnabled() {
-        return cacheConfiguration.publishCacheEntryEventEnabled();
     }
 
     @Override

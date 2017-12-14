@@ -17,19 +17,19 @@ public interface RedisCacheConfiguration<K, V> extends Configuration<K, V> {
 
     String getName();
 
-    long getExpiryForUpdate();
-
-    TimeUnit getExpiryForUpdateTimeUnit();
-
     boolean isStatisticsEnabled();
 
     boolean isManagementEnabled();
+
+    long getExpiryForUpdate();
+
+    TimeUnit getExpiryForUpdateTimeUnit();
 
     // redis
 
     boolean isRedisCacheEnabled();
 
-    String getRedisKey();
+    boolean isKeyNotificationEnabled();
 
     Codec getKeyCodec();
 
@@ -38,8 +38,6 @@ public interface RedisCacheConfiguration<K, V> extends Configuration<K, V> {
     String[] getKeyTypeCanonicalName();
 
     String getValueTypeCanonicalName();
-
-    boolean isPublishCacheEntryEventEnabled();
 
     // in-process
 

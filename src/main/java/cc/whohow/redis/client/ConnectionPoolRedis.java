@@ -1,15 +1,13 @@
 package cc.whohow.redis.client;
 
 import cc.whohow.redis.Redis;
+import cc.whohow.redis.RedisPipeline;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.FixedChannelPool;
 import io.netty.util.concurrent.Future;
-import org.redisson.client.RedisClient;
-import org.redisson.client.RedisClientConfig;
-import org.redisson.client.RedisConnection;
-import org.redisson.client.RedisException;
+import org.redisson.client.*;
 import org.redisson.client.codec.Codec;
 import org.redisson.client.handler.RedisChannelInitializer;
 import org.redisson.client.protocol.CommandData;
@@ -112,11 +110,56 @@ public class ConnectionPoolRedis implements Redis {
     }
 
     @Override
+    public RedisPipeline pipeline() {
+        return null;
+    }
+
+    @Override
+    public RedisPooledConnection getConnection() {
+        Future<Channel> channelFuture = channelPool.acquire().syncUninterruptibly();
+        if (channelFuture.isSuccess()) {
+            Channel channel = channelFuture.getNow();
+            try {
+                return new Connection(channelPool, RedisConnection.getFrom(channel));
+            } catch (RuntimeException e) {
+                channelPool.release(channel);
+                throw e;
+            }
+        }
+        throw new RedisException("acquire connection error", channelFuture.cause());
+    }
+
+    @Override
+    public RedisPubSubConnection getPubSubConnection() {
+        return redisClient.connectPubSub();
+    }
+
+    @Override
     public void close() {
         try {
             channelPool.close();
         } finally {
             redisClient.shutdown();
+        }
+    }
+
+    static class Connection implements RedisPooledConnection {
+        private ChannelPool channelPool;
+        private RedisConnection connection;
+
+        public Connection(ChannelPool channelPool, RedisConnection connection) {
+            this.channelPool = channelPool;
+            this.connection = connection;
+        }
+
+        @Override
+        public RedisConnection getConnection() {
+            return connection;
+        }
+
+        @Override
+        public void close() {
+            channelPool.release(connection.getChannel());
         }
     }
 }

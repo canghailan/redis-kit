@@ -2,6 +2,8 @@ package cc.whohow.redis.jcache;
 
 import cc.whohow.redis.Redis;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
+import cc.whohow.redis.jcache.processor.CacheMutableEntry;
+import cc.whohow.redis.jcache.processor.EntryProcessorResultWrapper;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.redisson.client.codec.Codec;
@@ -32,14 +34,13 @@ public class RedisCache<K, V> implements Cache<K, V> {
     protected final RedisCacheManager cacheManager;
     protected final RedisCacheConfiguration<K, V> configuration;
     protected final Redis redis;
-    protected final ByteBuf redisKeyWithSeparator;
+    protected final String name;
+    protected final ByteBuf keyPrefix;
     protected final Codec keyCodec;
     protected final Codec valueCodec;
 
     public RedisCache(RedisCacheManager cacheManager, RedisCacheConfiguration<K, V> configuration, Redis redis) {
         if (configuration.getName() == null ||
-                configuration.getRedisKey() == null ||
-                configuration.getRedisKey().contains(":") ||
                 configuration.getKeyCodec() == null ||
                 configuration.getValueCodec() == null) {
             throw new IllegalArgumentException();
@@ -47,7 +48,8 @@ public class RedisCache<K, V> implements Cache<K, V> {
         this.cacheManager = cacheManager;
         this.configuration = configuration;
         this.redis = redis;
-        this.redisKeyWithSeparator = Unpooled.copiedBuffer(configuration.getRedisKey(), StandardCharsets.UTF_8).writeByte(':').asReadOnly();
+        this.name = configuration.getName();
+        this.keyPrefix = Unpooled.copiedBuffer(name, StandardCharsets.UTF_8).writeByte(':').asReadOnly();
         this.keyCodec = configuration.getKeyCodec();
         this.valueCodec = configuration.getValueCodec();
     }
@@ -60,9 +62,17 @@ public class RedisCache<K, V> implements Cache<K, V> {
         return valueCodec;
     }
 
+    public ByteBuf encodeRedisKey(K key) {
+        return toRedisKey(encodeKey(key));
+    }
+
+    public ByteBuf toRedisKey(ByteBuf key) {
+        return Unpooled.wrappedBuffer(keyPrefix, key);
+    }
+
     public ByteBuf encodeKey(K key) {
         try {
-            return Unpooled.wrappedBuffer(redisKeyWithSeparator, keyCodec.getValueEncoder().encode(key));
+            return keyCodec.getValueEncoder().encode(key);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -91,19 +101,19 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public V get(K key) {
-        return redis.execute(valueCodec, RedisCommands.GET, encodeKey(key));
+        return redis.execute(valueCodec, RedisCommands.GET, encodeRedisKey(key));
     }
 
     @Override
     public Map<K, V> getAll(Set<? extends K> keys) {
-        Object[] encodedKeys = keys.stream().map(this::encodeKey).toArray();
+        Object[] encodedKeys = keys.stream().map(this::encodeRedisKey).toArray();
         List<? extends V> values = redis.execute(valueCodec, RedisCommands.MGET, encodedKeys);
         return toMap(keys, values);
     }
 
     @Override
     public boolean containsKey(K key) {
-        return redis.execute(RedisCommands.EXISTS, encodeKey(key));
+        return redis.execute(RedisCommands.EXISTS, encodeRedisKey(key));
     }
 
     @Override
@@ -113,30 +123,30 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public void put(K key, V value) {
-        redis.execute(RedisCommands.SET, encodeKey(key), encodeValue(value));
+        redis.execute(RedisCommands.SET, encodeRedisKey(key), encodeValue(value));
     }
 
     @Override
     public V getAndPut(K key, V value) {
-        return redis.execute(valueCodec, RedisCommands.GETSET, encodeKey(key), encodeValue(value));
+        return redis.execute(valueCodec, RedisCommands.GETSET, encodeRedisKey(key), encodeValue(value));
     }
 
     @Override
     public void putAll(Map<? extends K, ? extends V> map) {
         Object[] encodedKeyValues = map.entrySet().stream()
-                .flatMap(e -> Stream.of(encodeKey(e.getKey()), encodeValue(e.getValue())))
+                .flatMap(e -> Stream.of(encodeRedisKey(e.getKey()), encodeValue(e.getValue())))
                 .toArray();
         redis.execute(RedisCommands.MSET, encodedKeyValues);
     }
 
     @Override
     public boolean putIfAbsent(K key, V value) {
-        return redis.execute(RedisCommands.SETPXNX, encodeKey(key), encodeValue(value), "NX");
+        return redis.execute(RedisCommands.SETPXNX, encodeRedisKey(key), encodeValue(value), "NX");
     }
 
     @Override
     public boolean remove(K key) {
-        return redis.execute(RedisCommands.DEL, encodeKey(key)) == 1L;
+        return redis.execute(RedisCommands.DEL, encodeRedisKey(key)) == 1L;
     }
 
     @Override
@@ -156,7 +166,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public boolean replace(K key, V value) {
-        return redis.execute(RedisCommands.SETPXNX, encodeKey(key), encodeValue(value), "XX");
+        return redis.execute(RedisCommands.SETPXNX, encodeRedisKey(key), encodeValue(value), "XX");
     }
 
     @Override
@@ -166,13 +176,13 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public void removeAll(Set<? extends K> keys) {
-        redis.execute(RedisCommands.DEL, keys.stream().map(this::encodeKey).toArray());
+        redis.execute(RedisCommands.DEL, keys.stream().map(this::encodeRedisKey).toArray());
     }
 
     @Override
     public void removeAll() {
         Codec codec = new ScanCodec(StringCodec.INSTANCE);
-        ByteBuf pattern = redisKeyWithSeparator.copy().writeByte('*');
+        ByteBuf pattern = keyPrefix.copy().writeByte('*');
         Long pos = 0L;
         do {
             ListScanResult<ScanObjectEntry> result = redis.execute(
@@ -191,27 +201,38 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public <C extends Configuration<K, V>> C getConfiguration(Class<C> clazz) {
-        return null;
+        if (clazz.isInstance(configuration)) {
+            return clazz.cast(configuration);
+        }
+        throw new IllegalArgumentException();
     }
 
     @Override
     public <T> T invoke(K key, EntryProcessor<K, V, T> entryProcessor, Object... arguments) throws EntryProcessorException {
-        throw new UnsupportedOperationException();
+        return entryProcessor.process(new CacheMutableEntry<>(this, key), arguments);
     }
 
     @Override
     public <T> Map<K, EntryProcessorResult<T>> invokeAll(Set<? extends K> keys, EntryProcessor<K, V, T> entryProcessor, Object... arguments) {
-        throw new UnsupportedOperationException();
+        Map<K, EntryProcessorResult<T>> results = new LinkedHashMap<>();
+        for (K key : keys) {
+            try {
+                results.put(key, new EntryProcessorResultWrapper<>(invoke(key, entryProcessor, arguments)));
+            } catch (RuntimeException e) {
+                results.put(key, new EntryProcessorResultWrapper<>(new EntryProcessorException(e)));
+            }
+        }
+        return results;
     }
 
     @Override
     public String getName() {
-        return configuration.getName();
+        return name;
     }
 
     @Override
     public CacheManager getCacheManager() {
-        return null;
+        return cacheManager;
     }
 
     @Override
@@ -230,12 +251,12 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public void registerCacheEntryListener(CacheEntryListenerConfiguration<K, V> cacheEntryListenerConfiguration) {
-
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public void deregisterCacheEntryListener(CacheEntryListenerConfiguration<K, V> cacheEntryListenerConfiguration) {
-
+        throw new UnsupportedOperationException();
     }
 
     @Override

@@ -8,19 +8,18 @@ public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfigura
     private String name;
     private Class<K> keyType;
     private Class<V> valueType;
-    private long expiryForUpdate = -1;
-    private TimeUnit expiryForUpdateTimeUnit = TimeUnit.SECONDS;
     private boolean statisticsEnabled = true;
     private boolean managementEnabled = false;
+    private long expiryForUpdate = -1;
+    private TimeUnit expiryForUpdateTimeUnit = TimeUnit.SECONDS;
 
     // redis
     private boolean redisCacheEnabled = true;
-    private String redisKey;
-    private String[] keyTypeCanonicalName;
-    private String valueTypeCanonicalName;
+    private boolean keyNotificationEnabled = true;
     private Codec keyCodec;
     private Codec valueCodec;
-    private boolean publishCacheEntryEventEnabled = true;
+    private String[] keyTypeCanonicalName;
+    private String valueTypeCanonicalName;
 
     // in-process
     private boolean inProcessCacheEnabled = true;
@@ -56,24 +55,6 @@ public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfigura
     }
 
     @Override
-    public long getExpiryForUpdate() {
-        return expiryForUpdate;
-    }
-
-    public void setExpiryForUpdate(long expiryForUpdate) {
-        this.expiryForUpdate = expiryForUpdate;
-    }
-
-    @Override
-    public TimeUnit getExpiryForUpdateTimeUnit() {
-        return expiryForUpdateTimeUnit;
-    }
-
-    public void setExpiryForUpdateTimeUnit(TimeUnit expiryForUpdateTimeUnit) {
-        this.expiryForUpdateTimeUnit = expiryForUpdateTimeUnit;
-    }
-
-    @Override
     public boolean isStatisticsEnabled() {
         return statisticsEnabled;
     }
@@ -92,6 +73,24 @@ public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfigura
     }
 
     @Override
+    public long getExpiryForUpdate() {
+        return expiryForUpdate;
+    }
+
+    public void setExpiryForUpdate(long expiryForUpdate) {
+        this.expiryForUpdate = expiryForUpdate;
+    }
+
+    @Override
+    public TimeUnit getExpiryForUpdateTimeUnit() {
+        return expiryForUpdateTimeUnit;
+    }
+
+    public void setExpiryForUpdateTimeUnit(TimeUnit expiryForUpdateTimeUnit) {
+        this.expiryForUpdateTimeUnit = expiryForUpdateTimeUnit;
+    }
+
+    @Override
     public boolean isRedisCacheEnabled() {
         return redisCacheEnabled;
     }
@@ -101,30 +100,12 @@ public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfigura
     }
 
     @Override
-    public String getRedisKey() {
-        return redisKey;
+    public boolean isKeyNotificationEnabled() {
+        return keyNotificationEnabled;
     }
 
-    public void setRedisKey(String redisKey) {
-        this.redisKey = redisKey;
-    }
-
-    @Override
-    public String[] getKeyTypeCanonicalName() {
-        return keyTypeCanonicalName;
-    }
-
-    public void setKeyTypeCanonicalName(String[] keyTypeCanonicalName) {
-        this.keyTypeCanonicalName = keyTypeCanonicalName;
-    }
-
-    @Override
-    public String getValueTypeCanonicalName() {
-        return valueTypeCanonicalName;
-    }
-
-    public void setValueTypeCanonicalName(String valueTypeCanonicalName) {
-        this.valueTypeCanonicalName = valueTypeCanonicalName;
+    public void setKeyNotificationEnabled(boolean keyNotificationEnabled) {
+        this.keyNotificationEnabled = keyNotificationEnabled;
     }
 
     @Override
@@ -146,12 +127,21 @@ public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfigura
     }
 
     @Override
-    public boolean isPublishCacheEntryEventEnabled() {
-        return publishCacheEntryEventEnabled;
+    public String[] getKeyTypeCanonicalName() {
+        return keyTypeCanonicalName;
     }
 
-    public void setPublishCacheEntryEventEnabled(boolean publishCacheEntryEventEnabled) {
-        this.publishCacheEntryEventEnabled = publishCacheEntryEventEnabled;
+    public void setKeyTypeCanonicalName(String[] keyTypeCanonicalName) {
+        this.keyTypeCanonicalName = keyTypeCanonicalName;
+    }
+
+    @Override
+    public String getValueTypeCanonicalName() {
+        return valueTypeCanonicalName;
+    }
+
+    public void setValueTypeCanonicalName(String valueTypeCanonicalName) {
+        this.valueTypeCanonicalName = valueTypeCanonicalName;
     }
 
     @Override

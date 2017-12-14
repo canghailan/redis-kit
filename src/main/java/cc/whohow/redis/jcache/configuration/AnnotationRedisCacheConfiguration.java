@@ -27,8 +27,6 @@ public @interface AnnotationRedisCacheConfiguration {
 
     boolean redisCacheEnabled() default true;
 
-    String redisKey();
-
     String[] keyTypeCanonicalName();
 
     String valueTypeCanonicalName();
@@ -37,7 +35,7 @@ public @interface AnnotationRedisCacheConfiguration {
 
     String valueCodec();
 
-    boolean publishCacheEntryEventEnabled() default true;
+    boolean keyNotificationEnabled() default true;
 
     // in-process
 

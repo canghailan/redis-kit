@@ -1,13 +1,17 @@
 package cc.whohow.redis;
 
-import cc.whohow.redis.jcache.RedisCacheManager;
 import cc.whohow.redis.client.ConnectionPoolRedis;
+import cc.whohow.redis.jcache.RedisCacheManager;
 import cc.whohow.redis.jcache.configuration.MutableRedisCacheConfiguration;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.redisson.client.RedisPubSubConnection;
+import org.redisson.client.RedisPubSubListener;
 import org.redisson.client.codec.StringCodec;
+import org.redisson.client.protocol.RedisCommands;
+import org.redisson.client.protocol.pubsub.PubSubType;
 import org.redisson.config.Config;
 
 import javax.cache.Cache;
@@ -45,7 +49,6 @@ public class TestRedisCache {
             MutableRedisCacheConfiguration<String, String> config1 = new MutableRedisCacheConfiguration<>();
             config1.setName("test");
             config1.setRedisCacheEnabled(true);
-            config1.setRedisKey("test");
             config1.setKeyCodec(StringCodec.INSTANCE);
             config1.setValueCodec(StringCodec.INSTANCE);
             config1.setInProcessCacheEnabled(false);
@@ -54,7 +57,6 @@ public class TestRedisCache {
             MutableRedisCacheConfiguration<String, String> config2 = new MutableRedisCacheConfiguration<>();
             config2.setName("test-ex");
             config2.setRedisCacheEnabled(true);
-            config2.setRedisKey("test-ex");
             config2.setKeyCodec(StringCodec.INSTANCE);
             config2.setValueCodec(StringCodec.INSTANCE);
             config2.setExpiryForUpdate(60L);
@@ -198,5 +200,47 @@ public class TestRedisCache {
         Assert.assertEquals("z", redisExpireCache.get("a"));
         Assert.assertTrue(redisExpireCache.replace("a", "abc"));
         Assert.assertEquals("abc", redisExpireCache.get("a"));
+    }
+
+    @Test
+    public void testPublishCacheKeyEvent() {
+        System.out.println(redis.execute(RedisCommands.PUBLISH,  "test", "test-1"));
+//        System.out.println(redis.execute(RedisCommands.PUBLISH,  "test-ex", "test-ex-2"));
+    }
+
+    @Test
+    public void testSubscribeCacheKeyEvent() throws Exception {
+        RedisPubSubConnection connection = redis.getPubSubConnection();
+        try {
+            connection.addListener(new RedisPubSubListener() {
+                @Override
+                public boolean onStatus(PubSubType type, String channel) {
+                    System.out.println("onStatus");
+                    System.out.println(type);
+                    System.out.println(channel);
+                    return false;
+                }
+
+                @Override
+                public void onPatternMessage(String pattern, String channel, Object message) {
+                    System.out.println("onPatternMessage");
+                    System.out.println(pattern);
+                    System.out.println(channel);
+                    System.out.println(message);
+                }
+
+                @Override
+                public void onMessage(String channel, Object msg) {
+                    System.out.println("onMessage");
+                    System.out.println(channel);
+                    System.out.println(msg);
+                }
+            });
+            connection.subscribe(StringCodec.INSTANCE, "test");
+            connection.subscribe(StringCodec.INSTANCE, "test-ex");
+            Thread.sleep(60_000L);
+        } finally {
+            connection.closeAsync();
+        }
     }
 }
