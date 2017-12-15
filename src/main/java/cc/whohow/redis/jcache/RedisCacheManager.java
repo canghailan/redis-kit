@@ -40,7 +40,6 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
 
     private void initializeCommands() {
         commands.put(RedisCacheManagerCommand.SYNC.name(), this::onSyncMessage);
-        commands.put(RedisCacheManagerCommand.CLEAR.name(), this::onClearMessage);
     }
 
     @Override
@@ -242,13 +241,6 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
         Consumer<String> handler = commands.get(parsed[0]);
         if (handler != null) {
             handler.accept(parsed[1]);
-        }
-    }
-
-    public void onClearMessage(String cacheName) {
-        Cache cache = caches.get(cacheName);
-        if (cache != null) {
-            cache.clear();
         }
     }
 
