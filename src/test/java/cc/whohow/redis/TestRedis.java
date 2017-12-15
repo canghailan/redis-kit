@@ -2,14 +2,15 @@ package cc.whohow.redis;
 
 import cc.whohow.redis.client.ConnectionPoolRedis;
 import cc.whohow.redis.client.RedisPipeline;
-import cc.whohow.redis.jcache.codec.ObjectJacksonCodec;
-import cc.whohow.redis.jcache.codec.OptionalCodec;
+import cc.whohow.redis.codec.ObjectJacksonCodec;
+import cc.whohow.redis.codec.OptionalCodec;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.redisson.client.RedisPubSubConnection;
 import org.redisson.client.RedisPubSubListener;
+import org.redisson.client.codec.ByteArrayCodec;
 import org.redisson.client.codec.Codec;
 import org.redisson.client.codec.StringCodec;
 import org.redisson.client.protocol.RedisCommands;
@@ -19,6 +20,7 @@ import org.redisson.misc.RPromise;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.Properties;
 
@@ -26,8 +28,7 @@ public class TestRedis {
     private static Redis redis;
     private Codec optionalCodec = new OptionalCodec(new ObjectJacksonCodec(String.class));
 
-    @BeforeClass
-    public static void setup() throws Exception {
+    public static Redis setupRedis() throws Exception {
         try (InputStream stream = new FileInputStream("redis.properties")) {
             Properties properties = new Properties();
             properties.load(stream);
@@ -42,8 +43,13 @@ public class TestRedis {
                     .setAddress("redis://" + host + ":" + port)
                     .setPassword(password)
                     .setDatabase(database);
-            redis = new ConnectionPoolRedis(config);
+            return new ConnectionPoolRedis(config);
         }
+    }
+
+    @BeforeClass
+    public static void setup() throws Exception {
+        redis = setupRedis();
     }
 
     @AfterClass

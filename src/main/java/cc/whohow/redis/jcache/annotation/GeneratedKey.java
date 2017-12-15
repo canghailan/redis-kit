@@ -6,16 +6,16 @@ import java.util.Arrays;
 public class GeneratedKey implements GeneratedCacheKey {
     protected final Object[] keys;
 
+    protected GeneratedKey(Object... keys) {
+        this.keys = keys;
+    }
+
     public static GeneratedKey of(Object... keys) {
         if (keys.length == 1) {
             return new GeneratedSimpleKey(keys);
         } else {
             return new GeneratedKey(keys);
         }
-    }
-
-    protected GeneratedKey(Object... keys) {
-        this.keys = keys;
     }
 
     public Object[] getKeys() {

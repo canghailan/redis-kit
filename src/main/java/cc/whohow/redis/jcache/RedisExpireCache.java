@@ -1,6 +1,7 @@
 package cc.whohow.redis.jcache;
 
 import cc.whohow.redis.Redis;
+import cc.whohow.redis.codec.Codecs;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import org.redisson.client.protocol.RedisCommands;
 
@@ -19,7 +20,7 @@ public class RedisExpireCache<K, V> extends RedisCache<K, V> {
 
     @Override
     public void put(K key, V value) {
-        redis.execute(RedisCommands.SETPXNX, encodeRedisKey(key), encodeValue(value), "PX", ttl);
+        redis.execute(RedisCommands.SETPXNX, encodeRedisKey(key), Codecs.encode(valueCodec, value), "PX", ttl);
     }
 
     @Override
@@ -34,7 +35,7 @@ public class RedisExpireCache<K, V> extends RedisCache<K, V> {
 
     @Override
     public boolean putIfAbsent(K key, V value) {
-        return redis.execute(RedisCommands.SETPXNX, encodeRedisKey(key), encodeValue(value), "PX", ttl, "NX");
+        return redis.execute(RedisCommands.SETPXNX, encodeRedisKey(key), Codecs.encode(valueCodec, value), "PX", ttl, "NX");
     }
 
     @Override
@@ -44,7 +45,7 @@ public class RedisExpireCache<K, V> extends RedisCache<K, V> {
 
     @Override
     public boolean replace(K key, V value) {
-        return redis.execute(RedisCommands.SETPXNX, encodeRedisKey(key), encodeValue(value), "PX", ttl, "XX");
+        return redis.execute(RedisCommands.SETPXNX, encodeRedisKey(key), Codecs.encode(valueCodec, value), "PX", ttl, "XX");
     }
 
     @Override

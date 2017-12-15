@@ -2,6 +2,7 @@ package cc.whohow.redis.jcache;
 
 import cc.whohow.redis.Redis;
 import cc.whohow.redis.client.RedisPipeline;
+import cc.whohow.redis.codec.Codecs;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import io.netty.buffer.ByteBuf;
 import org.redisson.client.protocol.RedisCommands;
@@ -22,10 +23,10 @@ public class RedisKeyNotificationExpireCache<K, V> extends RedisKeyNotificationC
 
     @Override
     public void put(K key, V value) {
-        ByteBuf encodedKey = encodeKey(key);
+        ByteBuf encodedKey = Codecs.encode(keyCodec, key);
 
         RedisPipeline pipeline = redis.pipeline();
-        pipeline.execute(RedisCommands.SETPXNX, toRedisKey(encodedKey.retain()), encodeValue(value), "PX", ttl);
+        pipeline.execute(RedisCommands.SETPXNX, toRedisKey(encodedKey.retain()), Codecs.encode(valueCodec, value), "PX", ttl);
         pipeline.execute(RedisCommands.PUBLISH, name, encodedKey);
         pipeline.sync();
     }
@@ -42,10 +43,10 @@ public class RedisKeyNotificationExpireCache<K, V> extends RedisKeyNotificationC
 
     @Override
     public boolean putIfAbsent(K key, V value) {
-        ByteBuf encodedKey = encodeKey(key);
+        ByteBuf encodedKey = Codecs.encode(keyCodec, key);
 
         RedisPipeline pipeline = redis.pipeline();
-        RPromise<Boolean> r = pipeline.execute(RedisCommands.SETPXNX, toRedisKey(encodedKey.retain()), encodeValue(value), "PX", ttl, "NX");
+        RPromise<Boolean> r = pipeline.execute(RedisCommands.SETPXNX, toRedisKey(encodedKey.retain()), Codecs.encode(valueCodec, value), "PX", ttl, "NX");
         pipeline.execute(RedisCommands.PUBLISH, name, encodedKey);
         pipeline.sync();
         return r.getNow();
@@ -58,10 +59,10 @@ public class RedisKeyNotificationExpireCache<K, V> extends RedisKeyNotificationC
 
     @Override
     public boolean replace(K key, V value) {
-        ByteBuf encodedKey = encodeKey(key);
+        ByteBuf encodedKey = Codecs.encode(keyCodec, key);
 
         RedisPipeline pipeline = redis.pipeline();
-        RPromise<Boolean> r = pipeline.execute(RedisCommands.SETPXNX, toRedisKey(encodedKey.retain()), encodeValue(value), "PX", ttl, "XX");
+        RPromise<Boolean> r = pipeline.execute(RedisCommands.SETPXNX, toRedisKey(encodedKey.retain()), Codecs.encode(valueCodec, value), "PX", ttl, "XX");
         pipeline.execute(RedisCommands.PUBLISH, name, encodedKey);
         pipeline.sync();
         return r.getNow();

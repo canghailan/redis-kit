@@ -23,11 +23,6 @@ public class CacheMutableEntry<K, V> implements MutableEntry<K, V> {
     }
 
     @Override
-    public void setValue(V value) {
-        cache.put(key, value);
-    }
-
-    @Override
     public K getKey() {
         return key;
     }
@@ -35,6 +30,11 @@ public class CacheMutableEntry<K, V> implements MutableEntry<K, V> {
     @Override
     public V getValue() {
         return cache.get(key);
+    }
+
+    @Override
+    public void setValue(V value) {
+        cache.put(key, value);
     }
 
     @Override

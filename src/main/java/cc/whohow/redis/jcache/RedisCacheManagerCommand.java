@@ -1,5 +1,5 @@
 package cc.whohow.redis.jcache;
 
-public enum  RedisCacheManagerCommand {
+public enum RedisCacheManagerCommand {
     SYNC
 }

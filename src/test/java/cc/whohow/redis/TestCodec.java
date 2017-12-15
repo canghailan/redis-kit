@@ -2,8 +2,8 @@ package cc.whohow.redis;
 
 import cc.whohow.redis.jcache.annotation.GeneratedKey;
 import cc.whohow.redis.jcache.codec.GeneratedKeyJacksonCodec;
-import cc.whohow.redis.jcache.codec.ObjectArrayJacksonCodec;
-import cc.whohow.redis.jcache.codec.ObjectJacksonCodec;
+import cc.whohow.redis.codec.ObjectArrayJacksonCodec;
+import cc.whohow.redis.codec.ObjectJacksonCodec;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.type.TypeFactory;

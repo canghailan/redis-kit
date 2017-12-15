@@ -19,7 +19,7 @@ public class CacheMethods {
         for (int i = 0; i < parameterTypes.length; i++) {
             Annotation[] annotations = parameterAnnotations[i];
             for (Annotation annotation : annotations) {
-                if (annotation.annotationType() == CacheKey.class)  {
+                if (annotation.annotationType() == CacheKey.class) {
                     result.add(parameterTypes[i]);
                     break;
                 }

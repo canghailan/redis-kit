@@ -1,4 +1,4 @@
-package cc.whohow.redis.jcache.codec;
+package cc.whohow.redis.codec;
 
 import io.netty.buffer.ByteBuf;
 import org.redisson.client.codec.Codec;

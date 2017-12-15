@@ -1,9 +1,10 @@
-package cc.whohow.redis.jcache.codec;
+package cc.whohow.redis.codec;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
@@ -14,16 +15,18 @@ import org.redisson.client.protocol.Decoder;
 import org.redisson.client.protocol.Encoder;
 
 import java.io.IOException;
+import java.util.Arrays;
 
-public class ObjectJacksonCodec implements Codec {
+public class ObjectArrayJacksonCodec implements Codec {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
     static {
         OBJECT_MAPPER.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         OBJECT_MAPPER.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
-    protected final ObjectMapper objectMapper;
-    protected final JavaType type;
+    private final ObjectMapper objectMapper;
+    private final JavaType[] types;
 
     private final Encoder encoder = new Encoder() {
         @Override
@@ -44,33 +47,42 @@ public class ObjectJacksonCodec implements Codec {
     private final Decoder<Object> decoder = new Decoder<Object>() {
         @Override
         public Object decode(ByteBuf buf, State state) throws IOException {
-            return objectMapper.readValue(new ByteBufInputStream(buf), type);
+            ArrayNode arrayNode = objectMapper.readValue(new ByteBufInputStream(buf), ArrayNode.class);
+            Object[] objectArray = new Object[arrayNode.size()];
+            for (int i = 0; i < arrayNode.size(); i++) {
+                objectArray[i] = objectMapper.convertValue(arrayNode.get(i), types[i]);
+            }
+            return objectArray;
         }
     };
 
-    public ObjectJacksonCodec(String typeCanonicalName) {
-        this(OBJECT_MAPPER, typeCanonicalName);
+    public ObjectArrayJacksonCodec(String... typeCanonicalNames) {
+        this(OBJECT_MAPPER, typeCanonicalNames);
     }
 
-    public ObjectJacksonCodec(ObjectMapper objectMapper, String typeCanonicalName) {
-        this(OBJECT_MAPPER, objectMapper.getTypeFactory().constructFromCanonical(typeCanonicalName));
+    public ObjectArrayJacksonCodec(ObjectMapper objectMapper, String... typeCanonicalNames) {
+        this(objectMapper, Arrays.stream(typeCanonicalNames)
+                .map(objectMapper.getTypeFactory()::constructFromCanonical)
+                .toArray(JavaType[]::new));
     }
 
-    public ObjectJacksonCodec(Class<?> type) {
-        this(OBJECT_MAPPER, type);
+    public ObjectArrayJacksonCodec(Class<?>... types) {
+        this(OBJECT_MAPPER, types);
     }
 
-    public ObjectJacksonCodec(ObjectMapper objectMapper, Class<?> type) {
-        this(objectMapper, objectMapper.getTypeFactory().constructType(type));
+    public ObjectArrayJacksonCodec(ObjectMapper objectMapper, Class<?>... types) {
+        this(OBJECT_MAPPER, Arrays.stream(types)
+                .map(objectMapper.getTypeFactory()::constructType)
+                .toArray(JavaType[]::new));
     }
 
-    public ObjectJacksonCodec(JavaType type) {
-        this(OBJECT_MAPPER, type);
+    public ObjectArrayJacksonCodec(JavaType... types) {
+        this(OBJECT_MAPPER, types);
     }
 
-    public ObjectJacksonCodec(ObjectMapper objectMapper, JavaType type) {
+    public ObjectArrayJacksonCodec(ObjectMapper objectMapper, JavaType... types) {
         this.objectMapper = objectMapper;
-        this.type = type;
+        this.types = types;
     }
 
     @Override

@@ -1,5 +1,7 @@
 package cc.whohow.redis.jcache.codec;
 
+import cc.whohow.redis.codec.ObjectArrayJacksonCodec;
+import cc.whohow.redis.codec.ObjectJacksonCodec;
 import cc.whohow.redis.jcache.annotation.GeneratedKey;
 import cc.whohow.redis.jcache.annotation.GeneratedSimpleKey;
 import com.fasterxml.jackson.databind.JavaType;

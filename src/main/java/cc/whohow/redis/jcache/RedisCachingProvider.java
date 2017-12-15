@@ -11,14 +11,15 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class RedisCachingProvider implements CachingProvider {
     private static final RedisCachingProvider INSTANCE = new RedisCachingProvider();
-    private RedisCachingProvider() {}
+    private final Map<String, RedisCacheManager> cacheManagers = new ConcurrentHashMap<>();
+    private volatile RedisCacheManager defaultCacheManager;
+
+    private RedisCachingProvider() {
+    }
 
     public static RedisCachingProvider getInstance() {
         return INSTANCE;
     }
-
-    private volatile RedisCacheManager defaultCacheManager;
-    private final Map<String, RedisCacheManager> cacheManagers = new ConcurrentHashMap<>();
 
     @Override
     public RedisCacheManager getCacheManager(URI uri, ClassLoader classLoader, Properties properties) {

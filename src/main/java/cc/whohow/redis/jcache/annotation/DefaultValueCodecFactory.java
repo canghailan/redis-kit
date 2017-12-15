@@ -1,6 +1,6 @@
 package cc.whohow.redis.jcache.annotation;
 
-import cc.whohow.redis.jcache.codec.ObjectJacksonCodec;
+import cc.whohow.redis.codec.ObjectJacksonCodec;
 import cc.whohow.redis.jcache.util.CacheMethods;
 import org.redisson.client.codec.Codec;
 

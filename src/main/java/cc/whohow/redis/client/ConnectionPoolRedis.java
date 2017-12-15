@@ -8,7 +8,6 @@ import io.netty.channel.pool.FixedChannelPool;
 import io.netty.util.concurrent.Future;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.redisson.api.RFuture;
 import org.redisson.client.*;
 import org.redisson.client.codec.Codec;
 import org.redisson.client.handler.RedisChannelInitializer;
@@ -24,7 +23,6 @@ import java.lang.reflect.Field;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 基于Netty连接池的Redis连接池
@@ -190,7 +188,7 @@ public class ConnectionPoolRedis implements Redis {
         }
 
         @Override
-        public <T, R> RPromise<R>  execute(Codec codec, RedisCommand<T> command, Object... params) {
+        public <T, R> RPromise<R> execute(Codec codec, RedisCommand<T> command, Object... params) {
             log.trace("pipeline {}", command);
             CommandData<T, R> commandData = new CommandData<>(new RedissonPromise<>(), codec, command, params);
             commands.add(commandData);

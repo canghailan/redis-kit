@@ -10,6 +10,7 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.util.concurrent.TimeUnit;
 
 public class AnnotationRedisCacheConfiguration<K, V> implements RedisCacheConfiguration<K, V> {
+    private Method method;
     private CacheResult cacheResult;
     private RedisCacheDefaults redisCacheDefaults;
     private String[] keyTypeCanonicalName;
@@ -20,6 +21,7 @@ public class AnnotationRedisCacheConfiguration<K, V> implements RedisCacheConfig
     private Codec valueCodec;
 
     public AnnotationRedisCacheConfiguration(Method method, RedisCacheDefaults redisCacheDefaults) {
+        this.method = method;
         this.cacheResult = method.getAnnotation(CacheResult.class);
         this.redisCacheDefaults = redisCacheDefaults;
         this.keyTypeCanonicalName = redisCacheDefaults.keyTypeCanonicalName();
@@ -32,16 +34,6 @@ public class AnnotationRedisCacheConfiguration<K, V> implements RedisCacheConfig
         }
         this.keyType = redisCacheDefaults.keyType();
         this.valueType = redisCacheDefaults.valueType();
-        try {
-            keyCodec = redisCacheDefaults.keyCodecFactory().getDeclaredConstructor().newInstance().apply(method);
-        } catch (Exception e) {
-            throw new UndeclaredThrowableException(e);
-        }
-        try {
-            valueCodec = redisCacheDefaults.valueCodecFactory().getDeclaredConstructor().newInstance().apply(method);
-        } catch (Exception e) {
-            throw new UndeclaredThrowableException(e);
-        }
     }
 
     @Override
@@ -81,11 +73,25 @@ public class AnnotationRedisCacheConfiguration<K, V> implements RedisCacheConfig
 
     @Override
     public Codec getKeyCodec() {
+        if (keyCodec == null) {
+            try {
+                keyCodec = redisCacheDefaults.keyCodecFactory().getDeclaredConstructor().newInstance().apply(method);
+            } catch (Exception e) {
+                throw new UndeclaredThrowableException(e);
+            }
+        }
         return keyCodec;
     }
 
     @Override
     public Codec getValueCodec() {
+        if (valueCodec == null) {
+            try {
+                valueCodec = redisCacheDefaults.valueCodecFactory().getDeclaredConstructor().newInstance().apply(method);
+            } catch (Exception e) {
+                throw new UndeclaredThrowableException(e);
+            }
+        }
         return valueCodec;
     }
 

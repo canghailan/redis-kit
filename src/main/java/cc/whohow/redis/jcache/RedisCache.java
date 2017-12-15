@@ -1,7 +1,8 @@
 package cc.whohow.redis.jcache;
 
 import cc.whohow.redis.Redis;
-import cc.whohow.redis.jcache.codec.OptionalCodec;
+import cc.whohow.redis.codec.Codecs;
+import cc.whohow.redis.codec.OptionalCodec;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import cc.whohow.redis.jcache.processor.CacheMutableEntry;
 import cc.whohow.redis.jcache.processor.EntryProcessorResultWrapper;
@@ -21,8 +22,6 @@ import javax.cache.integration.CompletionListener;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Function;
@@ -102,18 +101,18 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public void put(K key, V value) {
-        redis.execute(RedisCommands.SET, encodeRedisKey(key), encodeValue(value));
+        redis.execute(RedisCommands.SET, encodeRedisKey(key), Codecs.encode(valueCodec, value));
     }
 
     @Override
     public V getAndPut(K key, V value) {
-        return redis.execute(valueCodec, RedisCommands.GETSET, encodeRedisKey(key), encodeValue(value));
+        return redis.execute(valueCodec, RedisCommands.GETSET, encodeRedisKey(key), Codecs.encode(valueCodec, value));
     }
 
     @Override
     public void putAll(Map<? extends K, ? extends V> map) {
         ByteBuf[] encodedKeys = encodeRedisKeys(map.keySet());
-        ByteBuf[] encodedValues = encodeValues(map.values());
+        ByteBuf[] encodedValues = Codecs.encode(valueCodec, map.values());
         ByteBuf[] encodedRedisKeyValues = new ByteBuf[encodedKeys.length * 2];
         for (int i = 0; i < encodedKeys.length; i++) {
             encodedRedisKeyValues[i * 2] = encodedKeys[i];
@@ -125,7 +124,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public boolean putIfAbsent(K key, V value) {
-        return redis.execute(RedisCommands.SETPXNX, encodeRedisKey(key), encodeValue(value), "NX");
+        return redis.execute(RedisCommands.SETPXNX, encodeRedisKey(key), Codecs.encode(valueCodec, value), "NX");
     }
 
     @Override
@@ -150,7 +149,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public boolean replace(K key, V value) {
-        return redis.execute(RedisCommands.SETPXNX, encodeRedisKey(key), encodeValue(value), "XX");
+        return redis.execute(RedisCommands.SETPXNX, encodeRedisKey(key), Codecs.encode(valueCodec, value), "XX");
     }
 
     @Override
@@ -249,7 +248,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
     }
 
     public ByteBuf encodeRedisKey(K key) {
-        return toRedisKey(encodeKey(key));
+        return toRedisKey(Codecs.encode(keyCodec, key));
     }
 
     public ByteBuf[] encodeRedisKeys(Collection<? extends K> keys) {
@@ -261,57 +260,13 @@ public class RedisCache<K, V> implements Cache<K, V> {
             }
             return encodedRedisKeys;
         } catch (RuntimeException e) {
-            release(encodedRedisKeys);
+            Codecs.release(encodedRedisKeys);
             throw e;
         }
     }
 
     public ByteBuf toRedisKey(ByteBuf key) {
         return Unpooled.wrappedBuffer(keyPrefix, key);
-    }
-
-    public ByteBuf encodeKey(K key) {
-        try {
-            return keyCodec.getValueEncoder().encode(key);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    public ByteBuf[] encodeKeys(Collection<? extends K> keys) {
-        ByteBuf[] encodedKeys = new ByteBuf[keys.size()];
-        try {
-            int i = 0;
-            for (K key : keys) {
-                encodedKeys[i++] = encodeKey(key);
-            }
-            return encodedKeys;
-        } catch (RuntimeException e) {
-            release(encodedKeys);
-            throw e;
-        }
-    }
-
-    public ByteBuf encodeValue(V value) {
-        try {
-            return valueCodec.getValueEncoder().encode(value);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    public ByteBuf[] encodeValues(Collection<? extends V> values) {
-        ByteBuf[] encodedValues = new ByteBuf[values.size()];
-        try {
-            int i = 0;
-            for (V value : values) {
-                encodedValues[i++] = encodeValue(value);
-            }
-            return encodedValues;
-        } catch (RuntimeException e) {
-            release(encodedValues);
-            throw e;
-        }
     }
 
     protected Map<K, V> toMap(Iterable<? extends K> keys, Iterable<? extends V> values) {
@@ -325,17 +280,5 @@ public class RedisCache<K, V> implements Cache<K, V> {
             }
         }
         return map;
-    }
-
-    protected void release(ByteBuf byteBuf) {
-        if (byteBuf != null) {
-            byteBuf.release();
-        }
-    }
-
-    protected void release(ByteBuf[] byteBufArray) {
-        for (ByteBuf byteBuf : byteBufArray) {
-            release(byteBuf);
-        }
     }
 }
