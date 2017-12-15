@@ -27,7 +27,17 @@ public class TestCodec {
             "long",
             "java.lang.Long",
             "[B");
-    private Codec generatedKeyCodec = new GeneratedKeyJacksonCodec(objectArrayCodec);
+    private Codec generatedKeyCodecInteger = new GeneratedKeyJacksonCodec(
+            "java.lang.Integer");
+    private Codec generatedKeyCodecString = new GeneratedKeyJacksonCodec(
+            "java.lang.String");
+    private Codec generatedKeyCodecArray = new GeneratedKeyJacksonCodec(
+            "java.lang.String",
+            "int",
+            "java.lang.Integer",
+            "long",
+            "java.lang.Long",
+            "[B");
 
     @Test
     public void testTypeCanonicalName() {
@@ -80,13 +90,23 @@ public class TestCodec {
 
     @Test
     public void testCacheKeyEncoder() throws Exception {
-        GeneratedKey generatedKey = GeneratedKey.of("a", 1, 3, 5L, 7L, "xyz".getBytes());
-        System.out.println(generatedKeyCodec.getValueEncoder().encode(generatedKey).toString(StandardCharsets.UTF_8));
+        GeneratedKey generatedKeyInteger = GeneratedKey.of(1);
+        System.out.println(generatedKeyCodecInteger.getValueEncoder().encode(generatedKeyInteger).toString(StandardCharsets.UTF_8));
+        GeneratedKey generatedKeyString = GeneratedKey.of("a");
+        System.out.println(generatedKeyCodecString.getValueEncoder().encode(generatedKeyString).toString(StandardCharsets.UTF_8));
+        GeneratedKey generatedKeyArray = GeneratedKey.of("a", 1, 3, 5L, 7L, "xyz".getBytes());
+        System.out.println(generatedKeyCodecArray.getValueEncoder().encode(generatedKeyArray).toString(StandardCharsets.UTF_8));
     }
 
     @Test
     public void testCacheKeyDecoder() throws Exception {
-        GeneratedKey generatedKey = (GeneratedKey) generatedKeyCodec.getValueDecoder().decode(Unpooled.copiedBuffer(
+        System.out.println(generatedKeyCodecInteger.getValueDecoder().decode(Unpooled.copiedBuffer(
+                "1",
+                StandardCharsets.UTF_8), new State(false)));
+        System.out.println(generatedKeyCodecString.getValueDecoder().decode(Unpooled.copiedBuffer(
+                "\"a\"",
+                StandardCharsets.UTF_8), new State(false)));
+        GeneratedKey generatedKey = (GeneratedKey) generatedKeyCodecArray.getValueDecoder().decode(Unpooled.copiedBuffer(
                 "[\"a\",1,3,5,7,\"eHl6\"]",
                 StandardCharsets.UTF_8), new State(false));
         System.out.println(generatedKey);

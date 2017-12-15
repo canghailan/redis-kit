@@ -12,8 +12,6 @@ import java.util.Arrays;
 import java.util.List;
 
 public class CacheMethods {
-    private static final TypeFactory TYPE_FACTORY = TypeFactory.defaultInstance();
-
     public static Type[] getKeyType(Method method) {
         List<Type> result = new ArrayList<>(method.getParameterCount());
         Type[] parameterTypes = method.getGenericParameterTypes();
@@ -36,7 +34,7 @@ public class CacheMethods {
 
     public static String[] getKeyTypeCanonicalName(Method method) {
         return Arrays.stream(getKeyType(method))
-                .map(TYPE_FACTORY::constructType)
+                .map(TypeFactory.defaultInstance()::constructType)
                 .map(JavaType::toCanonical)
                 .toArray(String[]::new);
     }
@@ -46,6 +44,6 @@ public class CacheMethods {
     }
 
     public static String getValueTypeCanonicalName(Method method) {
-        return TYPE_FACTORY.constructType(getValueType(method)).toCanonical();
+        return TypeFactory.defaultInstance().constructType(getValueType(method)).toCanonical();
     }
 }
