@@ -1,6 +1,7 @@
 package cc.whohow.redis.jcache;
 
 import cc.whohow.redis.Redis;
+import cc.whohow.redis.jcache.codec.OptionalCodec;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import cc.whohow.redis.jcache.processor.CacheMutableEntry;
 import cc.whohow.redis.jcache.processor.EntryProcessorResultWrapper;
@@ -13,7 +14,6 @@ import org.redisson.client.protocol.RedisCommands;
 import org.redisson.client.protocol.decoder.ListScanResult;
 import org.redisson.client.protocol.decoder.ScanObjectEntry;
 
-import javax.cache.Cache;
 import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.configuration.Configuration;
@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.function.Function;
 
 /**
  * 普通Redis缓存，不支持过期时间
@@ -37,6 +38,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
     protected final ByteBuf keyPrefix;
     protected final Codec keyCodec;
     protected final Codec valueCodec;
+    protected final Codec optionalValueCodec;
 
     public RedisCache(RedisCacheManager cacheManager, RedisCacheConfiguration<K, V> configuration, Redis redis) {
         if (configuration.getName() == null ||
@@ -51,6 +53,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
         this.keyPrefix = name.copy().writeByte(':').asReadOnly();
         this.keyCodec = configuration.getKeyCodec();
         this.valueCodec = configuration.getValueCodec();
+        this.optionalValueCodec = new OptionalCodec(valueCodec);
     }
 
     public Codec getKeyCodec() {
@@ -64,6 +67,21 @@ public class RedisCache<K, V> implements Cache<K, V> {
     @Override
     public V get(K key) {
         return redis.execute(valueCodec, RedisCommands.GET, encodeRedisKey(key));
+    }
+
+    public Optional<V> getOptional(K key) {
+        return redis.execute(optionalValueCodec, RedisCommands.GET, encodeRedisKey(key));
+    }
+
+    @Override
+    public V get(K key, Function<? super K, ? extends V> cacheLoader) {
+        Optional<V> optional = getOptional(key);
+        if (optional != null) {
+            return optional.orElse(null);
+        }
+        V value = cacheLoader.apply(key);
+        put(key, value);
+        return value;
     }
 
     @Override

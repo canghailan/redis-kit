@@ -1,6 +1,6 @@
 package cc.whohow.redis.jcache.codec;
 
-import cc.whohow.redis.jcache.JCacheKey;
+import cc.whohow.redis.jcache.annotation.GeneratedKey;
 import io.netty.buffer.ByteBuf;
 import org.redisson.client.codec.Codec;
 import org.redisson.client.handler.State;
@@ -9,25 +9,26 @@ import org.redisson.client.protocol.Encoder;
 
 import java.io.IOException;
 
-public class JCacheKeyJacksonCodec implements Codec {
-    private final ObjectArrayJacksonCodec objectArrayJacksonCodec;
+public class GeneratedKeyJacksonCodec implements Codec {
+    private final ObjectArrayJacksonCodec codec;
 
     private final Encoder encoder = new Encoder() {
         @Override
         public ByteBuf encode(Object in) throws IOException {
-            return objectArrayJacksonCodec.getValueEncoder().encode(((JCacheKey) in).getCacheKeys());
+            GeneratedKey generatedKey = (GeneratedKey) in;
+            return codec.getValueEncoder().encode(generatedKey.getKeys());
         }
     };
 
     private final Decoder<Object> decoder = new Decoder<Object>() {
         @Override
         public Object decode(ByteBuf buf, State state) throws IOException {
-            return new JCacheKey((Object[]) objectArrayJacksonCodec.getValueDecoder().decode(buf, state));
+            return GeneratedKey.of((Object[]) codec.getValueDecoder().decode(buf, state));
         }
     };
 
-    public JCacheKeyJacksonCodec(ObjectArrayJacksonCodec objectArrayJacksonCodec) {
-        this.objectArrayJacksonCodec = objectArrayJacksonCodec;
+    public GeneratedKeyJacksonCodec(ObjectArrayJacksonCodec codec) {
+        this.codec = codec;
     }
 
     @Override

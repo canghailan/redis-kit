@@ -4,14 +4,11 @@ import cc.whohow.redis.Redis;
 import cc.whohow.redis.client.RedisPipeline;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import org.redisson.client.protocol.RedisCommands;
 import org.redisson.misc.RPromise;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Stream;
 
 /**
  * 支持键通知的缓存
@@ -132,6 +129,6 @@ public class RedisKeyNotificationCache<K, V> extends RedisCache<K, V> {
     @Override
     public void removeAll() {
         super.removeAll();
-        cacheManager.sendRedisCacheManagerMessage("INVALIDATE", configuration.getName());
+        cacheManager.sendRedisCacheManagerMessage(RedisCacheManagerCommand.SYNC, configuration.getName());
     }
 }

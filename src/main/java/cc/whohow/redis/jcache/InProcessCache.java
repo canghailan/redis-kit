@@ -6,7 +6,6 @@ import cc.whohow.redis.jcache.processor.EntryProcessorResultWrapper;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.redisson.jcache.JCacheEntry;
 
-import javax.cache.Cache;
 import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.configuration.Configuration;
@@ -14,10 +13,8 @@ import javax.cache.integration.CompletionListener;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.function.Function;
 
 /**
  * 进程内缓存
@@ -59,11 +56,10 @@ public class InProcessCache<K, V> implements Cache<K, V> {
 
     @Override
     public boolean containsKey(K key) {
-        return cache.getIfPresent(key) != null;
+        return cache.asMap().containsKey(key);
     }
 
     @Override
-    @Deprecated
     public void loadAll(Set<? extends K> keys, boolean replaceExistingValues, CompletionListener completionListener) {
         throw new UnsupportedOperationException();
     }
@@ -74,7 +70,6 @@ public class InProcessCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    @Deprecated
     public V getAndPut(K key, V value) {
         throw new UnsupportedOperationException();
     }
@@ -85,7 +80,6 @@ public class InProcessCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    @Deprecated
     public boolean putIfAbsent(K key, V value) {
         throw new UnsupportedOperationException();
     }
@@ -97,31 +91,26 @@ public class InProcessCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    @Deprecated
     public boolean remove(K key, V oldValue) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    @Deprecated
     public V getAndRemove(K key) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    @Deprecated
     public boolean replace(K key, V oldValue, V newValue) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    @Deprecated
     public boolean replace(K key, V value) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    @Deprecated
     public V getAndReplace(K key, V value) {
         throw new UnsupportedOperationException();
     }
@@ -184,7 +173,6 @@ public class InProcessCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    @Deprecated
     public boolean isClosed() {
         return false;
     }
@@ -198,13 +186,11 @@ public class InProcessCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    @Deprecated
     public void registerCacheEntryListener(CacheEntryListenerConfiguration<K, V> cacheEntryListenerConfiguration) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    @Deprecated
     public void deregisterCacheEntryListener(CacheEntryListenerConfiguration<K, V> cacheEntryListenerConfiguration) {
         throw new UnsupportedOperationException();
     }
@@ -214,5 +200,19 @@ public class InProcessCache<K, V> implements Cache<K, V> {
         return cache.asMap().entrySet().stream()
                 .map(e -> (Entry<K, V>) new JCacheEntry<>(e.getKey(), e.getValue()))
                 .iterator();
+    }
+
+    @Override
+    public Optional<V> getOptional(K key) {
+        V value = cache.getIfPresent(key);
+        if (value != null) {
+            return Optional.of(value);
+        }
+        return cache.asMap().containsKey(key) ? Optional.empty() : null;
+    }
+
+    @Override
+    public V get(K key, Function<? super K, ? extends V> cacheLoader) {
+        return cache.get(key, cacheLoader);
     }
 }

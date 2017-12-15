@@ -5,7 +5,6 @@ import org.redisson.client.RedisPubSubListener;
 import org.redisson.client.codec.Codec;
 import org.redisson.client.protocol.pubsub.PubSubType;
 
-import javax.cache.Cache;
 import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.configuration.Configuration;
@@ -13,9 +12,7 @@ import javax.cache.integration.CompletionListener;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 
 /**
@@ -25,14 +22,14 @@ public class TierCache<K, V> implements Cache<K, V>, RedisPubSubListener<K> {
     protected final RedisCacheManager cacheManager;
     protected final RedisCacheConfiguration<K, V> configuration;
     protected final RedisCache<K, V> redisCache;
-    protected final TierInProcessCache<K, V> inProcessCache;
+    protected final InProcessCache<K, V> inProcessCache;
 
     public TierCache(RedisCacheManager cacheManager,
                      RedisCacheConfiguration<K, V> configuration) {
         this.cacheManager = cacheManager;
         this.configuration = configuration;
         this.redisCache = cacheManager.newRedisCache(configuration);
-        this.inProcessCache = new TierInProcessCache<>(cacheManager, configuration);
+        this.inProcessCache = cacheManager.newInProcessCache(configuration);
     }
 
     public Codec getKeyCodec() {
@@ -46,6 +43,14 @@ public class TierCache<K, V> implements Cache<K, V>, RedisPubSubListener<K> {
     @Override
     public V get(K key) {
         return inProcessCache.get(key, redisCache::get);
+    }
+
+    public Optional<V> getOptional(K key) {
+        V value = inProcessCache.get(key);
+        if (value != null) {
+            return Optional.of(value);
+        }
+        return redisCache.getOptional(key);
     }
 
     @Override
@@ -65,32 +70,32 @@ public class TierCache<K, V> implements Cache<K, V>, RedisPubSubListener<K> {
     @Override
     public void loadAll(Set<? extends K> keys, boolean replaceExistingValues, CompletionListener completionListener) {
         redisCache.loadAll(keys, replaceExistingValues, completionListener);
-        inProcessCache.invalidateAll(keys);
+        inProcessCache.removeAll(keys);
     }
 
     @Override
     public void put(K key, V value) {
         redisCache.put(key, value);
-        inProcessCache.invalidate(key);
+        inProcessCache.remove(key);
     }
 
     @Override
     public V getAndPut(K key, V value) {
         V oldValue = redisCache.getAndPut(key, value);
-        inProcessCache.invalidate(key);
+        inProcessCache.remove(key);
         return oldValue;
     }
 
     @Override
     public void putAll(Map<? extends K, ? extends V> map) {
         redisCache.putAll(map);
-        inProcessCache.invalidateAll(map.keySet());
+        inProcessCache.removeAll(map.keySet());
     }
 
     @Override
     public boolean putIfAbsent(K key, V value) {
         if (redisCache.putIfAbsent(key, value)) {
-            inProcessCache.invalidate(key);
+            inProcessCache.remove(key);
             return true;
         }
         return false;
@@ -99,7 +104,7 @@ public class TierCache<K, V> implements Cache<K, V>, RedisPubSubListener<K> {
     @Override
     public boolean remove(K key) {
         if (redisCache.remove(key)) {
-            inProcessCache.invalidate(key);
+            inProcessCache.remove(key);
             return true;
         }
         return false;
@@ -108,7 +113,7 @@ public class TierCache<K, V> implements Cache<K, V>, RedisPubSubListener<K> {
     @Override
     public boolean remove(K key, V oldValue) {
         if (redisCache.remove(key, oldValue)) {
-            inProcessCache.invalidate(key);
+            inProcessCache.remove(key);
             return true;
         }
         return false;
@@ -117,14 +122,14 @@ public class TierCache<K, V> implements Cache<K, V>, RedisPubSubListener<K> {
     @Override
     public V getAndRemove(K key) {
         V value = redisCache.getAndRemove(key);
-        inProcessCache.invalidate(key);
+        inProcessCache.remove(key);
         return value;
     }
 
     @Override
     public boolean replace(K key, V oldValue, V newValue) {
         if (redisCache.replace(key, oldValue, newValue)) {
-            inProcessCache.invalidate(key);
+            inProcessCache.remove(key);
             return true;
         }
         return false;
@@ -133,7 +138,7 @@ public class TierCache<K, V> implements Cache<K, V>, RedisPubSubListener<K> {
     @Override
     public boolean replace(K key, V value) {
         if (redisCache.replace(key, value)) {
-            inProcessCache.invalidate(key);
+            inProcessCache.remove(key);
             return true;
         }
         return false;
@@ -142,26 +147,26 @@ public class TierCache<K, V> implements Cache<K, V>, RedisPubSubListener<K> {
     @Override
     public V getAndReplace(K key, V value) {
         V oldValue = redisCache.getAndReplace(key, value);
-        inProcessCache.invalidate(key);
+        inProcessCache.remove(key);
         return oldValue;
     }
 
     @Override
     public void removeAll(Set<? extends K> keys) {
         redisCache.removeAll(keys);
-        inProcessCache.invalidateAll(keys);
+        inProcessCache.removeAll(keys);
     }
 
     @Override
     public void removeAll() {
         redisCache.removeAll();
-        inProcessCache.invalidateAll();
+        inProcessCache.removeAll();
     }
 
     @Override
     public void clear() {
         redisCache.clear();
-        inProcessCache.invalidateAll();
+        inProcessCache.clear();
     }
 
     @Override
@@ -175,14 +180,14 @@ public class TierCache<K, V> implements Cache<K, V>, RedisPubSubListener<K> {
     @Override
     public <T> T invoke(K key, EntryProcessor<K, V, T> entryProcessor, Object... arguments) throws EntryProcessorException {
         T result = redisCache.invoke(key, entryProcessor, arguments);
-        inProcessCache.invalidate(key);
+        inProcessCache.remove(key);
         return result;
     }
 
     @Override
     public <T> Map<K, EntryProcessorResult<T>> invokeAll(Set<? extends K> keys, EntryProcessor<K, V, T> entryProcessor, Object... arguments) {
         Map<K, EntryProcessorResult<T>> result = redisCache.invokeAll(keys, entryProcessor, arguments);
-        inProcessCache.invalidateAll(keys);
+        inProcessCache.removeAll(keys);
         return result;
     }
 
@@ -238,29 +243,34 @@ public class TierCache<K, V> implements Cache<K, V>, RedisPubSubListener<K> {
 
     @Override
     public boolean onStatus(PubSubType type, String channel) {
-        inProcessCache.invalidateAll();
+        synchronizeAll();
         return false;
     }
 
     @Override
     public void onPatternMessage(String pattern, String channel, K key) {
-        inProcessCache.invalidate(key);
+        synchronize(key);
     }
 
     @Override
     public void onMessage(String channel, K key) {
-        inProcessCache.invalidate(key);
+        synchronize(key);
     }
 
-    public void invalidate(K key) {
-        inProcessCache.invalidate(key);
+    @Override
+    public V get(K key, Function<? super K, ? extends V> cacheLoader) {
+        return inProcessCache.get(key, (k) -> redisCache.get(k, cacheLoader));
     }
 
-    public void invalidateAll(Set<? extends K> key) {
-        inProcessCache.invalidateAll(key);
+    public void synchronize(K key) {
+        inProcessCache.remove(key);
     }
 
-    public void invalidateAll() {
-        inProcessCache.invalidateAll();
+    public void synchronizeAll(Set<? extends K> keys) {
+        inProcessCache.removeAll(keys);
+    }
+
+    public void synchronizeAll() {
+        inProcessCache.removeAll();
     }
 }

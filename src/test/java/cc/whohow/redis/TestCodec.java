@@ -1,10 +1,9 @@
 package cc.whohow.redis;
 
-import cc.whohow.redis.jcache.JCacheKey;
-import cc.whohow.redis.jcache.codec.JCacheKeyJacksonCodec;
+import cc.whohow.redis.jcache.annotation.GeneratedKey;
+import cc.whohow.redis.jcache.codec.GeneratedKeyJacksonCodec;
 import cc.whohow.redis.jcache.codec.ObjectArrayJacksonCodec;
 import cc.whohow.redis.jcache.codec.ObjectJacksonCodec;
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.type.TypeFactory;
@@ -28,7 +27,7 @@ public class TestCodec {
             "long",
             "java.lang.Long",
             "[B");
-    private Codec jCacheKeyCodec = new JCacheKeyJacksonCodec(objectArrayCodec);
+    private Codec generatedKeyCodec = new GeneratedKeyJacksonCodec(objectArrayCodec);
 
     @Test
     public void testTypeCanonicalName() {
@@ -80,18 +79,18 @@ public class TestCodec {
     }
 
     @Test
-    public void testJCacheKeyEncoder() throws Exception {
-        JCacheKey jCacheKey = new JCacheKey("a", 1, 3, 5L, 7L, "xyz".getBytes());
-        System.out.println(jCacheKeyCodec.getValueEncoder().encode(jCacheKey).toString(StandardCharsets.UTF_8));
+    public void testCacheKeyEncoder() throws Exception {
+        GeneratedKey generatedKey = GeneratedKey.of("a", 1, 3, 5L, 7L, "xyz".getBytes());
+        System.out.println(generatedKeyCodec.getValueEncoder().encode(generatedKey).toString(StandardCharsets.UTF_8));
     }
 
     @Test
-    public void testJCacheKeyDecoder() throws Exception {
-        JCacheKey jCacheKey = (JCacheKey) jCacheKeyCodec.getValueDecoder().decode(Unpooled.copiedBuffer(
+    public void testCacheKeyDecoder() throws Exception {
+        GeneratedKey generatedKey = (GeneratedKey) generatedKeyCodec.getValueDecoder().decode(Unpooled.copiedBuffer(
                 "[\"a\",1,3,5,7,\"eHl6\"]",
                 StandardCharsets.UTF_8), new State(false));
-        System.out.println(jCacheKey);
-        for (Object object : jCacheKey.getCacheKeys()) {
+        System.out.println(generatedKey);
+        for (Object object : generatedKey.getKeys()) {
             System.out.println(object);
             System.out.println(object.getClass());
         }

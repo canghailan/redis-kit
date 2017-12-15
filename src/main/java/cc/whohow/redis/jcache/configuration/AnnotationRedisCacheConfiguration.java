@@ -1,49 +1,133 @@
 package cc.whohow.redis.jcache.configuration;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import cc.whohow.redis.jcache.annotation.RedisCacheDefaults;
+import cc.whohow.redis.jcache.util.CacheMethods;
+import org.redisson.client.codec.Codec;
+
+import javax.cache.annotation.CacheResult;
+import java.lang.reflect.Method;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.util.concurrent.TimeUnit;
 
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.METHOD})
-public @interface AnnotationRedisCacheConfiguration {
-    String name();
+public class AnnotationRedisCacheConfiguration<K, V> implements RedisCacheConfiguration<K, V> {
+    private CacheResult cacheResult;
+    private RedisCacheDefaults redisCacheDefaults;
+    private String[] keyTypeCanonicalName;
+    private String valueTypeCanonicalName;
+    private Class<?> keyType;
+    private Class<?> valueType;
+    private Codec keyCodec;
+    private Codec valueCodec;
 
-    Class<?> keyType();
+    public AnnotationRedisCacheConfiguration(Method method, RedisCacheDefaults redisCacheDefaults) {
+        this.cacheResult = method.getAnnotation(CacheResult.class);
+        this.redisCacheDefaults = redisCacheDefaults;
+        this.keyTypeCanonicalName = redisCacheDefaults.keyTypeCanonicalName();
+        if (this.keyTypeCanonicalName.length == 0) {
+            this.keyTypeCanonicalName = CacheMethods.getKeyTypeCanonicalName(method);
+        }
+        this.valueTypeCanonicalName = redisCacheDefaults.valueTypeCanonicalName();
+        if (this.valueTypeCanonicalName.isEmpty()) {
+            this.valueTypeCanonicalName = CacheMethods.getValueTypeCanonicalName(method);
+        }
+        this.keyType = redisCacheDefaults.keyType();
+        this.valueType = redisCacheDefaults.valueType();
+        try {
+            keyCodec = redisCacheDefaults.keyCodecFactory().getDeclaredConstructor().newInstance().apply(method);
+        } catch (Exception e) {
+            throw new UndeclaredThrowableException(e);
+        }
+        try {
+            valueCodec = redisCacheDefaults.valueCodecFactory().getDeclaredConstructor().newInstance().apply(method);
+        } catch (Exception e) {
+            throw new UndeclaredThrowableException(e);
+        }
+    }
 
-    Class<?> valueType();
+    @Override
+    public String getName() {
+        return cacheResult.cacheName();
+    }
 
-    long expiryForUpdate() default -1;
+    @Override
+    public boolean isStatisticsEnabled() {
+        return redisCacheDefaults.statisticsEnabled();
+    }
 
-    TimeUnit expiryForUpdateTimeUnit() default TimeUnit.SECONDS;
+    @Override
+    public boolean isManagementEnabled() {
+        return redisCacheDefaults.managementEnabled();
+    }
 
-    boolean statisticsEnabled() default true;
+    @Override
+    public long getExpiryForUpdate() {
+        return redisCacheDefaults.expiryForUpdate();
+    }
 
-    boolean managementEnabled() default false;
+    @Override
+    public TimeUnit getExpiryForUpdateTimeUnit() {
+        return redisCacheDefaults.expiryForUpdateTimeUnit();
+    }
 
-    // redis
+    @Override
+    public boolean isRedisCacheEnabled() {
+        return redisCacheDefaults.redisCacheEnabled();
+    }
 
-    boolean redisCacheEnabled() default true;
+    @Override
+    public boolean isKeyNotificationEnabled() {
+        return redisCacheDefaults.keyNotificationEnabled();
+    }
 
-    String[] keyTypeCanonicalName();
+    @Override
+    public Codec getKeyCodec() {
+        return keyCodec;
+    }
 
-    String valueTypeCanonicalName();
+    @Override
+    public Codec getValueCodec() {
+        return valueCodec;
+    }
 
-    String keyCodec() default "";
+    @Override
+    public String[] getKeyTypeCanonicalName() {
+        return keyTypeCanonicalName;
+    }
 
-    String valueCodec();
+    @Override
+    public String getValueTypeCanonicalName() {
+        return valueTypeCanonicalName;
+    }
 
-    boolean keyNotificationEnabled() default true;
+    @Override
+    public boolean isInProcessCacheEnabled() {
+        return redisCacheDefaults.inProcessCacheEnabled();
+    }
 
-    // in-process
+    @Override
+    public int getInProcessCacheMaxEntry() {
+        return redisCacheDefaults.inProcessCacheMaxEntry();
+    }
 
-    boolean inProcessCacheEnabled() default true;
+    @Override
+    public long getInProcessCacheExpiryForUpdate() {
+        return redisCacheDefaults.inProcessCacheExpiryForUpdate();
+    }
 
-    int inProcessCacheMaxEntry() default -1;
+    @Override
+    public TimeUnit getInProcessCacheExpiryForUpdateTimeUnit() {
+        return redisCacheDefaults.inProcessCacheExpiryForUpdateTimeUnit();
+    }
 
-    long inProcessCacheExpiryForUpdate() default -1;
+    @Override
+    @SuppressWarnings("unchecked")
+    public Class<K> getKeyType() {
+        return (Class<K>) keyType;
+    }
 
-    TimeUnit inProcessCacheExpiryForUpdateTimeUnit() default TimeUnit.SECONDS;
+    @Override
+    @SuppressWarnings("unchecked")
+    public Class<V> getValueType() {
+        return (Class<V>) valueType;
+    }
 }

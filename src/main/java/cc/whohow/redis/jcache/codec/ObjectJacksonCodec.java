@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
@@ -55,6 +54,14 @@ public class ObjectJacksonCodec implements Codec {
 
     public ObjectJacksonCodec(ObjectMapper objectMapper, String typeCanonicalName) {
         this(OBJECT_MAPPER, objectMapper.getTypeFactory().constructFromCanonical(typeCanonicalName));
+    }
+
+    public ObjectJacksonCodec(Class<?> type) {
+        this(OBJECT_MAPPER, type);
+    }
+
+    public ObjectJacksonCodec(ObjectMapper objectMapper, Class<?> type) {
+        this(objectMapper, objectMapper.getTypeFactory().constructType(type));
     }
 
     public ObjectJacksonCodec(JavaType type) {

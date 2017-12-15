@@ -3,15 +3,8 @@ package cc.whohow.redis;
 import cc.whohow.redis.client.ConnectionPoolRedis;
 import cc.whohow.redis.jcache.RedisCacheManager;
 import cc.whohow.redis.jcache.configuration.MutableRedisCacheConfiguration;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.redisson.client.RedisPubSubConnection;
-import org.redisson.client.RedisPubSubListener;
+import org.junit.*;
 import org.redisson.client.codec.StringCodec;
-import org.redisson.client.protocol.RedisCommands;
-import org.redisson.client.protocol.pubsub.PubSubType;
 import org.redisson.config.Config;
 
 import javax.cache.Cache;
@@ -21,13 +14,13 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class TestRedisCache {
-    private Redis redis;
-    private RedisCacheManager redisCacheManager;
-    private Cache<String, String> redisCache;
-    private Cache<String, String> redisExpireCache;
+    private static Redis redis;
+    private static RedisCacheManager redisCacheManager;
+    private static Cache<String, String> redisCache;
+    private static Cache<String, String> redisExpireCache;
 
-    @Before
-    public void setup() throws Exception {
+    @BeforeClass
+    public static void setup() throws Exception {
         try (InputStream stream = new FileInputStream("redis.properties")) {
             Properties properties = new Properties();
             properties.load(stream);
@@ -66,8 +59,8 @@ public class TestRedisCache {
         }
     }
 
-    @After
-    public void tearDown() throws Exception {
+    @AfterClass
+    public static void tearDown() throws Exception {
         redisCacheManager.close();
         redis.close();
     }

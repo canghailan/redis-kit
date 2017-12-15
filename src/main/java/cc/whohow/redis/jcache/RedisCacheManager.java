@@ -8,41 +8,44 @@ import org.redisson.client.codec.StringCodec;
 import org.redisson.client.protocol.RedisCommands;
 import org.redisson.client.protocol.pubsub.PubSubType;
 
-import javax.cache.Cache;
 import javax.cache.CacheManager;
 import javax.cache.configuration.Configuration;
 import javax.cache.spi.CachingProvider;
 import java.net.URI;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 @SuppressWarnings("unchecked")
 public class RedisCacheManager implements CacheManager, RedisPubSubListener<Object> {
     protected final String redisCacheManagerChannel = "RedisCacheManager";
-    protected final RedisCachingProvider cachingProvider;
+    protected final Map<String, Consumer<String>> commands = new HashMap<>();
+
     protected final Redis redis;
     protected final Map<String, Cache> caches = new ConcurrentHashMap<>();
     protected final RedisPubSubConnection pubSubConnection;
     protected final Map<String, RedisPubSubListener> keyNotificationListeners = new ConcurrentHashMap<>();
 
     public RedisCacheManager(Redis redis) {
-        this(new RedisCachingProvider(), redis);
-    }
-
-    public RedisCacheManager(RedisCachingProvider cachingProvider, Redis redis) {
-        this.cachingProvider = cachingProvider;
-        this.cachingProvider.setCacheManager(this);
         this.redis = redis;
+        this.initializeCommands();
         this.pubSubConnection = redis.getPubSubConnection();
         this.pubSubConnection.addListener(this);
         this.pubSubConnection.subscribe(StringCodec.INSTANCE, redisCacheManagerChannel);
+        RedisCachingProvider.getInstance().addCacheManager(this);
+    }
+
+    private void initializeCommands() {
+        commands.put(RedisCacheManagerCommand.SYNC.name(), this::onSyncMessage);
+        commands.put(RedisCacheManagerCommand.CLEAR.name(), this::onClearMessage);
     }
 
     @Override
     public CachingProvider getCachingProvider() {
-        return cachingProvider;
+        return RedisCachingProvider.getInstance();
     }
 
     @Override
@@ -58,6 +61,14 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
     @Override
     public Properties getProperties() {
         return null;
+    }
+
+    public <K, V> Cache<K, V> resolveCache(RedisCacheConfiguration configuration) {
+        Cache<K, V> cache = caches.get(configuration.getName());
+        if (cache == null) {
+            cache = createCache(configuration.getName(), configuration);
+        }
+        return cache;
     }
 
     @Override
@@ -222,39 +233,30 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
         }
     }
 
-    public void sendRedisCacheManagerMessage(String command, String message) {
-        redis.execute(RedisCommands.PUBLISH, redisCacheManagerChannel, command + " " + message);
+    public void sendRedisCacheManagerMessage(RedisCacheManagerCommand command, String message) {
+        redis.execute(RedisCommands.PUBLISH, redisCacheManagerChannel, command.name() + " " + message);
     }
 
     public void onRedisCacheManagerMessage(String message) {
         String[] parsed = message.split(" ", 2);
-        switch (parsed[0]) {
-            case "CLEAR": {
-                clearCache(parsed[1]);
-                break;
-            }
-            case "INVALIDATE": {
-                invalidateCache(parsed[1]);
-                break;
-            }
-            default: {
-                break;
-            }
+        Consumer<String> handler = commands.get(parsed[0]);
+        if (handler != null) {
+            handler.accept(parsed[1]);
         }
     }
 
-    public void clearCache(String cacheName) {
+    public void onClearMessage(String cacheName) {
         Cache cache = caches.get(cacheName);
         if (cache != null) {
             cache.clear();
         }
     }
 
-    public void invalidateCache(String cacheName) {
+    public void onSyncMessage(String cacheName) {
         Cache cache = caches.get(cacheName);
         if (cache != null && cache instanceof TierCache) {
             TierCache tierCache = (TierCache) cache;
-            tierCache.invalidateAll();
+            tierCache.synchronizeAll();
         }
     }
 }

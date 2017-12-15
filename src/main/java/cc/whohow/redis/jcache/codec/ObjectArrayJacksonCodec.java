@@ -1,7 +1,9 @@
 package cc.whohow.redis.jcache.codec;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -13,7 +15,6 @@ import org.redisson.client.protocol.Decoder;
 import org.redisson.client.protocol.Encoder;
 
 import java.io.IOException;
-import java.lang.reflect.Type;
 import java.util.Arrays;
 
 public class ObjectArrayJacksonCodec implements Codec {
@@ -61,6 +62,16 @@ public class ObjectArrayJacksonCodec implements Codec {
     public ObjectArrayJacksonCodec(ObjectMapper objectMapper, String... typeCanonicalNames) {
         this(objectMapper, Arrays.stream(typeCanonicalNames)
                 .map(objectMapper.getTypeFactory()::constructFromCanonical)
+                .toArray(JavaType[]::new));
+    }
+
+    public ObjectArrayJacksonCodec(Class<?>... types) {
+        this(OBJECT_MAPPER, types);
+    }
+
+    public ObjectArrayJacksonCodec(ObjectMapper objectMapper, Class<?>... types) {
+        this(OBJECT_MAPPER, Arrays.stream(types)
+                .map(objectMapper.getTypeFactory()::constructType)
                 .toArray(JavaType[]::new));
     }
 
