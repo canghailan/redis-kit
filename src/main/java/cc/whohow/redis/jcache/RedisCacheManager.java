@@ -243,11 +243,11 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
     }
 
     public void sendRedisCacheManagerMessage(RedisCacheManagerCommand command, String message) {
-        redis.execute(RedisCommands.PUBLISH, redisCacheManagerChannel, command.name() + " " + message);
+        redis.execute(RedisCommands.PUBLISH, redisCacheManagerChannel, command.name() + ":" + message);
     }
 
     public void onRedisCacheManagerMessage(String message) {
-        String[] parsed = message.split(" ", 2);
+        String[] parsed = message.split(":", 2);
         Consumer<String> handler = commands.get(parsed[0]);
         if (handler != null) {
             handler.accept(parsed[1]);
