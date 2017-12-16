@@ -1,13 +1,13 @@
 package cc.whohow.redis.util;
 
 import cc.whohow.redis.Redis;
-import cc.whohow.redis.client.RedisPipeline;
+import cc.whohow.redis.RedisPipeline;
 import cc.whohow.redis.codec.Codecs;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import org.redisson.api.RFuture;
 import org.redisson.client.codec.Codec;
 import org.redisson.client.protocol.RedisCommands;
-import org.redisson.misc.RPromise;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
@@ -59,10 +59,10 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number> {
         ByteBuf encodedKey = Codecs.encode(codec, key);
         RedisPipeline pipeline = redis.pipeline();
         pipeline.execute(RedisCommands.MULTI);
-        RPromise<Double> r = pipeline.execute(RedisCommands.ZSCORE, name, encodedKey.retain());
+        RFuture<Double> r = pipeline.execute(RedisCommands.ZSCORE, name, encodedKey.retain());
         pipeline.execute(RedisCommands.ZADD, name, value, encodedKey);
         pipeline.execute(RedisCommands.EXEC);
-        pipeline.sync();
+        pipeline.flush();
         return r.getNow();
     }
 
@@ -75,10 +75,10 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number> {
         ByteBuf encodedKey = Codecs.encode(codec, key);
         RedisPipeline pipeline = redis.pipeline();
         pipeline.execute(RedisCommands.MULTI);
-        RPromise<Double> r = pipeline.execute(RedisCommands.ZSCORE, name, encodedKey.retain());
+        RFuture<Double> r = pipeline.execute(RedisCommands.ZSCORE, name, encodedKey.retain());
         pipeline.execute(RedisCommands.ZREM, name, encodedKey);
         pipeline.execute(RedisCommands.EXEC);
-        pipeline.sync();
+        pipeline.flush();
         return r.getNow();
     }
 
@@ -134,10 +134,10 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number> {
         ByteBuf encodedKey = Codecs.encode(codec, key);
         RedisPipeline pipeline = redis.pipeline();
         pipeline.execute(RedisCommands.MULTI);
-        RPromise<Double> r = pipeline.execute(RedisCommands.ZSCORE, name, encodedKey.retain());
+        RFuture<Double> r = pipeline.execute(RedisCommands.ZSCORE, name, encodedKey.retain());
         pipeline.execute(RedisCommands.ZADD, name, "NX", value, Codecs.encode(codec, key));
         pipeline.execute(RedisCommands.EXEC);
-        pipeline.sync();
+        pipeline.flush();
         return r.getNow();
     }
 
@@ -162,10 +162,10 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number> {
         ByteBuf encodedKey = Codecs.encode(codec, key);
         RedisPipeline pipeline = redis.pipeline();
         pipeline.execute(RedisCommands.MULTI);
-        RPromise<Double> r = pipeline.execute(RedisCommands.ZSCORE, name, encodedKey.retain());
+        RFuture<Double> r = pipeline.execute(RedisCommands.ZSCORE, name, encodedKey.retain());
         pipeline.execute(RedisCommands.ZADD, name, "XX", value, Codecs.encode(codec, key));
         pipeline.execute(RedisCommands.EXEC);
-        pipeline.sync();
+        pipeline.flush();
         return r.getNow();
     }
 

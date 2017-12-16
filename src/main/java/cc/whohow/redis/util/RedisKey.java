@@ -1,13 +1,13 @@
 package cc.whohow.redis.util;
 
 import cc.whohow.redis.Redis;
-import cc.whohow.redis.client.RedisPipeline;
+import cc.whohow.redis.RedisPipeline;
 import cc.whohow.redis.codec.Codecs;
 import cc.whohow.redis.codec.OptionalCodec;
 import io.netty.buffer.ByteBuf;
+import org.redisson.api.RFuture;
 import org.redisson.client.codec.Codec;
 import org.redisson.client.protocol.RedisCommands;
-import org.redisson.misc.RPromise;
 
 import java.util.Collection;
 import java.util.Map;
@@ -64,10 +64,10 @@ public class RedisKey<V> implements ConcurrentMap<String, V> {
     public V put(String key, V value) {
         RedisPipeline pipeline = redis.pipeline();
         pipeline.execute(RedisCommands.MULTI);
-        RPromise<V> r = pipeline.execute(codec, RedisCommands.GET, key);
+        RFuture<V> r = pipeline.execute(codec, RedisCommands.GET, key);
         pipeline.execute(RedisCommands.SET, key, Codecs.encode(codec, value));
         pipeline.execute(RedisCommands.EXEC);
-        pipeline.sync();
+        pipeline.flush();
         return r.getNow();
     }
 
@@ -79,10 +79,10 @@ public class RedisKey<V> implements ConcurrentMap<String, V> {
     public V remove(Object key) {
         RedisPipeline pipeline = redis.pipeline();
         pipeline.execute(RedisCommands.MULTI);
-        RPromise<V> r = pipeline.execute(codec, RedisCommands.GET, key);
+        RFuture<V> r = pipeline.execute(codec, RedisCommands.GET, key);
         pipeline.execute(RedisCommands.DEL, key);
         pipeline.execute(RedisCommands.EXEC);
-        pipeline.sync();
+        pipeline.flush();
         return r.getNow();
     }
 
@@ -136,10 +136,10 @@ public class RedisKey<V> implements ConcurrentMap<String, V> {
     public V putIfAbsent(String key, V value) {
         RedisPipeline pipeline = redis.pipeline();
         pipeline.execute(RedisCommands.MULTI);
-        RPromise<V> r = pipeline.execute(codec, RedisCommands.GET, key);
+        RFuture<V> r = pipeline.execute(codec, RedisCommands.GET, key);
         pipeline.execute(RedisCommands.SET, key, Codecs.encode(codec, value), "NX");
         pipeline.execute(RedisCommands.EXEC);
-        pipeline.sync();
+        pipeline.flush();
         return r.getNow();
     }
 
@@ -167,10 +167,10 @@ public class RedisKey<V> implements ConcurrentMap<String, V> {
     public V replace(String key, V value) {
         RedisPipeline pipeline = redis.pipeline();
         pipeline.execute(RedisCommands.MULTI);
-        RPromise<V> r = pipeline.execute(codec, RedisCommands.GET, key);
+        RFuture<V> r = pipeline.execute(codec, RedisCommands.GET, key);
         pipeline.execute(RedisCommands.SET, key, Codecs.encode(codec, value), "XX");
         pipeline.execute(RedisCommands.EXEC);
-        pipeline.sync();
+        pipeline.flush();
         return r.getNow();
     }
 

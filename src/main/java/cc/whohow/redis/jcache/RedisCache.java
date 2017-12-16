@@ -24,7 +24,6 @@ import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 /**
@@ -268,7 +267,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
     }
 
     public ByteBuf toRedisKey(ByteBuf key) {
-        return Unpooled.wrappedBuffer(keyPrefix, key);
+        return Unpooled.wrappedBuffer(keyPrefix.retain(), key);
     }
 
     protected Map<K, V> toMap(Iterable<? extends K> keys, Iterable<? extends V> values) {
@@ -286,7 +285,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public String toString() {
-        return "RedisCache{" +
+        return getClass().getSimpleName() + "{" +
                 "redis=" + redis +
                 ", name=" + configuration.getName() +
                 ", keyCodec=" + keyCodec +

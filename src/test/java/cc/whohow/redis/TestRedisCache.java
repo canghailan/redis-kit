@@ -1,19 +1,24 @@
 package cc.whohow.redis;
 
-import cc.whohow.redis.client.ConnectionPoolRedis;
+import cc.whohow.redis.client.RedisAdapter;
 import cc.whohow.redis.jcache.RedisCacheManager;
 import cc.whohow.redis.jcache.configuration.MutableRedisCacheConfiguration;
-import org.junit.*;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.redisson.Redisson;
 import org.redisson.client.codec.StringCodec;
-import org.redisson.config.Config;
 
 import javax.cache.Cache;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class TestRedisCache {
+    private static Redisson redisson;
     private static Redis redis;
     private static RedisCacheManager redisCacheManager;
     private static Cache<String, String> redisCache;
@@ -21,42 +26,28 @@ public class TestRedisCache {
 
     @BeforeClass
     public static void setup() throws Exception {
-        try (InputStream stream = new FileInputStream("redis.properties")) {
-            Properties properties = new Properties();
-            properties.load(stream);
+        redisson = TestRedis.setupRedisson();
+        redis = new RedisAdapter(redisson.getConnectionManager());
 
-            String host = properties.getProperty("host");
-            int port = Integer.parseInt(properties.getProperty("port", "6379"));
-            String password = properties.getProperty("password", "");
-            int database = Integer.parseInt(properties.getProperty("database", "0"));
+        redisCacheManager = new RedisCacheManager(redis);
 
-            Config config = new Config();
-            config.useSingleServer()
-                    .setAddress("redis://" + host + ":" + port)
-                    .setPassword(password)
-                    .setDatabase(database);
-            redis = new ConnectionPoolRedis(config);
+        MutableRedisCacheConfiguration<String, String> config1 = new MutableRedisCacheConfiguration<>();
+        config1.setName("test");
+        config1.setRedisCacheEnabled(true);
+        config1.setKeyCodec(StringCodec.INSTANCE);
+        config1.setValueCodec(StringCodec.INSTANCE);
+        config1.setInProcessCacheEnabled(false);
+        redisCache = redisCacheManager.createCache(config1.getName(), config1);
 
-            redisCacheManager = new RedisCacheManager(redis);
-
-            MutableRedisCacheConfiguration<String, String> config1 = new MutableRedisCacheConfiguration<>();
-            config1.setName("test");
-            config1.setRedisCacheEnabled(true);
-            config1.setKeyCodec(StringCodec.INSTANCE);
-            config1.setValueCodec(StringCodec.INSTANCE);
-            config1.setInProcessCacheEnabled(false);
-            redisCache = redisCacheManager.createCache(config1.getName(), config1);
-
-            MutableRedisCacheConfiguration<String, String> config2 = new MutableRedisCacheConfiguration<>();
-            config2.setName("test-ex");
-            config2.setRedisCacheEnabled(true);
-            config2.setKeyCodec(StringCodec.INSTANCE);
-            config2.setValueCodec(StringCodec.INSTANCE);
-            config2.setExpiryForUpdate(60L);
-            config2.setExpiryForUpdateTimeUnit(TimeUnit.SECONDS);
-            config2.setInProcessCacheEnabled(false);
-            redisExpireCache = redisCacheManager.createCache(config2.getName(), config2);
-        }
+        MutableRedisCacheConfiguration<String, String> config2 = new MutableRedisCacheConfiguration<>();
+        config2.setName("test-ex");
+        config2.setRedisCacheEnabled(true);
+        config2.setKeyCodec(StringCodec.INSTANCE);
+        config2.setValueCodec(StringCodec.INSTANCE);
+        config2.setExpiryForUpdate(60L);
+        config2.setExpiryForUpdateTimeUnit(TimeUnit.SECONDS);
+        config2.setInProcessCacheEnabled(false);
+        redisExpireCache = redisCacheManager.createCache(config2.getName(), config2);
     }
 
     @AfterClass
@@ -80,7 +71,7 @@ public class TestRedisCache {
         redisCache.put("a", "z");
         redisCache.put("b", "y");
         redisCache.put("c", "x");
-        Assert.assertEquals(map, redisCache.getAll(new HashSet<>(Arrays.asList("a","b"))));
+        Assert.assertEquals(map, redisCache.getAll(new HashSet<>(Arrays.asList("a", "b"))));
     }
 
     @Test
@@ -147,7 +138,7 @@ public class TestRedisCache {
         redisCache.put("a", "z");
         Assert.assertTrue(redisCache.containsKey("a"));
         redisCache.remove("c");
-        redisCache.removeAll(new HashSet<>(Arrays.asList("a","b","c")));
+        redisCache.removeAll(new HashSet<>(Arrays.asList("a", "b", "c")));
         Assert.assertFalse(redisCache.containsKey("a"));
         Assert.assertFalse(redisCache.containsKey("b"));
         Assert.assertFalse(redisCache.containsKey("c"));

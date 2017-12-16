@@ -1,0 +1,623 @@
+# JMH version: 1.19
+# VM version: JDK 1.8.0_112, VM 25.112-b15
+# VM invoker: C:\Program Files\Java\jdk1.8.0_112\jre\bin\java.exe
+# VM options: -javaagent:C:\Program Files\JetBrains\IntelliJ IDEA 2017.3\lib\idea_rt.jar=14905:C:\Program Files\JetBrains\IntelliJ IDEA 2017.3\bin -Dfile.encoding=UTF-8
+# Warmup: 5 iterations, 1 s each
+# Measurement: 20 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 128 threads, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: cc.whohow.redis.RedisBenchmark.testJedis
+
+# Run progress: 0.00% complete, ETA 00:07:30
+# Fork: 1 of 3
+# Warmup Iteration   1: 64.515 ops/ms
+# Warmup Iteration   2: 82.238 ops/ms
+# Warmup Iteration   3: 71.755 ops/ms
+# Warmup Iteration   4: 79.388 ops/ms
+# Warmup Iteration   5: 72.406 ops/ms
+Iteration   1: 74.099 ops/ms
+Iteration   2: 72.598 ops/ms
+Iteration   3: 81.065 ops/ms
+Iteration   4: 74.785 ops/ms
+Iteration   5: 74.714 ops/ms
+Iteration   6: 73.659 ops/ms
+Iteration   7: 74.456 ops/ms
+Iteration   8: 71.396 ops/ms
+Iteration   9: 76.317 ops/ms
+Iteration  10: 76.755 ops/ms
+Iteration  11: 72.336 ops/ms
+Iteration  12: 69.740 ops/ms
+Iteration  13: 150.227 ops/ms
+Iteration  14: 109.553 ops/ms
+Iteration  15: 97.263 ops/ms
+Iteration  16: 98.138 ops/ms
+Iteration  17: 109.004 ops/ms
+Iteration  18: 123.512 ops/ms
+Iteration  19: 105.268 ops/ms
+Iteration  20: 84.060 ops/ms
+
+# Run progress: 5.56% complete, ETA 00:13:27
+# Fork: 2 of 3
+# Warmup Iteration   1: 73.579 ops/ms
+# Warmup Iteration   2: 105.882 ops/ms
+# Warmup Iteration   3: 94.731 ops/ms
+# Warmup Iteration   4: 114.806 ops/ms
+# Warmup Iteration   5: 86.698 ops/ms
+Iteration   1: 113.750 ops/ms
+Iteration   2: 90.901 ops/ms
+Iteration   3: 99.772 ops/ms
+Iteration   4: 113.165 ops/ms
+Iteration   5: 99.678 ops/ms
+Iteration   6: 189.684 ops/ms
+Iteration   7: 95.607 ops/ms
+Iteration   8: 103.403 ops/ms
+Iteration   9: 118.764 ops/ms
+Iteration  10: 116.875 ops/ms
+Iteration  11: 126.617 ops/ms
+Iteration  12: 104.629 ops/ms
+Iteration  13: 138.754 ops/ms
+Iteration  14: 129.813 ops/ms
+Iteration  15: 91.105 ops/ms
+Iteration  16: 95.977 ops/ms
+Iteration  17: 129.453 ops/ms
+Iteration  18: 99.060 ops/ms
+Iteration  19: 109.416 ops/ms
+Iteration  20: 108.570 ops/ms
+
+# Run progress: 11.11% complete, ETA 00:13:46
+# Fork: 3 of 3
+# Warmup Iteration   1: 77.544 ops/ms
+# Warmup Iteration   2: 117.097 ops/ms
+# Warmup Iteration   3: 84.572 ops/ms
+# Warmup Iteration   4: 114.988 ops/ms
+# Warmup Iteration   5: 115.137 ops/ms
+Iteration   1: 186.475 ops/ms
+Iteration   2: 92.379 ops/ms
+Iteration   3: 111.738 ops/ms
+Iteration   4: 113.963 ops/ms
+Iteration   5: 157.634 ops/ms
+Iteration   6: 107.133 ops/ms
+Iteration   7: 148.261 ops/ms
+Iteration   8: 166.961 ops/ms
+Iteration   9: 114.677 ops/ms
+Iteration  10: 88.130 ops/ms
+Iteration  11: 115.488 ops/ms
+Iteration  12: 125.752 ops/ms
+Iteration  13: 102.024 ops/ms
+Iteration  14: 94.525 ops/ms
+Iteration  15: 131.805 ops/ms
+Iteration  16: 161.941 ops/ms
+Iteration  17: 108.739 ops/ms
+Iteration  18: 154.367 ops/ms
+Iteration  19: 159.858 ops/ms
+Iteration  20: 91.354 ops/ms
+
+
+Result "cc.whohow.redis.RedisBenchmark.testJedis":
+  109.619 ±(99.9%) 13.052 ops/ms [Average]
+  (min, avg, max) = (69.740, 109.619, 189.684), stdev = 29.192
+  CI (99.9%): [96.567, 122.671] (assumes normal distribution)
+
+
+# JMH version: 1.19
+# VM version: JDK 1.8.0_112, VM 25.112-b15
+# VM invoker: C:\Program Files\Java\jdk1.8.0_112\jre\bin\java.exe
+# VM options: -javaagent:C:\Program Files\JetBrains\IntelliJ IDEA 2017.3\lib\idea_rt.jar=14905:C:\Program Files\JetBrains\IntelliJ IDEA 2017.3\bin -Dfile.encoding=UTF-8
+# Warmup: 5 iterations, 1 s each
+# Measurement: 20 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 128 threads, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: cc.whohow.redis.RedisBenchmark.testRedisConnectionPool
+
+# Run progress: 16.67% complete, ETA 00:13:19
+# Fork: 1 of 3
+# Warmup Iteration   1: 19.256 ops/ms
+# Warmup Iteration   2: 40.980 ops/ms
+# Warmup Iteration   3: 45.713 ops/ms
+# Warmup Iteration   4: 42.428 ops/ms
+# Warmup Iteration   5: 45.893 ops/ms
+Iteration   1: 41.695 ops/ms
+Iteration   2: 45.735 ops/ms
+Iteration   3: 42.264 ops/ms
+Iteration   4: 42.402 ops/ms
+Iteration   5: 42.152 ops/ms
+Iteration   6: 42.463 ops/ms
+Iteration   7: 41.437 ops/ms
+Iteration   8: 42.080 ops/ms
+Iteration   9: 41.078 ops/ms
+Iteration  10: 42.736 ops/ms
+Iteration  11: 41.347 ops/ms
+Iteration  12: 40.774 ops/ms
+Iteration  13: 42.311 ops/ms
+Iteration  14: 42.443 ops/ms
+Iteration  15: 44.093 ops/ms
+Iteration  16: 42.574 ops/ms
+Iteration  17: 42.541 ops/ms
+Iteration  18: 42.922 ops/ms
+Iteration  19: 42.973 ops/ms
+Iteration  20: 45.018 ops/ms
+
+# Run progress: 22.22% complete, ETA 00:11:07
+# Fork: 2 of 3
+# Warmup Iteration   1: 16.406 ops/ms
+# Warmup Iteration   2: 43.569 ops/ms
+# Warmup Iteration   3: 43.039 ops/ms
+# Warmup Iteration   4: 46.084 ops/ms
+# Warmup Iteration   5: 45.472 ops/ms
+Iteration   1: 41.435 ops/ms
+Iteration   2: 44.492 ops/ms
+Iteration   3: 41.800 ops/ms
+Iteration   4: 42.681 ops/ms
+Iteration   5: 42.474 ops/ms
+Iteration   6: 44.529 ops/ms
+Iteration   7: 43.004 ops/ms
+Iteration   8: 42.540 ops/ms
+Iteration   9: 43.316 ops/ms
+Iteration  10: 41.377 ops/ms
+Iteration  11: 43.656 ops/ms
+Iteration  12: 42.542 ops/ms
+Iteration  13: 42.568 ops/ms
+Iteration  14: 40.853 ops/ms
+Iteration  15: 42.393 ops/ms
+Iteration  16: 41.012 ops/ms
+Iteration  17: 41.710 ops/ms
+Iteration  18: 42.879 ops/ms
+Iteration  19: 44.876 ops/ms
+Iteration  20: 42.797 ops/ms
+
+# Run progress: 27.78% complete, ETA 00:09:35
+# Fork: 3 of 3
+# Warmup Iteration   1: 19.844 ops/ms
+# Warmup Iteration   2: 43.377 ops/ms
+# Warmup Iteration   3: 43.426 ops/ms
+# Warmup Iteration   4: 43.183 ops/ms
+# Warmup Iteration   5: 42.211 ops/ms
+Iteration   1: 43.252 ops/ms
+Iteration   2: 41.037 ops/ms
+Iteration   3: 42.616 ops/ms
+Iteration   4: 41.600 ops/ms
+Iteration   5: 42.404 ops/ms
+Iteration   6: 43.766 ops/ms
+Iteration   7: 41.242 ops/ms
+Iteration   8: 42.579 ops/ms
+Iteration   9: 45.605 ops/ms
+Iteration  10: 43.219 ops/ms
+Iteration  11: 42.774 ops/ms
+Iteration  12: 36.069 ops/ms
+Iteration  13: 44.332 ops/ms
+Iteration  14: 44.200 ops/ms
+Iteration  15: 43.946 ops/ms
+Iteration  16: 43.035 ops/ms
+Iteration  17: 43.708 ops/ms
+Iteration  18: 44.435 ops/ms
+Iteration  19: 42.897 ops/ms
+Iteration  20: 43.288 ops/ms
+
+
+Result "cc.whohow.redis.RedisBenchmark.testRedisConnectionPool":
+  42.666 ±(99.9%) 0.649 ops/ms [Average]
+  (min, avg, max) = (36.069, 42.666, 45.735), stdev = 1.451
+  CI (99.9%): [42.017, 43.315] (assumes normal distribution)
+
+
+# JMH version: 1.19
+# VM version: JDK 1.8.0_112, VM 25.112-b15
+# VM invoker: C:\Program Files\Java\jdk1.8.0_112\jre\bin\java.exe
+# VM options: -javaagent:C:\Program Files\JetBrains\IntelliJ IDEA 2017.3\lib\idea_rt.jar=14905:C:\Program Files\JetBrains\IntelliJ IDEA 2017.3\bin -Dfile.encoding=UTF-8
+# Warmup: 5 iterations, 1 s each
+# Measurement: 20 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 128 threads, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: cc.whohow.redis.RedisBenchmark.testRedisson
+
+# Run progress: 33.33% complete, ETA 00:08:23
+# Fork: 1 of 3
+# Warmup Iteration   1: 16.677 ops/ms
+# Warmup Iteration   2: 40.398 ops/ms
+# Warmup Iteration   3: 43.271 ops/ms
+# Warmup Iteration   4: 42.294 ops/ms
+# Warmup Iteration   5: 43.653 ops/ms
+Iteration   1: 43.032 ops/ms
+Iteration   2: 42.519 ops/ms
+Iteration   3: 43.286 ops/ms
+Iteration   4: 42.086 ops/ms
+Iteration   5: 42.622 ops/ms
+Iteration   6: 41.633 ops/ms
+Iteration   7: 40.236 ops/ms
+Iteration   8: 41.347 ops/ms
+Iteration   9: 43.461 ops/ms
+Iteration  10: 42.856 ops/ms
+Iteration  11: 42.776 ops/ms
+Iteration  12: 42.253 ops/ms
+Iteration  13: 42.318 ops/ms
+Iteration  14: 42.905 ops/ms
+Iteration  15: 42.582 ops/ms
+Iteration  16: 41.155 ops/ms
+Iteration  17: 43.612 ops/ms
+Iteration  18: 41.980 ops/ms
+Iteration  19: 42.483 ops/ms
+Iteration  20: 42.587 ops/ms
+
+# Run progress: 38.89% complete, ETA 00:07:23
+# Fork: 2 of 3
+# Warmup Iteration   1: 16.744 ops/ms
+# Warmup Iteration   2: 43.786 ops/ms
+# Warmup Iteration   3: 39.992 ops/ms
+# Warmup Iteration   4: 43.233 ops/ms
+# Warmup Iteration   5: 42.500 ops/ms
+Iteration   1: 42.109 ops/ms
+Iteration   2: 42.774 ops/ms
+Iteration   3: 40.976 ops/ms
+Iteration   4: 40.967 ops/ms
+Iteration   5: 42.583 ops/ms
+Iteration   6: 42.459 ops/ms
+Iteration   7: 41.606 ops/ms
+Iteration   8: 42.230 ops/ms
+Iteration   9: 42.393 ops/ms
+Iteration  10: 41.214 ops/ms
+Iteration  11: 43.305 ops/ms
+Iteration  12: 41.946 ops/ms
+Iteration  13: 42.488 ops/ms
+Iteration  14: 41.746 ops/ms
+Iteration  15: 41.997 ops/ms
+Iteration  16: 42.024 ops/ms
+Iteration  17: 41.256 ops/ms
+Iteration  18: 41.729 ops/ms
+Iteration  19: 41.705 ops/ms
+Iteration  20: 42.027 ops/ms
+
+# Run progress: 44.44% complete, ETA 00:06:30
+# Fork: 3 of 3
+# Warmup Iteration   1: 21.439 ops/ms
+# Warmup Iteration   2: 41.297 ops/ms
+# Warmup Iteration   3: 42.267 ops/ms
+# Warmup Iteration   4: 42.011 ops/ms
+# Warmup Iteration   5: 41.245 ops/ms
+Iteration   1: 42.158 ops/ms
+Iteration   2: 40.532 ops/ms
+Iteration   3: 42.032 ops/ms
+Iteration   4: 41.372 ops/ms
+Iteration   5: 42.494 ops/ms
+Iteration   6: 41.947 ops/ms
+Iteration   7: 42.078 ops/ms
+Iteration   8: 40.782 ops/ms
+Iteration   9: 41.365 ops/ms
+Iteration  10: 41.749 ops/ms
+Iteration  11: 41.845 ops/ms
+Iteration  12: 43.113 ops/ms
+Iteration  13: 41.589 ops/ms
+Iteration  14: 41.486 ops/ms
+Iteration  15: 41.710 ops/ms
+Iteration  16: 41.963 ops/ms
+Iteration  17: 41.186 ops/ms
+Iteration  18: 41.869 ops/ms
+Iteration  19: 42.196 ops/ms
+Iteration  20: 43.244 ops/ms
+
+
+Result "cc.whohow.redis.RedisBenchmark.testRedisson":
+  42.066 ±(99.9%) 0.326 ops/ms [Average]
+  (min, avg, max) = (40.236, 42.066, 43.612), stdev = 0.728
+  CI (99.9%): [41.741, 42.392] (assumes normal distribution)
+
+
+# JMH version: 1.19
+# VM version: JDK 1.8.0_112, VM 25.112-b15
+# VM invoker: C:\Program Files\Java\jdk1.8.0_112\jre\bin\java.exe
+# VM options: -javaagent:C:\Program Files\JetBrains\IntelliJ IDEA 2017.3\lib\idea_rt.jar=14905:C:\Program Files\JetBrains\IntelliJ IDEA 2017.3\bin -Dfile.encoding=UTF-8
+# Warmup: 5 iterations, 1 s each
+# Measurement: 20 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 128 threads, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: cc.whohow.redis.RedisBenchmark.testJedis
+
+# Run progress: 50.00% complete, ETA 00:05:43
+# Fork: 1 of 3
+# Warmup Iteration   1: 2.353 ±(99.9%) 0.594 ms/op
+# Warmup Iteration   2: 6.411 ±(99.9%) 9.481 ms/op
+# Warmup Iteration   3: 3.041 ±(99.9%) 1.402 ms/op
+# Warmup Iteration   4: 18.967 ±(99.9%) 30.321 ms/op
+# Warmup Iteration   5: 3.832 ±(99.9%) 3.062 ms/op
+Iteration   1: 2.797 ±(99.9%) 1.202 ms/op
+Iteration   2: 5.436 ±(99.9%) 7.979 ms/op
+Iteration   3: 5.546 ±(99.9%) 7.036 ms/op
+Iteration   4: 14.698 ±(99.9%) 40.621 ms/op
+Iteration   5: 2.135 ±(99.9%) 0.930 ms/op
+Iteration   6: 6.188 ±(99.9%) 7.871 ms/op
+Iteration   7: 3.685 ±(99.9%) 3.580 ms/op
+Iteration   8: 2.455 ±(99.9%) 0.968 ms/op
+Iteration   9: 3.988 ±(99.9%) 3.775 ms/op
+Iteration  10: 3.259 ±(99.9%) 3.041 ms/op
+Iteration  11: 3.857 ±(99.9%) 3.083 ms/op
+Iteration  12: 3.773 ±(99.9%) 2.131 ms/op
+Iteration  13: 3.938 ±(99.9%) 3.820 ms/op
+Iteration  14: 2.803 ±(99.9%) 1.743 ms/op
+Iteration  15: 3.029 ±(99.9%) 1.705 ms/op
+Iteration  16: 11.709 ±(99.9%) 24.420 ms/op
+Iteration  17: 3.402 ±(99.9%) 2.975 ms/op
+Iteration  18: 4.083 ±(99.9%) 4.361 ms/op
+Iteration  19: 10.311 ±(99.9%) 20.215 ms/op
+Iteration  20: 3.405 ±(99.9%) 2.029 ms/op
+
+# Run progress: 55.56% complete, ETA 00:05:16
+# Fork: 2 of 3
+# Warmup Iteration   1: 2.605 ±(99.9%) 0.787 ms/op
+# Warmup Iteration   2: 7.399 ±(99.9%) 10.991 ms/op
+# Warmup Iteration   3: 2.522 ±(99.9%) 0.839 ms/op
+# Warmup Iteration   4: 28.806 ±(99.9%) 40.451 ms/op
+# Warmup Iteration   5: 2.788 ±(99.9%) 1.873 ms/op
+Iteration   1: 5.351 ±(99.9%) 6.414 ms/op
+Iteration   2: 9.713 ±(99.9%) 24.239 ms/op
+Iteration   3: 5.050 ±(99.9%) 6.563 ms/op
+Iteration   4: 3.358 ±(99.9%) 2.825 ms/op
+Iteration   5: 2.822 ±(99.9%) 1.473 ms/op
+Iteration   6: 2.939 ±(99.9%) 1.635 ms/op
+Iteration   7: 5.128 ±(99.9%) 5.761 ms/op
+Iteration   8: 10.297 ±(99.9%) 15.570 ms/op
+Iteration   9: 4.214 ±(99.9%) 5.942 ms/op
+Iteration  10: 3.967 ±(99.9%) 2.544 ms/op
+Iteration  11: 2.214 ±(99.9%) 0.949 ms/op
+Iteration  12: 6.743 ±(99.9%) 11.737 ms/op
+Iteration  13: 2.682 ±(99.9%) 0.928 ms/op
+Iteration  14: 3.338 ±(99.9%) 2.177 ms/op
+Iteration  15: 4.965 ±(99.9%) 4.637 ms/op
+Iteration  16: 4.878 ±(99.9%) 7.063 ms/op
+Iteration  17: 2.989 ±(99.9%) 2.056 ms/op
+Iteration  18: 9.595 ±(99.9%) 22.661 ms/op
+Iteration  19: 2.382 ±(99.9%) 0.899 ms/op
+Iteration  20: 20.893 ±(99.9%) 45.386 ms/op
+
+# Run progress: 61.11% complete, ETA 00:04:46
+# Fork: 3 of 3
+# Warmup Iteration   1: 2.224 ±(99.9%) 0.420 ms/op
+# Warmup Iteration   2: 3.851 ±(99.9%) 2.970 ms/op
+# Warmup Iteration   3: 2.492 ±(99.9%) 0.607 ms/op
+# Warmup Iteration   4: 13.166 ±(99.9%) 26.866 ms/op
+# Warmup Iteration   5: 5.341 ±(99.9%) 4.186 ms/op
+Iteration   1: 7.645 ±(99.9%) 16.019 ms/op
+Iteration   2: 2.760 ±(99.9%) 1.437 ms/op
+Iteration   3: 3.456 ±(99.9%) 2.969 ms/op
+Iteration   4: 6.212 ±(99.9%) 8.660 ms/op
+Iteration   5: 3.291 ±(99.9%) 2.598 ms/op
+Iteration   6: 3.207 ±(99.9%) 2.059 ms/op
+Iteration   7: 3.348 ±(99.9%) 2.895 ms/op
+Iteration   8: 3.624 ±(99.9%) 2.085 ms/op
+Iteration   9: 17.633 ±(99.9%) 35.850 ms/op
+Iteration  10: 2.241 ±(99.9%) 0.672 ms/op
+Iteration  11: 2.546 ±(99.9%) 1.288 ms/op
+Iteration  12: 16.788 ±(99.9%) 32.766 ms/op
+Iteration  13: 4.717 ±(99.9%) 5.852 ms/op
+Iteration  14: 3.292 ±(99.9%) 1.830 ms/op
+Iteration  15: 15.080 ±(99.9%) 29.268 ms/op
+Iteration  16: 8.948 ±(99.9%) 21.965 ms/op
+Iteration  17: 3.711 ±(99.9%) 2.725 ms/op
+Iteration  18: 2.557 ±(99.9%) 1.121 ms/op
+Iteration  19: 2.702 ±(99.9%) 1.549 ms/op
+Iteration  20: 6.486 ±(99.9%) 12.489 ms/op
+
+
+Result "cc.whohow.redis.RedisBenchmark.testJedis":
+  5.571 ±(99.9%) 1.873 ms/op [Average]
+  (min, avg, max) = (2.135, 5.571, 20.893), stdev = 4.188
+  CI (99.9%): [3.698, 7.444] (assumes normal distribution)
+
+
+# JMH version: 1.19
+# VM version: JDK 1.8.0_112, VM 25.112-b15
+# VM invoker: C:\Program Files\Java\jdk1.8.0_112\jre\bin\java.exe
+# VM options: -javaagent:C:\Program Files\JetBrains\IntelliJ IDEA 2017.3\lib\idea_rt.jar=14905:C:\Program Files\JetBrains\IntelliJ IDEA 2017.3\bin -Dfile.encoding=UTF-8
+# Warmup: 5 iterations, 1 s each
+# Measurement: 20 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 128 threads, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: cc.whohow.redis.RedisBenchmark.testRedisConnectionPool
+
+# Run progress: 66.67% complete, ETA 00:04:12
+# Fork: 1 of 3
+# Warmup Iteration   1: 6.262 ±(99.9%) 0.537 ms/op
+# Warmup Iteration   2: 2.906 ±(99.9%) 0.006 ms/op
+# Warmup Iteration   3: 3.121 ±(99.9%) 0.008 ms/op
+# Warmup Iteration   4: 2.793 ±(99.9%) 0.007 ms/op
+# Warmup Iteration   5: 2.892 ±(99.9%) 0.007 ms/op
+Iteration   1: 2.831 ±(99.9%) 0.007 ms/op
+Iteration   2: 2.813 ±(99.9%) 0.004 ms/op
+Iteration   3: 2.779 ±(99.9%) 0.005 ms/op
+Iteration   4: 2.891 ±(99.9%) 0.004 ms/op
+Iteration   5: 2.821 ±(99.9%) 0.005 ms/op
+Iteration   6: 2.938 ±(99.9%) 0.005 ms/op
+Iteration   7: 2.887 ±(99.9%) 0.005 ms/op
+Iteration   8: 2.967 ±(99.9%) 0.005 ms/op
+Iteration   9: 2.869 ±(99.9%) 0.033 ms/op
+Iteration  10: 2.872 ±(99.9%) 0.007 ms/op
+Iteration  11: 2.870 ±(99.9%) 0.006 ms/op
+Iteration  12: 2.822 ±(99.9%) 0.004 ms/op
+Iteration  13: 2.846 ±(99.9%) 0.004 ms/op
+Iteration  14: 2.963 ±(99.9%) 0.008 ms/op
+Iteration  15: 3.033 ±(99.9%) 0.003 ms/op
+Iteration  16: 3.054 ±(99.9%) 0.004 ms/op
+Iteration  17: 2.872 ±(99.9%) 0.003 ms/op
+Iteration  18: 2.921 ±(99.9%) 0.004 ms/op
+Iteration  19: 3.014 ±(99.9%) 0.003 ms/op
+Iteration  20: 3.009 ±(99.9%) 0.003 ms/op
+
+# Run progress: 72.22% complete, ETA 00:03:26
+# Fork: 2 of 3
+# Warmup Iteration   1: 49.209 ±(99.9%) 13.029 ms/op
+# Warmup Iteration   2: 3.553 ±(99.9%) 0.015 ms/op
+# Warmup Iteration   3: 2.811 ±(99.9%) 0.004 ms/op
+# Warmup Iteration   4: 2.939 ±(99.9%) 0.006 ms/op
+# Warmup Iteration   5: 3.051 ±(99.9%) 0.006 ms/op
+Iteration   1: 2.964 ±(99.9%) 0.004 ms/op
+Iteration   2: 2.931 ±(99.9%) 0.004 ms/op
+Iteration   3: 3.100 ±(99.9%) 0.004 ms/op
+Iteration   4: 2.911 ±(99.9%) 0.004 ms/op
+Iteration   5: 3.060 ±(99.9%) 0.004 ms/op
+Iteration   6: 2.936 ±(99.9%) 0.004 ms/op
+Iteration   7: 2.945 ±(99.9%) 0.005 ms/op
+Iteration   8: 3.020 ±(99.9%) 0.006 ms/op
+Iteration   9: 2.892 ±(99.9%) 0.005 ms/op
+Iteration  10: 3.094 ±(99.9%) 0.004 ms/op
+Iteration  11: 3.007 ±(99.9%) 0.007 ms/op
+Iteration  12: 2.888 ±(99.9%) 0.006 ms/op
+Iteration  13: 2.807 ±(99.9%) 0.005 ms/op
+Iteration  14: 2.838 ±(99.9%) 0.006 ms/op
+Iteration  15: 2.822 ±(99.9%) 0.006 ms/op
+Iteration  16: 2.838 ±(99.9%) 0.008 ms/op
+Iteration  17: 2.876 ±(99.9%) 0.005 ms/op
+Iteration  18: 2.958 ±(99.9%) 0.006 ms/op
+Iteration  19: 3.057 ±(99.9%) 0.006 ms/op
+Iteration  20: 3.106 ±(99.9%) 0.005 ms/op
+
+# Run progress: 77.78% complete, ETA 00:02:42
+# Fork: 3 of 3
+# Warmup Iteration   1: 6.272 ±(99.9%) 0.217 ms/op
+# Warmup Iteration   2: 2.955 ±(99.9%) 0.007 ms/op
+# Warmup Iteration   3: 2.877 ±(99.9%) 0.007 ms/op
+# Warmup Iteration   4: 2.962 ±(99.9%) 0.004 ms/op
+# Warmup Iteration   5: 2.925 ±(99.9%) 0.017 ms/op
+Iteration   1: 2.828 ±(99.9%) 0.004 ms/op
+Iteration   2: 3.008 ±(99.9%) 0.022 ms/op
+Iteration   3: 3.013 ±(99.9%) 0.004 ms/op
+Iteration   4: 2.994 ±(99.9%) 0.005 ms/op
+Iteration   5: 3.007 ±(99.9%) 0.004 ms/op
+Iteration   6: 3.029 ±(99.9%) 0.003 ms/op
+Iteration   7: 3.038 ±(99.9%) 0.003 ms/op
+Iteration   8: 3.010 ±(99.9%) 0.004 ms/op
+Iteration   9: 2.961 ±(99.9%) 0.004 ms/op
+Iteration  10: 3.041 ±(99.9%) 0.004 ms/op
+Iteration  11: 3.005 ±(99.9%) 0.004 ms/op
+Iteration  12: 3.023 ±(99.9%) 0.004 ms/op
+Iteration  13: 2.961 ±(99.9%) 0.004 ms/op
+Iteration  14: 3.059 ±(99.9%) 0.004 ms/op
+Iteration  15: 3.016 ±(99.9%) 0.004 ms/op
+Iteration  16: 2.970 ±(99.9%) 0.004 ms/op
+Iteration  17: 3.039 ±(99.9%) 0.004 ms/op
+Iteration  18: 2.963 ±(99.9%) 0.004 ms/op
+Iteration  19: 3.026 ±(99.9%) 0.004 ms/op
+Iteration  20: 2.916 ±(99.9%) 0.004 ms/op
+
+
+Result "cc.whohow.redis.RedisBenchmark.testRedisConnectionPool":
+  2.950 ±(99.9%) 0.038 ms/op [Average]
+  (min, avg, max) = (2.779, 2.950, 3.106), stdev = 0.086
+  CI (99.9%): [2.912, 2.989] (assumes normal distribution)
+
+
+# JMH version: 1.19
+# VM version: JDK 1.8.0_112, VM 25.112-b15
+# VM invoker: C:\Program Files\Java\jdk1.8.0_112\jre\bin\java.exe
+# VM options: -javaagent:C:\Program Files\JetBrains\IntelliJ IDEA 2017.3\lib\idea_rt.jar=14905:C:\Program Files\JetBrains\IntelliJ IDEA 2017.3\bin -Dfile.encoding=UTF-8
+# Warmup: 5 iterations, 1 s each
+# Measurement: 20 iterations, 1 s each
+# Timeout: 10 min per iteration
+# Threads: 128 threads, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: cc.whohow.redis.RedisBenchmark.testRedisson
+
+# Run progress: 83.33% complete, ETA 00:01:59
+# Fork: 1 of 3
+# Warmup Iteration   1: 6.678 ±(99.9%) 0.326 ms/op
+# Warmup Iteration   2: 3.136 ±(99.9%) 0.006 ms/op
+# Warmup Iteration   3: 3.039 ±(99.9%) 0.004 ms/op
+# Warmup Iteration   4: 3.042 ±(99.9%) 0.005 ms/op
+# Warmup Iteration   5: 3.046 ±(99.9%) 0.004 ms/op
+Iteration   1: 2.961 ±(99.9%) 0.003 ms/op
+Iteration   2: 3.053 ±(99.9%) 0.004 ms/op
+Iteration   3: 3.012 ±(99.9%) 0.003 ms/op
+Iteration   4: 3.059 ±(99.9%) 0.003 ms/op
+Iteration   5: 3.014 ±(99.9%) 0.005 ms/op
+Iteration   6: 3.083 ±(99.9%) 0.003 ms/op
+Iteration   7: 3.043 ±(99.9%) 0.004 ms/op
+Iteration   8: 3.159 ±(99.9%) 0.004 ms/op
+Iteration   9: 3.059 ±(99.9%) 0.005 ms/op
+Iteration  10: 3.082 ±(99.9%) 0.004 ms/op
+Iteration  11: 3.128 ±(99.9%) 0.004 ms/op
+Iteration  12: 3.052 ±(99.9%) 0.003 ms/op
+Iteration  13: 3.146 ±(99.9%) 0.003 ms/op
+Iteration  14: 3.080 ±(99.9%) 0.004 ms/op
+Iteration  15: 3.033 ±(99.9%) 0.004 ms/op
+Iteration  16: 3.011 ±(99.9%) 0.003 ms/op
+Iteration  17: 2.983 ±(99.9%) 0.004 ms/op
+Iteration  18: 3.080 ±(99.9%) 0.003 ms/op
+Iteration  19: 2.988 ±(99.9%) 0.004 ms/op
+Iteration  20: 3.097 ±(99.9%) 0.035 ms/op
+
+# Run progress: 88.89% complete, ETA 00:01:18
+# Fork: 2 of 3
+# Warmup Iteration   1: 7.975 ±(99.9%) 0.614 ms/op
+# Warmup Iteration   2: 3.057 ±(99.9%) 0.006 ms/op
+# Warmup Iteration   3: 3.105 ±(99.9%) 0.004 ms/op
+# Warmup Iteration   4: 2.956 ±(99.9%) 0.005 ms/op
+# Warmup Iteration   5: 2.981 ±(99.9%) 0.008 ms/op
+Iteration   1: 2.962 ±(99.9%) 0.004 ms/op
+Iteration   2: 3.030 ±(99.9%) 0.004 ms/op
+Iteration   3: 3.021 ±(99.9%) 0.004 ms/op
+Iteration   4: 2.987 ±(99.9%) 0.005 ms/op
+Iteration   5: 3.124 ±(99.9%) 0.005 ms/op
+Iteration   6: 3.015 ±(99.9%) 0.004 ms/op
+Iteration   7: 3.026 ±(99.9%) 0.003 ms/op
+Iteration   8: 3.067 ±(99.9%) 0.003 ms/op
+Iteration   9: 3.007 ±(99.9%) 0.003 ms/op
+Iteration  10: 3.005 ±(99.9%) 0.004 ms/op
+Iteration  11: 3.069 ±(99.9%) 0.003 ms/op
+Iteration  12: 3.026 ±(99.9%) 0.004 ms/op
+Iteration  13: 3.003 ±(99.9%) 0.004 ms/op
+Iteration  14: 3.052 ±(99.9%) 0.004 ms/op
+Iteration  15: 2.983 ±(99.9%) 0.004 ms/op
+Iteration  16: 3.045 ±(99.9%) 0.005 ms/op
+Iteration  17: 3.095 ±(99.9%) 0.004 ms/op
+Iteration  18: 3.092 ±(99.9%) 0.004 ms/op
+Iteration  19: 3.006 ±(99.9%) 0.004 ms/op
+Iteration  20: 3.054 ±(99.9%) 0.005 ms/op
+
+# Run progress: 94.44% complete, ETA 00:00:38
+# Fork: 3 of 3
+# Warmup Iteration   1: 6.849 ±(99.9%) 0.533 ms/op
+# Warmup Iteration   2: 3.084 ±(99.9%) 0.007 ms/op
+# Warmup Iteration   3: 3.150 ±(99.9%) 0.005 ms/op
+# Warmup Iteration   4: 3.142 ±(99.9%) 0.004 ms/op
+# Warmup Iteration   5: 3.083 ±(99.9%) 0.005 ms/op
+Iteration   1: 3.000 ±(99.9%) 0.005 ms/op
+Iteration   2: 3.141 ±(99.9%) 0.002 ms/op
+Iteration   3: 3.051 ±(99.9%) 0.003 ms/op
+Iteration   4: 3.043 ±(99.9%) 0.003 ms/op
+Iteration   5: 3.053 ±(99.9%) 0.005 ms/op
+Iteration   6: 3.047 ±(99.9%) 0.003 ms/op
+Iteration   7: 3.094 ±(99.9%) 0.003 ms/op
+Iteration   8: 3.075 ±(99.9%) 0.003 ms/op
+Iteration   9: 3.102 ±(99.9%) 0.005 ms/op
+Iteration  10: 3.113 ±(99.9%) 0.003 ms/op
+Iteration  11: 3.048 ±(99.9%) 0.002 ms/op
+Iteration  12: 3.100 ±(99.9%) 0.003 ms/op
+Iteration  13: 3.016 ±(99.9%) 0.003 ms/op
+Iteration  14: 3.033 ±(99.9%) 0.003 ms/op
+Iteration  15: 3.078 ±(99.9%) 0.003 ms/op
+Iteration  16: 3.029 ±(99.9%) 0.003 ms/op
+Iteration  17: 3.111 ±(99.9%) 0.003 ms/op
+Iteration  18: 3.153 ±(99.9%) 0.003 ms/op
+Iteration  19: 3.154 ±(99.9%) 0.003 ms/op
+Iteration  20: 3.140 ±(99.9%) 0.003 ms/op
+
+
+Result "cc.whohow.redis.RedisBenchmark.testRedisson":
+  3.056 ±(99.9%) 0.022 ms/op [Average]
+  (min, avg, max) = (2.961, 3.056, 3.159), stdev = 0.050
+  CI (99.9%): [3.034, 3.079] (assumes normal distribution)
+
+
+# Run complete. Total time: 00:11:29
+
+Benchmark                                Mode  Cnt    Score    Error   Units
+RedisBenchmark.testJedis                thrpt   60  109.619 ± 13.052  ops/ms
+RedisBenchmark.testRedisConnectionPool  thrpt   60   42.666 ±  0.649  ops/ms
+RedisBenchmark.testRedisson             thrpt   60   42.066 ±  0.326  ops/ms
+RedisBenchmark.testJedis                 avgt   60    5.571 ±  1.873   ms/op
+RedisBenchmark.testRedisConnectionPool   avgt   60    2.950 ±  0.038   ms/op
+RedisBenchmark.testRedisson              avgt   60    3.056 ±  0.022   ms/op
+
+Benchmark result is saved to threads-128.csv

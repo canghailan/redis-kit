@@ -1,12 +1,12 @@
 package cc.whohow.redis.jcache;
 
 import cc.whohow.redis.Redis;
-import cc.whohow.redis.client.RedisPipeline;
+import cc.whohow.redis.RedisPipeline;
 import cc.whohow.redis.codec.Codecs;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import io.netty.buffer.ByteBuf;
+import org.redisson.api.RFuture;
 import org.redisson.client.protocol.RedisCommands;
-import org.redisson.misc.RPromise;
 
 import java.util.Map;
 import java.util.Set;
@@ -25,8 +25,8 @@ public class RedisKeyNotificationCache<K, V> extends RedisCache<K, V> {
 
         RedisPipeline pipeline = redis.pipeline();
         pipeline.execute(RedisCommands.SET, toRedisKey(encodedKey.retain()), Codecs.encode(valueCodec, value));
-        pipeline.execute(RedisCommands.PUBLISH, name, encodedKey);
-        pipeline.sync();
+        pipeline.execute(RedisCommands.PUBLISH, name.retain(), encodedKey);
+        pipeline.flush();
     }
 
     @Override
@@ -34,9 +34,9 @@ public class RedisKeyNotificationCache<K, V> extends RedisCache<K, V> {
         ByteBuf encodedKey = Codecs.encode(keyCodec, key);
 
         RedisPipeline pipeline = redis.pipeline();
-        RPromise<V> r = pipeline.execute(valueCodec, RedisCommands.GETSET, toRedisKey(encodedKey.retain()), Codecs.encode(valueCodec, value));
-        pipeline.execute(RedisCommands.PUBLISH, name, encodedKey);
-        pipeline.sync();
+        RFuture<V> r = pipeline.execute(valueCodec, RedisCommands.GETSET, toRedisKey(encodedKey.retain()), Codecs.encode(valueCodec, value));
+        pipeline.execute(RedisCommands.PUBLISH, name.retain(), encodedKey);
+        pipeline.flush();
         return r.getNow();
     }
 
@@ -53,9 +53,9 @@ public class RedisKeyNotificationCache<K, V> extends RedisCache<K, V> {
         RedisPipeline pipeline = redis.pipeline();
         pipeline.execute(RedisCommands.MSET, (Object[]) encodedRedisKeyValues);
         for (ByteBuf encodedKey : encodedKeys) {
-            pipeline.execute(RedisCommands.PUBLISH, name, encodedKey);
+            pipeline.execute(RedisCommands.PUBLISH, name.retain(), encodedKey);
         }
-        pipeline.sync();
+        pipeline.flush();
     }
 
     @Override
@@ -63,9 +63,9 @@ public class RedisKeyNotificationCache<K, V> extends RedisCache<K, V> {
         ByteBuf encodedKey = Codecs.encode(keyCodec, key);
 
         RedisPipeline pipeline = redis.pipeline();
-        RPromise<Boolean> r = pipeline.execute(RedisCommands.SETPXNX, toRedisKey(encodedKey.retain()), Codecs.encode(valueCodec, value), "NX");
-        pipeline.execute(RedisCommands.PUBLISH, name, encodedKey);
-        pipeline.sync();
+        RFuture<Boolean> r = pipeline.execute(RedisCommands.SETPXNX, toRedisKey(encodedKey.retain()), Codecs.encode(valueCodec, value), "NX");
+        pipeline.execute(RedisCommands.PUBLISH, name.retain(), encodedKey);
+        pipeline.flush();
         return r.getNow();
     }
 
@@ -74,9 +74,9 @@ public class RedisKeyNotificationCache<K, V> extends RedisCache<K, V> {
         ByteBuf encodedKey = Codecs.encode(keyCodec, key);
 
         RedisPipeline pipeline = redis.pipeline();
-        RPromise<Long> r = pipeline.execute(RedisCommands.DEL, toRedisKey(encodedKey.retain()));
-        pipeline.execute(RedisCommands.PUBLISH, name, encodedKey);
-        pipeline.sync();
+        RFuture<Long> r = pipeline.execute(RedisCommands.DEL, toRedisKey(encodedKey.retain()));
+        pipeline.execute(RedisCommands.PUBLISH, name.retain(), encodedKey);
+        pipeline.flush();
         return r.getNow() == 1L;
     }
 
@@ -100,9 +100,9 @@ public class RedisKeyNotificationCache<K, V> extends RedisCache<K, V> {
         ByteBuf encodedKey = Codecs.encode(keyCodec, key);
 
         RedisPipeline pipeline = redis.pipeline();
-        RPromise<Boolean> r = pipeline.execute(RedisCommands.SETPXNX, toRedisKey(encodedKey.retain()), Codecs.encode(valueCodec, value), "XX");
-        pipeline.execute(RedisCommands.PUBLISH, name, encodedKey);
-        pipeline.sync();
+        RFuture<Boolean> r = pipeline.execute(RedisCommands.SETPXNX, toRedisKey(encodedKey.retain()), Codecs.encode(valueCodec, value), "XX");
+        pipeline.execute(RedisCommands.PUBLISH, name.retain(), encodedKey);
+        pipeline.flush();
         return r.getNow();
     }
 
@@ -122,9 +122,9 @@ public class RedisKeyNotificationCache<K, V> extends RedisCache<K, V> {
         RedisPipeline pipeline = redis.pipeline();
         pipeline.execute(RedisCommands.DEL, (Object[]) encodedRedisKeys);
         for (ByteBuf encodedKey : encodedKeys) {
-            pipeline.execute(RedisCommands.PUBLISH, name, encodedKey);
+            pipeline.execute(RedisCommands.PUBLISH, name.retain(), encodedKey);
         }
-        pipeline.sync();
+        pipeline.flush();
     }
 
     @Override

@@ -1,15 +1,15 @@
 package cc.whohow.redis.util;
 
 import cc.whohow.redis.Redis;
-import cc.whohow.redis.client.RedisPipeline;
+import cc.whohow.redis.RedisPipeline;
 import cc.whohow.redis.codec.Codecs;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import org.redisson.api.RFuture;
 import org.redisson.client.codec.Codec;
 import org.redisson.client.protocol.RedisCommand;
 import org.redisson.client.protocol.RedisCommands;
 import org.redisson.client.protocol.convertor.IntegerReplayConvertor;
-import org.redisson.misc.RPromise;
 
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -75,7 +75,7 @@ public class RedisSet<E> implements Set<E>, Queue<E> {
 
     @Override
     public boolean containsAll(Collection<?> c) {
-        List<RPromise<Boolean>> list = new ArrayList<>(c.size());
+        List<RFuture<Boolean>> list = new ArrayList<>(c.size());
         ByteBuf[] elements = Codecs.encode(codec, c);
         RedisPipeline pipeline = redis.pipeline();
         pipeline.execute(RedisCommands.MULTI);
@@ -83,8 +83,8 @@ public class RedisSet<E> implements Set<E>, Queue<E> {
             list.add(pipeline.execute(RedisCommands.SISMEMBER, name, e));
         }
         pipeline.execute(RedisCommands.EXEC);
-        pipeline.sync();
-        return list.stream().allMatch(RPromise::getNow);
+        pipeline.flush();
+        return list.stream().allMatch(RFuture::getNow);
     }
 
     @Override

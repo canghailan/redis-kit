@@ -4,7 +4,6 @@ import cc.whohow.redis.Redis;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.redisson.client.codec.LongCodec;
-import org.redisson.client.codec.StringCodec;
 import org.redisson.client.protocol.RedisCommands;
 
 import java.nio.charset.StandardCharsets;

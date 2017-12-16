@@ -1,14 +1,14 @@
 package cc.whohow.redis.util;
 
 import cc.whohow.redis.Redis;
-import cc.whohow.redis.client.RedisPipeline;
+import cc.whohow.redis.RedisPipeline;
 import cc.whohow.redis.codec.Codecs;
 import cc.whohow.redis.codec.OptionalCodec;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import org.redisson.api.RFuture;
 import org.redisson.client.codec.Codec;
 import org.redisson.client.protocol.RedisCommands;
-import org.redisson.misc.RPromise;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
@@ -66,10 +66,10 @@ public class RedisMap<K, V> implements ConcurrentMap<K, V> {
         ByteBuf encodedKey = Codecs.encodeMapKey(codec, key);
         RedisPipeline pipeline = redis.pipeline();
         pipeline.execute(RedisCommands.MULTI);
-        RPromise<V> r = pipeline.execute(codec, RedisCommands.HGET, name, encodedKey.retain());
+        RFuture<V> r = pipeline.execute(codec, RedisCommands.HGET, name, encodedKey.retain());
         pipeline.execute(RedisCommands.HSET, name, encodedKey, Codecs.encodeMapValue(codec, value));
         pipeline.execute(RedisCommands.EXEC);
-        pipeline.sync();
+        pipeline.flush();
         return r.getNow();
     }
 
@@ -82,10 +82,10 @@ public class RedisMap<K, V> implements ConcurrentMap<K, V> {
         ByteBuf encodedKey = Codecs.encodeMapKey(codec, key);
         RedisPipeline pipeline = redis.pipeline();
         pipeline.execute(RedisCommands.MULTI);
-        RPromise<V> r = pipeline.execute(codec, RedisCommands.HGET, name, encodedKey.retain());
+        RFuture<V> r = pipeline.execute(codec, RedisCommands.HGET, name, encodedKey.retain());
         pipeline.execute(RedisCommands.HDEL, name, encodedKey);
         pipeline.execute(RedisCommands.EXEC);
-        pipeline.sync();
+        pipeline.flush();
         return r.getNow();
     }
 
@@ -132,10 +132,10 @@ public class RedisMap<K, V> implements ConcurrentMap<K, V> {
         ByteBuf encodedKey = Codecs.encodeMapKey(codec, key);
         RedisPipeline pipeline = redis.pipeline();
         pipeline.execute(RedisCommands.MULTI);
-        RPromise<V> r = pipeline.execute(codec, RedisCommands.HGET, name, encodedKey.retain());
+        RFuture<V> r = pipeline.execute(codec, RedisCommands.HGET, name, encodedKey.retain());
         pipeline.execute(RedisCommands.HSETNX, name, encodedKey, Codecs.encodeMapValue(codec, value));
         pipeline.execute(RedisCommands.EXEC);
-        pipeline.sync();
+        pipeline.flush();
         return r.getNow();
     }
 

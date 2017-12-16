@@ -1,10 +1,9 @@
 package cc.whohow.redis;
 
-import cc.whohow.redis.client.RedisPipeline;
-import cc.whohow.redis.client.RedisPooledConnection;
-import org.redisson.client.RedisPubSubConnection;
+import org.redisson.client.RedisPubSubListener;
 import org.redisson.client.codec.Codec;
 import org.redisson.client.protocol.RedisCommand;
+import org.redisson.connection.PubSubConnectionEntry;
 
 import java.io.Closeable;
 import java.net.URI;
@@ -12,13 +11,17 @@ import java.net.URI;
 public interface Redis extends Closeable {
     URI getUri();
 
+    RedisPipeline pipeline();
+
     <T> T execute(RedisCommand<T> command, Object... params);
 
     <T, R> R execute(Codec codec, RedisCommand<T> command, Object... params);
 
-    RedisPipeline pipeline();
+    PubSubConnectionEntry subscribe(String name, Codec codec, RedisPubSubListener<?>... listeners);
 
-    RedisPooledConnection getConnection();
+    PubSubConnectionEntry psubscribe(String pattern, Codec codec, RedisPubSubListener<?>... listeners);
 
-    RedisPubSubConnection getPubSubConnection();
+    void unsubscribe(String name);
+
+    void punsubscribe(String pattern);
 }

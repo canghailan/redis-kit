@@ -1,13 +1,13 @@
 package cc.whohow.redis.util;
 
 import cc.whohow.redis.Redis;
-import cc.whohow.redis.client.RedisPipeline;
+import cc.whohow.redis.RedisPipeline;
 import cc.whohow.redis.codec.Codecs;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import org.redisson.api.RFuture;
 import org.redisson.client.codec.Codec;
 import org.redisson.client.protocol.RedisCommands;
-import org.redisson.misc.RPromise;
 
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -229,10 +229,10 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
     public E set(int index, E element) {
         RedisPipeline pipeline = redis.pipeline();
         pipeline.execute(RedisCommands.MULTI);
-        RPromise<E> r = pipeline.execute(codec, RedisCommands.LINDEX, name, index);
+        RFuture<E> r = pipeline.execute(codec, RedisCommands.LINDEX, name, index);
         pipeline.execute(RedisCommands.LSET, name, index, Codecs.encode(codec, element));
         pipeline.execute(RedisCommands.EXEC);
-        pipeline.sync();
+        pipeline.flush();
         return r.getNow();
     }
 
@@ -356,10 +356,10 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
     public int drainTo(Collection<? super E> c, int maxElements) {
         RedisPipeline pipeline = redis.pipeline();
         pipeline.execute(RedisCommands.MULTI);
-        RPromise<List<E>> r = pipeline.execute(codec, RedisCommands.LRANGE, name, 0, maxElements - 1);
+        RFuture<List<E>> r = pipeline.execute(codec, RedisCommands.LRANGE, name, 0, maxElements - 1);
         pipeline.execute(RedisCommands.LTRIM, name, maxElements, -1);
         pipeline.execute(RedisCommands.EXEC);
-        pipeline.sync();
+        pipeline.flush();
         List<E> list = r.getNow();
         c.addAll(list);
         return list.size();

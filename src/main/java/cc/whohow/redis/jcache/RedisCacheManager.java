@@ -4,7 +4,6 @@ import cc.whohow.redis.Redis;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.redisson.client.RedisPubSubConnection;
 import org.redisson.client.RedisPubSubListener;
 import org.redisson.client.codec.StringCodec;
 import org.redisson.client.protocol.RedisCommands;
@@ -30,15 +29,12 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
 
     protected final Redis redis;
     protected final Map<String, Cache> caches = new ConcurrentHashMap<>();
-    protected final RedisPubSubConnection pubSubConnection;
     protected final Map<String, RedisPubSubListener> keyNotificationListeners = new ConcurrentHashMap<>();
 
     public RedisCacheManager(Redis redis) {
         this.redis = redis;
         this.initializeCommands();
-        this.pubSubConnection = redis.getPubSubConnection();
-        this.pubSubConnection.addListener(this);
-        this.pubSubConnection.subscribe(StringCodec.INSTANCE, redisCacheManagerChannel);
+        this.redis.subscribe(redisCacheManagerChannel, StringCodec.INSTANCE, this);
         RedisCachingProvider.getInstance().addCacheManager(this);
     }
 
@@ -89,7 +85,7 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
         if (cache instanceof RedisPubSubListener) {
             RedisPubSubListener keyListener = (RedisPubSubListener) cache;
             keyNotificationListeners.put(redisCacheConfiguration.getName(), keyListener);
-            pubSubConnection.subscribe(redisCacheConfiguration.getKeyCodec(), redisCacheConfiguration.getName());
+            redis.subscribe(redisCacheConfiguration.getName(), redisCacheConfiguration.getKeyCodec(), this);
         }
         log.trace("create {}", cache);
         return cache;
@@ -154,7 +150,7 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
     public void destroyCache(String cacheName) {
         try {
             if (keyNotificationListeners.remove(cacheName) != null) {
-                pubSubConnection.unsubscribe(cacheName);
+                redis.unsubscribe(cacheName);
             }
         } finally {
             Cache cache = caches.remove(cacheName);
@@ -179,7 +175,6 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
     public void close() {
         try {
             keyNotificationListeners.clear();
-            pubSubConnection.closeAsync().syncUninterruptibly();
         } finally {
             for (Cache cache : caches.values()) {
                 try {
@@ -194,7 +189,7 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
 
     @Override
     public boolean isClosed() {
-        return pubSubConnection.isClosed();
+        return false;
     }
 
     @Override
