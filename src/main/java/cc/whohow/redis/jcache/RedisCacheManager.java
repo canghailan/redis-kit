@@ -127,8 +127,8 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
         return new InProcessCache<>(this, configuration);
     }
 
-    public <K, V> TierCache<K, V> newTierCache(RedisCacheConfiguration<K, V> configuration) {
-        return new TierCache<>(this, configuration);
+    public <K, V> RedisTierCache<K, V> newTierCache(RedisCacheConfiguration<K, V> configuration) {
+        return new RedisTierCache<>(this, configuration);
     }
 
     @Override
@@ -252,10 +252,10 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
 
     public void onSyncMessage(String cacheName) {
         Cache cache = caches.get(cacheName);
-        if (cache != null && cache instanceof TierCache) {
-            TierCache tierCache = (TierCache) cache;
-            tierCache.synchronizeAll();
-            log.trace("SYNC {}", tierCache);
+        if (cache != null && cache instanceof RedisTierCache) {
+            RedisTierCache redisTierCache = (RedisTierCache) cache;
+            redisTierCache.synchronizeAll();
+            log.trace("SYNC {}", cacheName);
         }
     }
 

@@ -23,7 +23,7 @@ import java.util.function.Function;
 /**
  * 两级缓存，仅支持 Read Through 模式
  */
-public class TierCache<K, V> implements Cache<K, V>, RedisPubSubListener<K> {
+public class RedisTierCache<K, V> implements Cache<K, V>, RedisPubSubListener<K> {
     private static final Logger log = LogManager.getLogger();
 
     protected final RedisCacheManager cacheManager;
@@ -31,8 +31,8 @@ public class TierCache<K, V> implements Cache<K, V>, RedisPubSubListener<K> {
     protected final RedisCache<K, V> redisCache;
     protected final InProcessCache<K, V> inProcessCache;
 
-    public TierCache(RedisCacheManager cacheManager,
-                     RedisCacheConfiguration<K, V> configuration) {
+    public RedisTierCache(RedisCacheManager cacheManager,
+                          RedisCacheConfiguration<K, V> configuration) {
         this.cacheManager = cacheManager;
         this.configuration = configuration;
         this.redisCache = cacheManager.newRedisCache(configuration);
@@ -286,7 +286,7 @@ public class TierCache<K, V> implements Cache<K, V>, RedisPubSubListener<K> {
 
     @Override
     public String toString() {
-        return "TierCache{" +
+        return "RedisTierCache{" +
                 "redisCache=" + redisCache +
                 ", inProcessCache=" + inProcessCache +
                 '}';
