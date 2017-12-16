@@ -52,14 +52,6 @@ public class RedisTierCache<K, V> implements Cache<K, V>, RedisPubSubListener<K>
         return inProcessCache.get(key, redisCache::get);
     }
 
-    public Optional<V> getOptional(K key) {
-        V value = inProcessCache.get(key);
-        if (value != null) {
-            return Optional.of(value);
-        }
-        return redisCache.getOptional(key);
-    }
-
     @Override
     public Map<K, V> getAll(Set<? extends K> keys) {
         Map<K, V> keyValues = inProcessCache.getAll(keys);

@@ -203,15 +203,6 @@ public class InProcessCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    public Optional<V> getOptional(K key) {
-        V value = cache.getIfPresent(key);
-        if (value != null) {
-            return Optional.of(value);
-        }
-        return cache.asMap().containsKey(key) ? Optional.empty() : null;
-    }
-
-    @Override
     public V get(K key, Function<? super K, ? extends V> cacheLoader) {
         return cache.get(key, cacheLoader);
     }

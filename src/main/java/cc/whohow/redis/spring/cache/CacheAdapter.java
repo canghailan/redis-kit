@@ -26,11 +26,11 @@ public class CacheAdapter implements org.springframework.cache.Cache {
 
     @Override
     public ValueWrapper get(Object key) {
-        Optional<?> optional = cache.getOptional(key);
-        if (optional == null) {
-            return null;
+        Object value = cache.get(key);
+        if (value != null) {
+            return new SimpleValueWrapper(value);
         }
-        return optional.<ValueWrapper>map(SimpleValueWrapper::new).orElse(NullValueWrapper.INSTANCE);
+        return cache.containsKey(key) ? NullValueWrapper.INSTANCE : null;
     }
 
     @Override

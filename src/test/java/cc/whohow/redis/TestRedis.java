@@ -64,8 +64,9 @@ public class TestRedis {
 
     @Test
     public void testPublish() {
-        System.out.println(redis.execute(RedisCommands.PUBLISH, "test", "test-1"));
-        System.out.println(redis.execute(RedisCommands.PUBLISH,  "test-ex", "test-ex-2"));
+//        System.out.println(redis.execute(RedisCommands.PUBLISH, "test", "test-1"));
+//        System.out.println(redis.execute(RedisCommands.PUBLISH,  "test-ex", "test-ex-2"));
+        System.out.println(redis.execute(RedisCommands.PUBLISH,  "RedisCacheManager", "SYNC doc"));
     }
 
     @Test

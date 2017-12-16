@@ -71,6 +71,10 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
         return cache;
     }
 
+    public <K, V> Cache<K, V> createCache(RedisCacheConfiguration configuration) {
+        return createCache(configuration.getName(), configuration);
+    }
+
     @Override
     public synchronized <K, V, C extends Configuration<K, V>> Cache<K, V> createCache(String cacheName, C configuration) throws IllegalArgumentException {
         if (redisCacheManagerChannel.equals(cacheName)) {
@@ -85,7 +89,7 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
         if (cache instanceof RedisPubSubListener) {
             RedisPubSubListener keyListener = (RedisPubSubListener) cache;
             keyNotificationListeners.put(redisCacheConfiguration.getName(), keyListener);
-            redis.subscribe(redisCacheConfiguration.getName(), redisCacheConfiguration.getKeyCodec(), this);
+            redis.subscribe(redisCacheConfiguration.getName(), redisCacheConfiguration.getKeyCodec());
         }
         log.trace("create {}", cache);
         return cache;
@@ -251,11 +255,11 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
     }
 
     public void onSyncMessage(String cacheName) {
+        log.trace("SYNC {}", cacheName);
         Cache cache = caches.get(cacheName);
         if (cache != null && cache instanceof RedisTierCache) {
             RedisTierCache redisTierCache = (RedisTierCache) cache;
             redisTierCache.synchronizeAll();
-            log.trace("SYNC {}", cacheName);
         }
     }
 
