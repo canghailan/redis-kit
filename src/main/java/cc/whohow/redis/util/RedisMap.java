@@ -37,7 +37,7 @@ public class RedisMap<K, V> implements ConcurrentMap<K, V> {
 
     @Override
     public int size() {
-        return redis.execute(RedisCommands.HLEN, name);
+        return redis.execute(RedisCommands.HLEN, name.retain());
     }
 
     @Override
@@ -47,7 +47,7 @@ public class RedisMap<K, V> implements ConcurrentMap<K, V> {
 
     @Override
     public boolean containsKey(Object key) {
-        return redis.execute(RedisCommands.HEXISTS, name, Codecs.encodeMapKey(codec, key));
+        return redis.execute(RedisCommands.HEXISTS, name.retain(), Codecs.encodeMapKey(codec, key));
     }
 
     @Override
@@ -58,7 +58,7 @@ public class RedisMap<K, V> implements ConcurrentMap<K, V> {
 
     @Override
     public V get(Object key) {
-        return redis.execute(codec, RedisCommands.HGET, name, Codecs.encodeMapKey(codec, key));
+        return redis.execute(codec, RedisCommands.HGET, name.retain(), Codecs.encodeMapKey(codec, key));
     }
 
     @Override
@@ -66,15 +66,15 @@ public class RedisMap<K, V> implements ConcurrentMap<K, V> {
         ByteBuf encodedKey = Codecs.encodeMapKey(codec, key);
         RedisPipeline pipeline = redis.pipeline();
         pipeline.execute(RedisCommands.MULTI);
-        RFuture<V> r = pipeline.execute(codec, RedisCommands.HGET, name, encodedKey.retain());
-        pipeline.execute(RedisCommands.HSET, name, encodedKey, Codecs.encodeMapValue(codec, value));
+        RFuture<V> r = pipeline.execute(codec, RedisCommands.HGET, name.retain(), encodedKey.retain());
+        pipeline.execute(RedisCommands.HSET, name.retain(), encodedKey, Codecs.encodeMapValue(codec, value));
         pipeline.execute(RedisCommands.EXEC);
         pipeline.flush();
         return r.getNow();
     }
 
     public boolean hset(K key, V value) {
-        return redis.execute(RedisCommands.HSET, name, Codecs.encodeMapKey(codec, key), Codecs.encodeMapValue(codec, value));
+        return redis.execute(RedisCommands.HSET, name.retain(), Codecs.encodeMapKey(codec, key), Codecs.encodeMapValue(codec, value));
     }
 
     @Override
@@ -82,25 +82,25 @@ public class RedisMap<K, V> implements ConcurrentMap<K, V> {
         ByteBuf encodedKey = Codecs.encodeMapKey(codec, key);
         RedisPipeline pipeline = redis.pipeline();
         pipeline.execute(RedisCommands.MULTI);
-        RFuture<V> r = pipeline.execute(codec, RedisCommands.HGET, name, encodedKey.retain());
-        pipeline.execute(RedisCommands.HDEL, name, encodedKey);
+        RFuture<V> r = pipeline.execute(codec, RedisCommands.HGET, name.retain(), encodedKey.retain());
+        pipeline.execute(RedisCommands.HDEL, name.retain(), encodedKey);
         pipeline.execute(RedisCommands.EXEC);
         pipeline.flush();
         return r.getNow();
     }
 
     public boolean hdel(K key) {
-        return redis.execute(RedisCommands.HDEL, name, Codecs.encodeMapKey(codec, key)) > 0;
+        return redis.execute(RedisCommands.HDEL, name.retain(), Codecs.encodeMapKey(codec, key)) > 0;
     }
 
     @Override
     public void putAll(Map<? extends K, ? extends V> m) {
-        redis.execute(RedisCommands.HMSET, (Object[]) Codecs.concat(name, Codecs.encodeMapKeyValue(codec, m)));
+        redis.execute(RedisCommands.HMSET, (Object[]) Codecs.concat(name.retain(), Codecs.encodeMapKeyValue(codec, m)));
     }
 
     @Override
     public void clear() {
-        redis.execute(RedisCommands.DEL, name);
+        redis.execute(RedisCommands.DEL, name.retain());
     }
 
     @Override
@@ -123,7 +123,7 @@ public class RedisMap<K, V> implements ConcurrentMap<K, V> {
 
     @Override
     public V getOrDefault(Object key, V defaultValue) {
-        Optional<V> optionalValue = redis.execute(optionalCodec, RedisCommands.HGET, name, Codecs.encodeMapKey(codec, key));
+        Optional<V> optionalValue = redis.execute(optionalCodec, RedisCommands.HGET, name.retain(), Codecs.encodeMapKey(codec, key));
         return optionalValue == null ? defaultValue : optionalValue.orElse(null);
     }
 
@@ -132,15 +132,15 @@ public class RedisMap<K, V> implements ConcurrentMap<K, V> {
         ByteBuf encodedKey = Codecs.encodeMapKey(codec, key);
         RedisPipeline pipeline = redis.pipeline();
         pipeline.execute(RedisCommands.MULTI);
-        RFuture<V> r = pipeline.execute(codec, RedisCommands.HGET, name, encodedKey.retain());
-        pipeline.execute(RedisCommands.HSETNX, name, encodedKey, Codecs.encodeMapValue(codec, value));
+        RFuture<V> r = pipeline.execute(codec, RedisCommands.HGET, name.retain(), encodedKey.retain());
+        pipeline.execute(RedisCommands.HSETNX, name.retain(), encodedKey, Codecs.encodeMapValue(codec, value));
         pipeline.execute(RedisCommands.EXEC);
         pipeline.flush();
         return r.getNow();
     }
 
     public boolean hsetnx(K key, V value) {
-        return redis.execute(RedisCommands.HSETNX, name, Codecs.encodeMapKey(codec, key), Codecs.encodeMapValue(codec, value));
+        return redis.execute(RedisCommands.HSETNX, name.retain(), Codecs.encodeMapKey(codec, key), Codecs.encodeMapValue(codec, value));
     }
 
     @Override

@@ -31,7 +31,7 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number> {
 
     @Override
     public int size() {
-        return redis.execute(RedisCommands.ZCARD_INT, name);
+        return redis.execute(RedisCommands.ZCARD_INT, name.retain());
     }
 
     @Override
@@ -46,12 +46,12 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number> {
 
     @Override
     public boolean containsValue(Object value) {
-        return redis.execute(RedisCommands.ZCOUNT, name, value, value) > 0;
+        return redis.execute(RedisCommands.ZCOUNT, name.retain(), value, value) > 0;
     }
 
     @Override
     public Number get(Object key) {
-        return redis.execute(RedisCommands.ZSCORE, name, Codecs.encode(codec, key));
+        return redis.execute(RedisCommands.ZSCORE, name.retain(), Codecs.encode(codec, key));
     }
 
     @Override
@@ -59,15 +59,15 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number> {
         ByteBuf encodedKey = Codecs.encode(codec, key);
         RedisPipeline pipeline = redis.pipeline();
         pipeline.execute(RedisCommands.MULTI);
-        RFuture<Double> r = pipeline.execute(RedisCommands.ZSCORE, name, encodedKey.retain());
-        pipeline.execute(RedisCommands.ZADD, name, value, encodedKey);
+        RFuture<Double> r = pipeline.execute(RedisCommands.ZSCORE, name.retain(), encodedKey.retain());
+        pipeline.execute(RedisCommands.ZADD, name.retain(), value, encodedKey);
         pipeline.execute(RedisCommands.EXEC);
         pipeline.flush();
         return r.getNow();
     }
 
     public long zadd(E key, Number value) {
-        return redis.execute(RedisCommands.ZADD, name, value, Codecs.encode(codec, key));
+        return redis.execute(RedisCommands.ZADD, name.retain(), value, Codecs.encode(codec, key));
     }
 
     @Override
@@ -75,22 +75,22 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number> {
         ByteBuf encodedKey = Codecs.encode(codec, key);
         RedisPipeline pipeline = redis.pipeline();
         pipeline.execute(RedisCommands.MULTI);
-        RFuture<Double> r = pipeline.execute(RedisCommands.ZSCORE, name, encodedKey.retain());
-        pipeline.execute(RedisCommands.ZREM, name, encodedKey);
+        RFuture<Double> r = pipeline.execute(RedisCommands.ZSCORE, name.retain(), encodedKey.retain());
+        pipeline.execute(RedisCommands.ZREM, name.retain(), encodedKey);
         pipeline.execute(RedisCommands.EXEC);
         pipeline.flush();
         return r.getNow();
     }
 
     public boolean zrem(E key) {
-        return redis.execute(RedisCommands.ZREM, name, Codecs.encode(codec, key));
+        return redis.execute(RedisCommands.ZREM, name.retain(), Codecs.encode(codec, key));
     }
 
     @Override
     public void putAll(Map<? extends E, ? extends Number> m) {
         ByteBuf[] encodedKeys = Codecs.encode(codec, m.keySet());
         Object[] params = new Object[1 + m.size() * 2];
-        params[0] = name;
+        params[0] = name.retain();
         int i = 0;
         for (Number value : m.values()) {
             params[i * 2 + 1] = value;
@@ -102,7 +102,7 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number> {
 
     @Override
     public void clear() {
-        redis.execute(RedisCommands.DEL, name);
+        redis.execute(RedisCommands.DEL, name.retain());
     }
 
     @Override
@@ -134,15 +134,15 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number> {
         ByteBuf encodedKey = Codecs.encode(codec, key);
         RedisPipeline pipeline = redis.pipeline();
         pipeline.execute(RedisCommands.MULTI);
-        RFuture<Double> r = pipeline.execute(RedisCommands.ZSCORE, name, encodedKey.retain());
-        pipeline.execute(RedisCommands.ZADD, name, "NX", value, Codecs.encode(codec, key));
+        RFuture<Double> r = pipeline.execute(RedisCommands.ZSCORE, name.retain(), encodedKey.retain());
+        pipeline.execute(RedisCommands.ZADD, name.retain(), "NX", value, Codecs.encode(codec, key));
         pipeline.execute(RedisCommands.EXEC);
         pipeline.flush();
         return r.getNow();
     }
 
     public long zaddnx(E key, Number value) {
-        return redis.execute(RedisCommands.ZADD, name, "NX", value, Codecs.encode(codec, key));
+        return redis.execute(RedisCommands.ZADD, name.retain(), "NX", value, Codecs.encode(codec, key));
     }
 
     @Override
@@ -162,15 +162,15 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number> {
         ByteBuf encodedKey = Codecs.encode(codec, key);
         RedisPipeline pipeline = redis.pipeline();
         pipeline.execute(RedisCommands.MULTI);
-        RFuture<Double> r = pipeline.execute(RedisCommands.ZSCORE, name, encodedKey.retain());
-        pipeline.execute(RedisCommands.ZADD, name, "XX", value, Codecs.encode(codec, key));
+        RFuture<Double> r = pipeline.execute(RedisCommands.ZSCORE, name.retain(), encodedKey.retain());
+        pipeline.execute(RedisCommands.ZADD, name.retain(), "XX", value, Codecs.encode(codec, key));
         pipeline.execute(RedisCommands.EXEC);
         pipeline.flush();
         return r.getNow();
     }
 
     public long zaddxx(E key, Number value) {
-        return redis.execute(RedisCommands.ZADD, name, "XX", value, Codecs.encode(codec, key));
+        return redis.execute(RedisCommands.ZADD, name.retain(), "XX", value, Codecs.encode(codec, key));
     }
 
     @Override

@@ -30,12 +30,12 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
 
     @Override
     public void addFirst(E e) {
-        redis.execute(RedisCommands.LPUSH, name, Codecs.encode(codec, e));
+        redis.execute(RedisCommands.LPUSH, name.retain(), Codecs.encode(codec, e));
     }
 
     @Override
     public void addLast(E e) {
-        redis.execute(RedisCommands.RPUSH, name, Codecs.encode(codec, e));
+        redis.execute(RedisCommands.RPUSH, name.retain(), Codecs.encode(codec, e));
     }
 
     @Override
@@ -62,12 +62,12 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
 
     @Override
     public E pollFirst() {
-        return redis.execute(codec, RedisCommands.LPOP, name);
+        return redis.execute(codec, RedisCommands.LPOP, name.retain());
     }
 
     @Override
     public E pollLast() {
-        return redis.execute(codec, RedisCommands.RPOP, name);
+        return redis.execute(codec, RedisCommands.RPOP, name.retain());
     }
 
     @Override
@@ -82,22 +82,22 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
 
     @Override
     public E peekFirst() {
-        return redis.execute(codec, RedisCommands.LINDEX, name, 0);
+        return redis.execute(codec, RedisCommands.LINDEX, name.retain(), 0);
     }
 
     @Override
     public E peekLast() {
-        return redis.execute(codec, RedisCommands.LINDEX, name, -1);
+        return redis.execute(codec, RedisCommands.LINDEX, name.retain(), -1);
     }
 
     @Override
     public boolean removeFirstOccurrence(Object o) {
-        return redis.execute(RedisCommands.LREM_SINGLE, name, 1, Codecs.encode(codec, o));
+        return redis.execute(RedisCommands.LREM_SINGLE, name.retain(), 1, Codecs.encode(codec, o));
     }
 
     @Override
     public boolean removeLastOccurrence(Object o) {
-        return redis.execute(RedisCommands.LREM_SINGLE, name, -1, Codecs.encode(codec, o));
+        return redis.execute(RedisCommands.LREM_SINGLE, name.retain(), -1, Codecs.encode(codec, o));
     }
 
     @Override
@@ -143,7 +143,7 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
 
     @Override
     public int size() {
-        return redis.execute(RedisCommands.LLEN_INT, name);
+        return redis.execute(RedisCommands.LLEN_INT, name.retain());
     }
 
     @Override
@@ -165,13 +165,13 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
 
     @Override
     public Object[] toArray() {
-        List<?> list = redis.execute(codec, RedisCommands.LRANGE, name, 0, -1);
+        List<?> list = redis.execute(codec, RedisCommands.LRANGE, name.retain(), 0, -1);
         return list.toArray();
     }
 
     @Override
     public <T> T[] toArray(T[] a) {
-        List<T> list = redis.execute(codec, RedisCommands.LRANGE, name, 0, -1);
+        List<T> list = redis.execute(codec, RedisCommands.LRANGE, name.retain(), 0, -1);
         return list.toArray(a);
     }
 
@@ -193,7 +193,7 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
 
     @Override
     public boolean addAll(Collection<? extends E> c) {
-        redis.execute(RedisCommands.RPUSH, (Object[]) Codecs.concat(name, Codecs.encode(codec, c)));
+        redis.execute(RedisCommands.RPUSH, (Object[]) Codecs.concat(name.retain(), Codecs.encode(codec, c)));
         return true;
     }
 
@@ -217,27 +217,27 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
 
     @Override
     public void clear() {
-        redis.execute(RedisCommands.DEL, name);
+        redis.execute(RedisCommands.DEL, name.retain());
     }
 
     @Override
     public E get(int index) {
-        return redis.execute(codec, RedisCommands.LINDEX, name, index);
+        return redis.execute(codec, RedisCommands.LINDEX, name.retain(), index);
     }
 
     @Override
     public E set(int index, E element) {
         RedisPipeline pipeline = redis.pipeline();
         pipeline.execute(RedisCommands.MULTI);
-        RFuture<E> r = pipeline.execute(codec, RedisCommands.LINDEX, name, index);
-        pipeline.execute(RedisCommands.LSET, name, index, Codecs.encode(codec, element));
+        RFuture<E> r = pipeline.execute(codec, RedisCommands.LINDEX, name.retain(), index);
+        pipeline.execute(RedisCommands.LSET, name.retain(), index, Codecs.encode(codec, element));
         pipeline.execute(RedisCommands.EXEC);
         pipeline.flush();
         return r.getNow();
     }
 
     public void lset(int index, E element) {
-        redis.execute(RedisCommands.LSET, name, index, Codecs.encode(codec, element));
+        redis.execute(RedisCommands.LSET, name.retain(), index, Codecs.encode(codec, element));
     }
 
     @Override
@@ -314,12 +314,12 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
 
     @Override
     public E pollFirst(long timeout, TimeUnit unit) {
-        return redis.execute(codec, RedisCommands.BLPOP_VALUE, name, unit.toSeconds(timeout));
+        return redis.execute(codec, RedisCommands.BLPOP_VALUE, name.retain(), unit.toSeconds(timeout));
     }
 
     @Override
     public E pollLast(long timeout, TimeUnit unit) {
-        return redis.execute(codec, RedisCommands.BRPOP_VALUE, name, unit.toSeconds(timeout));
+        return redis.execute(codec, RedisCommands.BRPOP_VALUE, name.retain(), unit.toSeconds(timeout));
     }
 
     @Override
@@ -356,8 +356,8 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
     public int drainTo(Collection<? super E> c, int maxElements) {
         RedisPipeline pipeline = redis.pipeline();
         pipeline.execute(RedisCommands.MULTI);
-        RFuture<List<E>> r = pipeline.execute(codec, RedisCommands.LRANGE, name, 0, maxElements - 1);
-        pipeline.execute(RedisCommands.LTRIM, name, maxElements, -1);
+        RFuture<List<E>> r = pipeline.execute(codec, RedisCommands.LRANGE, name.retain(), 0, maxElements - 1);
+        pipeline.execute(RedisCommands.LTRIM, name.retain(), maxElements, -1);
         pipeline.execute(RedisCommands.EXEC);
         pipeline.flush();
         List<E> list = r.getNow();

@@ -22,11 +22,11 @@ public class RedisAtomicLong extends Number {
     }
 
     public void set(long newValue) {
-        redis.execute(RedisCommands.SET, name, newValue);
+        redis.execute(RedisCommands.SET, name.retain(), newValue);
     }
 
     public long getAndSet(long newValue) {
-        return redis.execute(LongCodec.INSTANCE, RedisCommands.GETSET, name, newValue);
+        return redis.execute(LongCodec.INSTANCE, RedisCommands.GETSET, name.retain(), newValue);
     }
 
     public long getAndIncrement() {
@@ -42,15 +42,15 @@ public class RedisAtomicLong extends Number {
     }
 
     public long incrementAndGet() {
-        return redis.execute(RedisCommands.INCR, name);
+        return redis.execute(RedisCommands.INCR, name.retain());
     }
 
     public long decrementAndGet() {
-        return redis.execute(RedisCommands.DECR, name);
+        return redis.execute(RedisCommands.DECR, name.retain());
     }
 
     public long addAndGet(long delta) {
-        return redis.execute(RedisCommands.INCRBY, name, delta);
+        return redis.execute(RedisCommands.INCRBY, name.retain(), delta);
     }
 
     @Override
@@ -60,7 +60,7 @@ public class RedisAtomicLong extends Number {
 
     @Override
     public long longValue() {
-        return redis.execute(LongCodec.INSTANCE, RedisCommands.GET, name);
+        return redis.execute(LongCodec.INSTANCE, RedisCommands.GET, name.retain());
     }
 
     @Override

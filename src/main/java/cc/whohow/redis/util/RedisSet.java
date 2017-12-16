@@ -32,7 +32,7 @@ public class RedisSet<E> implements Set<E>, Queue<E> {
 
     @Override
     public int size() {
-        return redis.execute(RedisCommands.SCARD_INT, name);
+        return redis.execute(RedisCommands.SCARD_INT, name.retain());
     }
 
     @Override
@@ -42,7 +42,7 @@ public class RedisSet<E> implements Set<E>, Queue<E> {
 
     @Override
     public boolean contains(Object o) {
-        return redis.execute(RedisCommands.SISMEMBER, name, Codecs.encode(codec, o));
+        return redis.execute(RedisCommands.SISMEMBER, name.retain(), Codecs.encode(codec, o));
     }
 
     @Override
@@ -53,24 +53,24 @@ public class RedisSet<E> implements Set<E>, Queue<E> {
 
     @Override
     public Object[] toArray() {
-        Set<E> set = redis.execute(codec, RedisCommands.SMEMBERS, name);
+        Set<E> set = redis.execute(codec, RedisCommands.SMEMBERS, name.retain());
         return set.toArray();
     }
 
     @Override
     public <T> T[] toArray(T[] a) {
-        Set<T> set = redis.execute(codec, RedisCommands.SMEMBERS, name);
+        Set<T> set = redis.execute(codec, RedisCommands.SMEMBERS, name.retain());
         return set.toArray(a);
     }
 
     @Override
     public boolean add(E e) {
-        return redis.execute(RedisCommands.SADD, name, Codecs.encode(codec, e)) > 0;
+        return redis.execute(RedisCommands.SADD, name.retain(), Codecs.encode(codec, e)) > 0;
     }
 
     @Override
     public boolean remove(Object o) {
-        return redis.execute(SREM, name, Codecs.encode(codec, o)) > 0;
+        return redis.execute(SREM, name.retain(), Codecs.encode(codec, o)) > 0;
     }
 
     @Override
@@ -80,7 +80,7 @@ public class RedisSet<E> implements Set<E>, Queue<E> {
         RedisPipeline pipeline = redis.pipeline();
         pipeline.execute(RedisCommands.MULTI);
         for (ByteBuf e : elements) {
-            list.add(pipeline.execute(RedisCommands.SISMEMBER, name, e));
+            list.add(pipeline.execute(RedisCommands.SISMEMBER, name.retain(), e));
         }
         pipeline.execute(RedisCommands.EXEC);
         pipeline.flush();
@@ -89,7 +89,7 @@ public class RedisSet<E> implements Set<E>, Queue<E> {
 
     @Override
     public boolean addAll(Collection<? extends E> c) {
-        return redis.execute(RedisCommands.SADD, (Object[]) Codecs.concat(name, Codecs.encode(codec, c))) > 0;
+        return redis.execute(RedisCommands.SADD, (Object[]) Codecs.concat(name.retain(), Codecs.encode(codec, c))) > 0;
     }
 
     @Override
@@ -100,12 +100,12 @@ public class RedisSet<E> implements Set<E>, Queue<E> {
 
     @Override
     public boolean removeAll(Collection<?> c) {
-        return redis.execute(SREM, (Object[]) Codecs.concat(name, Codecs.encode(codec, c))) > 0;
+        return redis.execute(SREM, (Object[]) Codecs.concat(name.retain(), Codecs.encode(codec, c))) > 0;
     }
 
     @Override
     public void clear() {
-        redis.execute(RedisCommands.DEL, name);
+        redis.execute(RedisCommands.DEL, name.retain());
     }
 
     @Override
@@ -120,7 +120,7 @@ public class RedisSet<E> implements Set<E>, Queue<E> {
 
     @Override
     public E poll() {
-        return redis.execute(codec, RedisCommands.SPOP_SINGLE, name);
+        return redis.execute(codec, RedisCommands.SPOP_SINGLE, name.retain());
     }
 
     @Override
@@ -130,7 +130,7 @@ public class RedisSet<E> implements Set<E>, Queue<E> {
 
     @Override
     public E peek() {
-        return redis.execute(codec, RedisCommands.SRANDMEMBER_SINGLE, name);
+        return redis.execute(codec, RedisCommands.SRANDMEMBER_SINGLE, name.retain());
     }
 
     protected E checkElement(E e) {
