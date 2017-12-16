@@ -25,8 +25,8 @@ public class ObjectArrayJacksonCodec implements Codec {
         OBJECT_MAPPER.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
-    private final ObjectMapper objectMapper;
-    private final JavaType[] types;
+    protected final ObjectMapper objectMapper;
+    protected final JavaType[] types;
 
     private final Encoder encoder = new Encoder() {
         @Override

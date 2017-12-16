@@ -3,7 +3,6 @@ package cc.whohow.redis.spring.cache;
 import cc.whohow.redis.jcache.Cache;
 import org.springframework.cache.support.SimpleValueWrapper;
 
-import java.util.Optional;
 import java.util.concurrent.Callable;
 
 @SuppressWarnings("unchecked")

@@ -1,5 +1,6 @@
 package cc.whohow.redis.codec;
 
+import cc.whohow.redis.jcache.annotation.GeneratedKey;
 import io.netty.buffer.ByteBuf;
 import org.redisson.client.codec.Codec;
 import org.redisson.client.handler.State;
@@ -7,58 +8,59 @@ import org.redisson.client.protocol.Decoder;
 import org.redisson.client.protocol.Encoder;
 
 import java.io.IOException;
-import java.util.Optional;
+import java.util.function.Function;
 
-public class OptionalCodec implements Codec {
-    protected final Codec innerCodec;
+public class WrapCodec implements Codec {
+    protected final Codec codec;
+    protected final Function<Object, GeneratedKey> wrap;
+    protected final Function<GeneratedKey, Object> unwrap;
 
     private final Encoder valueEncoder = new Encoder() {
         @Override
         public ByteBuf encode(Object in) throws IOException {
-            Optional<?> optional = (Optional<?>) in;
-            return innerCodec.getValueEncoder().encode(optional.orElse(null));
+            return codec.getValueEncoder().encode(unwrap.apply((GeneratedKey) in));
         }
     };
 
     private final Decoder<Object> valueDecoder = new Decoder<Object>() {
         @Override
         public Object decode(ByteBuf buf, State state) throws IOException {
-            return Optional.ofNullable(innerCodec.getValueDecoder().decode(buf, state));
+            return wrap.apply(codec.getValueDecoder().decode(buf, state));
         }
     };
 
     private final Encoder mapKeyEncoder = new Encoder() {
         @Override
         public ByteBuf encode(Object in) throws IOException {
-            Optional<?> optional = (Optional<?>) in;
-            return innerCodec.getMapKeyEncoder().encode(optional.orElse(null));
+            return codec.getMapKeyEncoder().encode(unwrap.apply((GeneratedKey) in));
         }
     };
 
     private final Decoder<Object> mapKeyDecoder = new Decoder<Object>() {
         @Override
         public Object decode(ByteBuf buf, State state) throws IOException {
-            return Optional.ofNullable(innerCodec.getMapKeyDecoder().decode(buf, state));
+            return wrap.apply(codec.getMapKeyDecoder().decode(buf, state));
         }
     };
 
     private final Encoder mapValueEncoder = new Encoder() {
         @Override
         public ByteBuf encode(Object in) throws IOException {
-            Optional<?> optional = (Optional<?>) in;
-            return innerCodec.getMapValueEncoder().encode(optional.orElse(null));
+            return codec.getMapValueEncoder().encode(unwrap.apply((GeneratedKey) in));
         }
     };
 
     private final Decoder<Object> mapValueDecoder = new Decoder<Object>() {
         @Override
         public Object decode(ByteBuf buf, State state) throws IOException {
-            return Optional.ofNullable(innerCodec.getMapValueDecoder().decode(buf, state));
+            return wrap.apply(codec.getMapValueDecoder().decode(buf, state));
         }
     };
 
-    public OptionalCodec(Codec innerCodec) {
-        this.innerCodec = innerCodec;
+    public WrapCodec(Codec codec, Function<Object, GeneratedKey> wrap, Function<GeneratedKey, Object> unwrap) {
+        this.codec = codec;
+        this.wrap = wrap;
+        this.unwrap = unwrap;
     }
 
     @Override
@@ -93,8 +95,8 @@ public class OptionalCodec implements Codec {
 
     @Override
     public String toString() {
-        return "OptionalCodec{" +
-                "innerCodec=" + innerCodec +
+        return "WrapCodec{" +
+                "codec=" + codec +
                 '}';
     }
 }
