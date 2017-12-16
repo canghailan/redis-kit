@@ -1,6 +1,8 @@
 package cc.whohow.redis.jcache;
 
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.redisson.client.RedisPubSubListener;
 import org.redisson.client.codec.Codec;
 import org.redisson.client.protocol.pubsub.PubSubType;
@@ -22,6 +24,8 @@ import java.util.function.Function;
  * 两级缓存
  */
 public class TierCache<K, V> implements Cache<K, V>, RedisPubSubListener<K> {
+    private static final Logger log = LogManager.getLogger();
+
     protected final RedisCacheManager cacheManager;
     protected final RedisCacheConfiguration<K, V> configuration;
     protected final RedisCache<K, V> redisCache;
@@ -266,14 +270,17 @@ public class TierCache<K, V> implements Cache<K, V>, RedisPubSubListener<K> {
     }
 
     public void synchronize(K key) {
+        log.trace("synchronize {} {}", configuration.getName(), key);
         inProcessCache.remove(key);
     }
 
     public void synchronizeAll(Set<? extends K> keys) {
+        log.trace("synchronize {} {}", configuration.getName(), keys);
         inProcessCache.removeAll(keys);
     }
 
     public void synchronizeAll() {
+        log.trace("synchronize {}", configuration.getName());
         inProcessCache.removeAll();
     }
 
