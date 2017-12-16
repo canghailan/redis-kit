@@ -90,4 +90,11 @@ public class OptionalCodec implements Codec {
     public Encoder getValueEncoder() {
         return valueEncoder;
     }
+
+    @Override
+    public String toString() {
+        return "OptionalCodec{" +
+                "innerCodec=" + innerCodec +
+                '}';
+    }
 }

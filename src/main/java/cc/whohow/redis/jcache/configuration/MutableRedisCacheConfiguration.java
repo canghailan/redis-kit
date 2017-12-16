@@ -2,6 +2,7 @@ package cc.whohow.redis.jcache.configuration;
 
 import org.redisson.client.codec.Codec;
 
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfiguration<K, V> {
@@ -178,5 +179,28 @@ public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfigura
 
     public void setInProcessCacheExpiryForUpdateTimeUnit(TimeUnit inProcessCacheExpiryForUpdateTimeUnit) {
         this.inProcessCacheExpiryForUpdateTimeUnit = inProcessCacheExpiryForUpdateTimeUnit;
+    }
+
+    @Override
+    public String toString() {
+        return "MutableRedisCacheConfiguration{" +
+                "name='" + name + '\'' +
+                ", keyType=" + keyType +
+                ", valueType=" + valueType +
+                ", statisticsEnabled=" + statisticsEnabled +
+                ", managementEnabled=" + managementEnabled +
+                ", expiryForUpdate=" + expiryForUpdate +
+                ", expiryForUpdateTimeUnit=" + expiryForUpdateTimeUnit +
+                ", redisCacheEnabled=" + redisCacheEnabled +
+                ", keyNotificationEnabled=" + keyNotificationEnabled +
+                ", keyCodec=" + keyCodec +
+                ", valueCodec=" + valueCodec +
+                ", keyTypeCanonicalName=" + Arrays.toString(keyTypeCanonicalName) +
+                ", valueTypeCanonicalName='" + valueTypeCanonicalName + '\'' +
+                ", inProcessCacheEnabled=" + inProcessCacheEnabled +
+                ", inProcessCacheMaxEntry=" + inProcessCacheMaxEntry +
+                ", inProcessCacheExpiryForUpdate=" + inProcessCacheExpiryForUpdate +
+                ", inProcessCacheExpiryForUpdateTimeUnit=" + inProcessCacheExpiryForUpdateTimeUnit +
+                '}';
     }
 }

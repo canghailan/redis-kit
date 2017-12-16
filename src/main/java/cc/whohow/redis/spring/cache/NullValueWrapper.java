@@ -9,4 +9,9 @@ public class NullValueWrapper implements Cache.ValueWrapper {
     public Object get() {
         return null;
     }
+
+    @Override
+    public String toString() {
+        return "null";
+    }
 }

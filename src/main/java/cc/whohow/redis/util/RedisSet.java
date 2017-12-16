@@ -139,4 +139,13 @@ public class RedisSet<E> implements Set<E>, Queue<E> {
         }
         return e;
     }
+
+    @Override
+    public String toString() {
+        return "RedisSet{" +
+                "redis=" + redis +
+                ", name=" + name.toString(StandardCharsets.UTF_8) +
+                ", codec=" + codec +
+                '}';
+    }
 }

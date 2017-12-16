@@ -62,4 +62,9 @@ public class CacheAdapter implements org.springframework.cache.Cache {
     public void clear() {
         cache.clear();
     }
+
+    @Override
+    public String toString() {
+        return cache.toString();
+    }
 }

@@ -114,4 +114,11 @@ public class ObjectArrayJacksonCodec implements Codec {
     public Encoder getValueEncoder() {
         return encoder;
     }
+
+    @Override
+    public String toString() {
+        return "ObjectArrayJacksonCodec{" +
+                "types=" + Arrays.toString(types) +
+                '}';
+    }
 }

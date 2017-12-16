@@ -172,4 +172,13 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number> {
     public long zaddxx(E key, Number value) {
         return redis.execute(RedisCommands.ZADD, name, "XX", value, Codecs.encode(codec, key));
     }
+
+    @Override
+    public String toString() {
+        return "RedisSortedSet{" +
+                "redis=" + redis +
+                ", name=" + name.toString(StandardCharsets.UTF_8) +
+                ", codec=" + codec +
+                '}';
+    }
 }

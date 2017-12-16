@@ -3,6 +3,7 @@ package cc.whohow.redis.jcache.processor;
 import javax.cache.CacheException;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
+import java.util.Objects;
 
 public class EntryProcessorResultWrapper<T> implements EntryProcessorResult<T> {
     protected final T value;
@@ -24,5 +25,10 @@ public class EntryProcessorResultWrapper<T> implements EntryProcessorResult<T> {
             throw exception;
         }
         return value;
+    }
+
+    @Override
+    public String toString() {
+        return Objects.toString(get());
     }
 }

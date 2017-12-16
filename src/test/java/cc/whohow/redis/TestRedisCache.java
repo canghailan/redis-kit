@@ -46,6 +46,7 @@ public class TestRedisCache {
             config1.setValueCodec(StringCodec.INSTANCE);
             config1.setInProcessCacheEnabled(false);
             redisCache = redisCacheManager.createCache(config1.getName(), config1);
+            System.out.println(redisCache);
 
             MutableRedisCacheConfiguration<String, String> config2 = new MutableRedisCacheConfiguration<>();
             config2.setName("test-ex");
@@ -56,6 +57,7 @@ public class TestRedisCache {
             config2.setExpiryForUpdateTimeUnit(TimeUnit.SECONDS);
             config2.setInProcessCacheEnabled(false);
             redisExpireCache = redisCacheManager.createCache(config2.getName(), config2);
+            System.out.println(redisExpireCache);
         }
     }
 

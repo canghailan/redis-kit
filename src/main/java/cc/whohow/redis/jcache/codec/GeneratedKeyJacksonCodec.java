@@ -104,4 +104,9 @@ public class GeneratedKeyJacksonCodec implements Codec {
     public Encoder getValueEncoder() {
         return encoder;
     }
+
+    @Override
+    public String toString() {
+        return codec.toString();
+    }
 }

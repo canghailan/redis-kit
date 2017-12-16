@@ -7,6 +7,7 @@ import org.redisson.client.codec.Codec;
 import javax.cache.annotation.CacheResult;
 import java.lang.reflect.Method;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 public class AnnotationRedisCacheConfiguration<K, V> implements RedisCacheConfiguration<K, V> {
@@ -15,8 +16,6 @@ public class AnnotationRedisCacheConfiguration<K, V> implements RedisCacheConfig
     private RedisCacheDefaults redisCacheDefaults;
     private String[] keyTypeCanonicalName;
     private String valueTypeCanonicalName;
-    private Class<?> keyType;
-    private Class<?> valueType;
     private Codec keyCodec;
     private Codec valueCodec;
 
@@ -32,8 +31,6 @@ public class AnnotationRedisCacheConfiguration<K, V> implements RedisCacheConfig
         if (this.valueTypeCanonicalName.isEmpty()) {
             this.valueTypeCanonicalName = CacheMethods.getValueTypeCanonicalName(method);
         }
-        this.keyType = redisCacheDefaults.keyType();
-        this.valueType = redisCacheDefaults.valueType();
     }
 
     @Override
@@ -128,12 +125,36 @@ public class AnnotationRedisCacheConfiguration<K, V> implements RedisCacheConfig
     @Override
     @SuppressWarnings("unchecked")
     public Class<K> getKeyType() {
-        return (Class<K>) keyType;
+        return (Class<K>) Object.class;
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public Class<V> getValueType() {
-        return (Class<V>) valueType;
+        return (Class<V>) Object.class;
+    }
+
+    @Override
+    public String toString() {
+        return "AnnotationRedisCacheConfiguration{" +
+                "method=" + method +
+                ", keyTypeCanonicalName=" + Arrays.toString(keyTypeCanonicalName) +
+                ", valueTypeCanonicalName='" + valueTypeCanonicalName + '\'' +
+                ", keyCodec=" + getKeyCodec() +
+                ", valueCodec=" + getValueCodec() +
+                ", name='" + getName() + '\'' +
+                ", statisticsEnabled=" + isStatisticsEnabled() +
+                ", managementEnabled=" + isManagementEnabled() +
+                ", expiryForUpdate=" + getExpiryForUpdate() +
+                ", expiryForUpdateTimeUnit=" + getExpiryForUpdateTimeUnit() +
+                ", redisCacheEnabled=" + isRedisCacheEnabled() +
+                ", keyNotificationEnabled=" + isKeyNotificationEnabled() +
+                ", inProcessCacheEnabled=" + isInProcessCacheEnabled() +
+                ", inProcessCacheMaxEntry=" + getInProcessCacheMaxEntry() +
+                ", inProcessCacheExpiryForUpdate=" + getInProcessCacheExpiryForUpdate() +
+                ", inProcessCacheExpiryForUpdateTimeUnit=" + getInProcessCacheExpiryForUpdateTimeUnit() +
+                ", keyType=" + getKeyType() +
+                ", valueType=" + getValueType() +
+                '}';
     }
 }

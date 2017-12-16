@@ -184,4 +184,13 @@ public class RedisMap<K, V> implements ConcurrentMap<K, V> {
     public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    public String toString() {
+        return "RedisMap{" +
+                "redis=" + redis +
+                ", name=" + name.toString(StandardCharsets.UTF_8) +
+                ", codec=" + codec +
+                '}';
+    }
 }

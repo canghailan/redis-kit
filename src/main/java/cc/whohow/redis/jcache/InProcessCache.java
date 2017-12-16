@@ -215,4 +215,9 @@ public class InProcessCache<K, V> implements Cache<K, V> {
     public V get(K key, Function<? super K, ? extends V> cacheLoader) {
         return cache.get(key, cacheLoader);
     }
+
+    @Override
+    public String toString() {
+        return cache.toString();
+    }
 }

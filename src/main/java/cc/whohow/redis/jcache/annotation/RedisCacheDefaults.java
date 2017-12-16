@@ -13,10 +13,6 @@ import java.util.function.Function;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD})
 public @interface RedisCacheDefaults {
-    Class<?> keyType() default Object.class;
-
-    Class<?> valueType() default Object.class;
-
     boolean statisticsEnabled() default true;
 
     boolean managementEnabled() default false;

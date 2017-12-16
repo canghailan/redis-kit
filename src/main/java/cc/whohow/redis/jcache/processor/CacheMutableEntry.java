@@ -44,4 +44,12 @@ public class CacheMutableEntry<K, V> implements MutableEntry<K, V> {
         }
         throw new IllegalArgumentException();
     }
+
+    @Override
+    public String toString() {
+        return "CacheMutableEntry{" +
+                "key=" + key +
+                ", value=" + getValue() +
+                '}';
+    }
 }

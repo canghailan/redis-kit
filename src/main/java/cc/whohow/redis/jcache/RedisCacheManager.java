@@ -251,4 +251,12 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
             tierCache.synchronizeAll();
         }
     }
+
+    @Override
+    public String toString() {
+        return "RedisCacheManager{" +
+                "redis=" + redis +
+                ", caches=" + caches +
+                '}';
+    }
 }

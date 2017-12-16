@@ -19,6 +19,8 @@ import org.redisson.config.SingleServerConfig;
 import org.redisson.misc.RPromise;
 import org.redisson.misc.RedissonPromise;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.lang.reflect.Field;
 import java.net.URI;
 import java.util.ArrayList;
@@ -51,6 +53,7 @@ public class ConnectionPoolRedis implements Redis {
                         unsafeGet(redisClient, "channels"),
                         RedisChannelInitializer.Type.PLAIN),
                 config.useSingleServer().getConnectionPoolSize());
+        log.trace("redis connection pool initialized: {}", this);
     }
 
     @SuppressWarnings("unchecked")
@@ -91,7 +94,7 @@ public class ConnectionPoolRedis implements Redis {
     @Override
     public URI getUri() {
         SingleServerConfig singleServerConfig = config.useSingleServer();
-        return singleServerConfig.getAddress().resolve(String.valueOf(singleServerConfig.getDatabase()));
+        return singleServerConfig.getAddress().resolve("/" + singleServerConfig.getDatabase());
     }
 
     @Override
@@ -172,6 +175,11 @@ public class ConnectionPoolRedis implements Redis {
         public void close() {
             channelPool.release(connection.getChannel());
         }
+
+        @Override
+        public String toString() {
+            return connection.toString();
+        }
     }
 
     static class Pipeline implements RedisPipeline {
@@ -189,7 +197,7 @@ public class ConnectionPoolRedis implements Redis {
 
         @Override
         public <T, R> RPromise<R> execute(Codec codec, RedisCommand<T> command, Object... params) {
-            log.trace("pipeline {}", command);
+            log.trace("{} {}", this, command);
             CommandData<T, R> commandData = new CommandData<>(new RedissonPromise<>(), codec, command, params);
             commands.add(commandData);
             return commandData.getPromise();
@@ -197,7 +205,7 @@ public class ConnectionPoolRedis implements Redis {
 
         @Override
         public void sync() {
-            log.trace("pipeline ->");
+            log.trace("{} ->", this);
             Future<Channel> channelFuture = redis.channelPool.acquire().syncUninterruptibly();
             if (channelFuture.isSuccess()) {
                 Channel channel = channelFuture.getNow();
@@ -213,5 +221,15 @@ public class ConnectionPoolRedis implements Redis {
                 throw new RedisException("acquire connection error", channelFuture.cause());
             }
         }
+
+        @Override
+        public String toString() {
+            return "pipeline#" + hashCode();
+        }
+    }
+
+    @Override
+    public String toString() {
+        return getUri().toString();
     }
 }

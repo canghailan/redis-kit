@@ -24,6 +24,7 @@ import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 /**
@@ -40,11 +41,9 @@ public class RedisCache<K, V> implements Cache<K, V> {
     protected final Codec optionalValueCodec;
 
     public RedisCache(RedisCacheManager cacheManager, RedisCacheConfiguration<K, V> configuration, Redis redis) {
-        if (configuration.getName() == null ||
-                configuration.getKeyCodec() == null ||
-                configuration.getValueCodec() == null) {
-            throw new IllegalArgumentException();
-        }
+        Objects.requireNonNull(configuration.getName());
+        Objects.requireNonNull(configuration.getKeyCodec());
+        Objects.requireNonNull(configuration.getValueCodec());
         this.cacheManager = cacheManager;
         this.configuration = configuration;
         this.redis = redis;
@@ -280,5 +279,20 @@ public class RedisCache<K, V> implements Cache<K, V> {
             }
         }
         return map;
+    }
+
+    @Override
+    public String toString() {
+        return "RedisCache{" +
+                "redis=" + redis +
+                ", name=" + configuration.getName() +
+                ", keyCodec=" + keyCodec +
+                ", valueCodec=" + valueCodec +
+                ", expiryForUpdate=" + configuration.getExpiryForUpdate() +
+                ", expiryForUpdateTimeUnit=" + configuration.getExpiryForUpdateTimeUnit() +
+                ", keyNotificationEnabled=" + configuration.isKeyNotificationEnabled() +
+                ", keyTypeCanonicalName=" + Arrays.toString(configuration.getKeyTypeCanonicalName()) +
+                ", valueTypeCanonicalName='" + configuration.getValueTypeCanonicalName() + '\'' +
+                '}';
     }
 }

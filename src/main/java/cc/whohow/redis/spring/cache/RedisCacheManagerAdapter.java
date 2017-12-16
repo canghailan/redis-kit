@@ -20,4 +20,9 @@ public class RedisCacheManagerAdapter implements org.springframework.cache.Cache
     public Collection<String> getCacheNames() {
         return redisCacheManager.getCacheNames();
     }
+
+    @Override
+    public String toString() {
+        return redisCacheManager.toString();
+    }
 }

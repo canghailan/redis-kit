@@ -276,4 +276,12 @@ public class TierCache<K, V> implements Cache<K, V>, RedisPubSubListener<K> {
     public void synchronizeAll() {
         inProcessCache.removeAll();
     }
+
+    @Override
+    public String toString() {
+        return "TierCache{" +
+                "redisCache=" + redisCache +
+                ", inProcessCache=" + inProcessCache +
+                '}';
+    }
 }

@@ -103,4 +103,11 @@ public class ObjectJacksonCodec implements Codec {
     public Encoder getValueEncoder() {
         return encoder;
     }
+
+    @Override
+    public String toString() {
+        return "ObjectJacksonCodec{" +
+                "type=" + type +
+                '}';
+    }
 }
