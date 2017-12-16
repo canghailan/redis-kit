@@ -2,6 +2,8 @@ package cc.whohow.redis.jcache;
 
 import cc.whohow.redis.Redis;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.redisson.client.RedisPubSubConnection;
 import org.redisson.client.RedisPubSubListener;
 import org.redisson.client.codec.StringCodec;
@@ -21,6 +23,8 @@ import java.util.function.Consumer;
 
 @SuppressWarnings("unchecked")
 public class RedisCacheManager implements CacheManager, RedisPubSubListener<Object> {
+    private static final Logger log = LogManager.getLogger();
+
     protected final String redisCacheManagerChannel = "RedisCacheManager";
     protected final Map<String, Consumer<String>> commands = new HashMap<>();
 
@@ -67,6 +71,7 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
         if (cache == null) {
             cache = createCache(configuration.getName(), configuration);
         }
+        log.trace("resolve {}", cache);
         return cache;
     }
 
@@ -86,6 +91,7 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
             keyNotificationListeners.put(redisCacheConfiguration.getName(), keyListener);
             pubSubConnection.subscribe(redisCacheConfiguration.getKeyCodec(), redisCacheConfiguration.getName());
         }
+        log.trace("create {}", cache);
         return cache;
     }
 
@@ -156,6 +162,7 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
                 cache.close();
             }
         }
+        log.trace("destroy {}", cacheName);
     }
 
     @Override
@@ -182,6 +189,7 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
             }
             caches.clear();
         }
+        log.trace("close RedisCacheManager");
     }
 
     @Override
@@ -199,6 +207,7 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
 
     @Override
     public boolean onStatus(PubSubType type, String channel) {
+        log.trace("onStatus {} {}", type, channel);
         if (!redisCacheManagerChannel.equals(channel)) {
             RedisPubSubListener listener = keyNotificationListeners.get(channel);
             if (listener != null) {
@@ -210,6 +219,7 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
 
     @Override
     public void onPatternMessage(String pattern, String channel, Object message) {
+        log.trace("onPatternMessage {} {} {}", pattern, channel, message);
         if (redisCacheManagerChannel.equals(channel)) {
             onRedisCacheManagerMessage((String) message);
         } else {
@@ -222,6 +232,7 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
 
     @Override
     public void onMessage(String channel, Object message) {
+        log.trace("onMessage {} {}", channel, message);
         if (redisCacheManagerChannel.equals(channel)) {
             onRedisCacheManagerMessage((String) message);
         } else {
@@ -249,6 +260,7 @@ public class RedisCacheManager implements CacheManager, RedisPubSubListener<Obje
         if (cache != null && cache instanceof TierCache) {
             TierCache tierCache = (TierCache) cache;
             tierCache.synchronizeAll();
+            log.trace("SYNC {}", tierCache);
         }
     }
 

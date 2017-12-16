@@ -228,7 +228,10 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public <T> T unwrap(Class<T> clazz) {
-        return null;
+        if (clazz.isInstance(this)) {
+            return clazz.cast(this);
+        }
+        throw new IllegalArgumentException();
     }
 
     @Override
