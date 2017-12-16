@@ -120,7 +120,6 @@ public class TestCodec {
     public void testObjectMapper() throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
-        objectMapper.configure(SerializationFeature.WRITE_BIGDECIMAL_AS_PLAIN, false);
         System.out.println(objectMapper.writeValueAsString(new BigDecimal("3.14159")));
         System.out.println(objectMapper.writeValueAsString(new Date()));
         System.out.println(objectMapper.readValue("\"2017-12-14T15:08:14.599+0000\"", Date.class));

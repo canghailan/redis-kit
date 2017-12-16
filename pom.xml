@@ -125,7 +125,7 @@
         </dependency>
         <dependency>
             <groupId>org.springframework</groupId>
-            <artifactId>spring-context</artifactId>
+            <artifactId>spring-tx</artifactId>
             <version>RELEASE</version>
             <scope>provided</scope>
         </dependency>

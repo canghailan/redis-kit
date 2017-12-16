@@ -22,7 +22,7 @@ import java.util.List;
 /**
  *
  */
-public class RedisAdapter implements Redis {
+public class RedisConnectionManagerAdapter implements Redis {
     private static final Logger log = LogManager.getLogger();
 
     protected final SingleServerConfig config;
@@ -30,7 +30,7 @@ public class RedisAdapter implements Redis {
     protected final MasterSlaveEntry master;
     protected final CommandExecutor commandExecutor;
 
-    public RedisAdapter(ConnectionManager connectionManager) {
+    public RedisConnectionManagerAdapter(ConnectionManager connectionManager) {
         this.config = connectionManager.getCfg().useSingleServer();
         this.connectionManager = connectionManager;
         this.master = connectionManager.getEntry(connectionManager.calcSlot(""));
@@ -92,10 +92,10 @@ public class RedisAdapter implements Redis {
     }
 
     static class Pipeline implements RedisPipeline {
-        private final RedisAdapter redis;
+        private final RedisConnectionManagerAdapter redis;
         private final CommandBatchService commandExecutor;
 
-        Pipeline(RedisAdapter redis) {
+        Pipeline(RedisConnectionManagerAdapter redis) {
             this.redis = redis;
             this.commandExecutor = new CommandBatchService(redis.connectionManager);
         }

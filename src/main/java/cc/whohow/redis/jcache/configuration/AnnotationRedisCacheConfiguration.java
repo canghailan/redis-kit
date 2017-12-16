@@ -8,6 +8,7 @@ import javax.cache.annotation.CacheResult;
 import java.lang.reflect.Method;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class AnnotationRedisCacheConfiguration<K, V> implements RedisCacheConfiguration<K, V> {
@@ -120,6 +121,11 @@ public class AnnotationRedisCacheConfiguration<K, V> implements RedisCacheConfig
     @Override
     public TimeUnit getInProcessCacheExpiryForUpdateTimeUnit() {
         return redisCacheDefaults.inProcessCacheExpiryForUpdateTimeUnit();
+    }
+
+    @Override
+    public List<String> getCustomConfiguration() {
+        return Arrays.asList(redisCacheDefaults.customConfiguration());
     }
 
     @Override

@@ -8,7 +8,7 @@ import java.util.concurrent.Callable;
 
 @SuppressWarnings("unchecked")
 public class CacheAdapter implements org.springframework.cache.Cache {
-    private final Cache cache;
+    protected final Cache cache;
 
     public CacheAdapter(Cache cache) {
         this.cache = cache;

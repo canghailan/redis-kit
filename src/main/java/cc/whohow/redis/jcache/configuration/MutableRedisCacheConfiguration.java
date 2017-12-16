@@ -2,7 +2,9 @@ package cc.whohow.redis.jcache.configuration;
 
 import org.redisson.client.codec.Codec;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfiguration<K, V> {
@@ -27,6 +29,9 @@ public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfigura
     private int inProcessCacheMaxEntry = -1;
     private long inProcessCacheExpiryForUpdate = -1;
     private TimeUnit inProcessCacheExpiryForUpdateTimeUnit = TimeUnit.SECONDS;
+
+    // custom
+    private List<String> customConfiguration = new ArrayList<>();
 
     @Override
     public String getName() {
@@ -179,6 +184,15 @@ public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfigura
 
     public void setInProcessCacheExpiryForUpdateTimeUnit(TimeUnit inProcessCacheExpiryForUpdateTimeUnit) {
         this.inProcessCacheExpiryForUpdateTimeUnit = inProcessCacheExpiryForUpdateTimeUnit;
+    }
+
+    @Override
+    public List<String> getCustomConfiguration() {
+        return customConfiguration;
+    }
+
+    public void setCustomConfiguration(List<String> customConfiguration) {
+        this.customConfiguration = customConfiguration;
     }
 
     @Override

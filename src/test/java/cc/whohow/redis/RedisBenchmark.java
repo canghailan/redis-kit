@@ -1,6 +1,6 @@
 package cc.whohow.redis;
 
-import cc.whohow.redis.client.RedisAdapter;
+import cc.whohow.redis.client.RedisConnectionManagerAdapter;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.options.Options;
@@ -13,10 +13,8 @@ import org.redisson.config.Config;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
-import java.time.LocalDateTime;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
@@ -91,7 +89,7 @@ public class RedisBenchmark {
                 redisson = (Redisson) Redisson.create(config);
                 rBucket = redisson.getBucket("test", StringCodec.INSTANCE);
 
-                redis = new RedisAdapter(redisson.getConnectionManager());
+                redis = new RedisConnectionManagerAdapter(redisson.getConnectionManager());
 
                 if (password == null) {
                     jedisPool = new JedisPool("redis://" + host + ":" + port + "/" + database);

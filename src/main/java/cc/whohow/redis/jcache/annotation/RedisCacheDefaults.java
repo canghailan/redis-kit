@@ -17,7 +17,7 @@ public @interface RedisCacheDefaults {
 
     boolean managementEnabled() default false;
 
-    long expiryForUpdate() default -1;
+    long expiryForUpdate() default 86400;
 
     TimeUnit expiryForUpdateTimeUnit() default TimeUnit.SECONDS;
 
@@ -41,9 +41,13 @@ public @interface RedisCacheDefaults {
 
     boolean inProcessCacheEnabled() default true;
 
-    int inProcessCacheMaxEntry() default -1;
+    int inProcessCacheMaxEntry() default 1024;
 
-    long inProcessCacheExpiryForUpdate() default -1;
+    long inProcessCacheExpiryForUpdate() default 86400;
 
     TimeUnit inProcessCacheExpiryForUpdateTimeUnit() default TimeUnit.SECONDS;
+
+    // custom
+
+    String[] customConfiguration() default {};
 }

@@ -21,7 +21,7 @@ import java.util.Set;
 import java.util.function.Function;
 
 /**
- * 两级缓存
+ * 两级缓存，仅支持 Read Through 模式
  */
 public class TierCache<K, V> implements Cache<K, V>, RedisPubSubListener<K> {
     private static final Logger log = LogManager.getLogger();

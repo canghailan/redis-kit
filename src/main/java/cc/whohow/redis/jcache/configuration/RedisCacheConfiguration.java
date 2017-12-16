@@ -3,6 +3,7 @@ package cc.whohow.redis.jcache.configuration;
 import org.redisson.client.codec.Codec;
 
 import javax.cache.configuration.Configuration;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -48,4 +49,6 @@ public interface RedisCacheConfiguration<K, V> extends Configuration<K, V> {
     long getInProcessCacheExpiryForUpdate();
 
     TimeUnit getInProcessCacheExpiryForUpdateTimeUnit();
+
+    List<String> getCustomConfiguration();
 }

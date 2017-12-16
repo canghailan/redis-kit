@@ -1,6 +1,6 @@
 package cc.whohow.redis;
 
-import cc.whohow.redis.client.RedisAdapter;
+import cc.whohow.redis.client.RedisConnectionManagerAdapter;
 import cc.whohow.redis.jcache.RedisCacheManager;
 import cc.whohow.redis.jcache.configuration.MutableRedisCacheConfiguration;
 import org.junit.AfterClass;
@@ -27,7 +27,7 @@ public class TestRedisCache {
     @BeforeClass
     public static void setup() throws Exception {
         redisson = TestRedis.setupRedisson();
-        redis = new RedisAdapter(redisson.getConnectionManager());
+        redis = new RedisConnectionManagerAdapter(redisson.getConnectionManager());
 
         redisCacheManager = new RedisCacheManager(redis);
 

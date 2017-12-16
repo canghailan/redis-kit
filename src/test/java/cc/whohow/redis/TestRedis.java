@@ -1,6 +1,6 @@
 package cc.whohow.redis;
 
-import cc.whohow.redis.client.RedisAdapter;
+import cc.whohow.redis.client.RedisConnectionManagerAdapter;
 import cc.whohow.redis.codec.ObjectJacksonCodec;
 import cc.whohow.redis.codec.OptionalCodec;
 import org.junit.AfterClass;
@@ -49,7 +49,7 @@ public class TestRedis {
     @BeforeClass
     public static void setup() throws Exception {
         redisson = setupRedisson();
-        redis = new RedisAdapter(redisson.getConnectionManager());
+        redis = new RedisConnectionManagerAdapter(redisson.getConnectionManager());
     }
 
     @AfterClass
