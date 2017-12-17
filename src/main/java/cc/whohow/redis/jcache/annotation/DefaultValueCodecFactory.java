@@ -21,12 +21,12 @@ public class DefaultValueCodecFactory implements Function<Method, Codec> {
             }
 
             Codec codec = new ObjectJacksonCodec(valueTypeCanonicalName);
-            if (redisCacheDefaults.valueCompressCodec().isEmpty()) {
+            if (redisCacheDefaults.valueCompressionCodec().isEmpty()) {
                 return codec;
             }
 
             try {
-                return (Codec) Class.forName(redisCacheDefaults.valueCompressCodec())
+                return (Codec) Class.forName(redisCacheDefaults.valueCompressionCodec())
                         .getConstructor(Codec.class)
                         .newInstance(codec);
             } catch (Exception e) {

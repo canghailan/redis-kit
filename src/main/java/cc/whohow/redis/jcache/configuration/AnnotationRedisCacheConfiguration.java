@@ -125,7 +125,7 @@ public class AnnotationRedisCacheConfiguration<K, V> implements RedisCacheConfig
 
     @Override
     public List<String> getCustomConfiguration() {
-        return Arrays.asList(redisCacheDefaults.customConfiguration());
+        return Arrays.asList(redisCacheDefaults.custom());
     }
 
     @Override

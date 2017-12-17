@@ -29,7 +29,7 @@ public @interface RedisCacheDefaults {
 
     String valueTypeCanonicalName() default "";
 
-    String valueCompressCodec() default "";
+    String valueCompressionCodec() default "";
 
     Class<? extends Function<Method, Codec>> keyCodecFactory() default DefaultKeyCodecFactory.class;
 
@@ -49,5 +49,5 @@ public @interface RedisCacheDefaults {
 
     // custom
 
-    String[] customConfiguration() default {};
+    String[] custom() default {};
 }
