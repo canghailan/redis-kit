@@ -3,9 +3,14 @@ package cc.whohow.redis.jcache;
 import cc.whohow.redis.Redis;
 import cc.whohow.redis.codec.Codecs;
 import cc.whohow.redis.codec.OptionalCodec;
+import cc.whohow.redis.codec.OptionalRedisCodec;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import cc.whohow.redis.jcache.processor.CacheMutableEntry;
 import cc.whohow.redis.jcache.processor.EntryProcessorResultWrapper;
+import io.lettuce.core.SetArgs;
+import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.api.sync.RedisCommands;
+import io.lettuce.core.codec.RedisCodec;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.redisson.client.codec.Codec;
@@ -22,22 +27,24 @@ import javax.cache.integration.CompletionListener;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * 普通Redis缓存，不支持过期时间
  */
 public class RedisCache<K, V> implements Cache<K, V> {
+    public static final String OK = "OK";
+    public static final SetArgs NX = SetArgs.Builder.nx();
+
     protected final RedisCacheManager cacheManager;
     protected final RedisCacheConfiguration<K, V> configuration;
-    protected final Redis redis;
-    protected final ByteBuf name;
-    protected final ByteBuf keyPrefix;
-    protected final Codec keyCodec;
-    protected final Codec valueCodec;
-    protected final Codec optionalValueCodec;
+    protected final RedisCommands<ByteBuffer, ByteBuffer> commands;
+    protected final OptionalRedisCodec<K, V> codec;
 
     public RedisCache(RedisCacheManager cacheManager, RedisCacheConfiguration<K, V> configuration, Redis redis) {
         Objects.requireNonNull(configuration.getName());
@@ -45,29 +52,17 @@ public class RedisCache<K, V> implements Cache<K, V> {
         Objects.requireNonNull(configuration.getValueCodec());
         this.cacheManager = cacheManager;
         this.configuration = configuration;
-        this.redis = redis;
-        this.name = Unpooled.copiedBuffer(configuration.getName(), StandardCharsets.UTF_8).asReadOnly();
-        this.keyPrefix = name.copy().writeByte(':').asReadOnly();
-        this.keyCodec = configuration.getKeyCodec();
-        this.valueCodec = configuration.getValueCodec();
-        this.optionalValueCodec = new OptionalCodec(valueCodec);
-    }
-
-    public Codec getKeyCodec() {
-        return keyCodec;
-    }
-
-    public Codec getValueCodec() {
-        return valueCodec;
+        this.commands = null;
+        this.codec = null;
     }
 
     @Override
     public V get(K key) {
-        return redis.execute(valueCodec, RedisCommands.GET, encodeRedisKey(key));
+        return codec.decodeValue(commands.get(codec.encodeKey(key)));
     }
 
     public Optional<V> getOptional(K key) {
-        return redis.execute(optionalValueCodec, RedisCommands.GET, encodeRedisKey(key));
+        return codec.decodeOptionalValue(commands.get(codec.encodeKey(key)));
     }
 
     @Override
@@ -83,13 +78,19 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public Map<K, V> getAll(Set<? extends K> keys) {
-        List<? extends V> values = redis.execute(valueCodec, RedisCommands.MGET, (Object[]) encodeRedisKeys(keys));
-        return toMap(keys, values);
+        ByteBuffer[] encodedKeys = keys.stream()
+                .map(key -> (K) key)
+                .map(codec::encodeKey)
+                .toArray(ByteBuffer[]::new);
+        return commands.mget(encodedKeys).stream()
+                .collect(Collectors.toMap(
+                        kv -> codec.decodeKey(kv.getKey()),
+                        kv -> codec.decodeValue(kv.getValueOrElse(null))));
     }
 
     @Override
     public boolean containsKey(K key) {
-        return redis.execute(RedisCommands.EXISTS, encodeRedisKey(key));
+        return commands.exists(codec.encodeKey(key)) > 0;
     }
 
     @Override
@@ -99,30 +100,26 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public void put(K key, V value) {
-        redis.execute(RedisCommands.SET, encodeRedisKey(key), Codecs.encode(valueCodec, value));
+        commands.set(codec.encodeKey(key), codec.encodeValue(value));
     }
 
     @Override
     public V getAndPut(K key, V value) {
-        return redis.execute(valueCodec, RedisCommands.GETSET, encodeRedisKey(key), Codecs.encode(valueCodec, value));
+        return codec.decodeValue(commands.getset(codec.encodeKey(key), codec.encodeValue(value)));
     }
 
     @Override
     public void putAll(Map<? extends K, ? extends V> map) {
-        ByteBuf[] encodedKeys = encodeRedisKeys(map.keySet());
-        ByteBuf[] encodedValues = Codecs.encode(valueCodec, map.values());
-        ByteBuf[] encodedRedisKeyValues = new ByteBuf[encodedKeys.length * 2];
-        for (int i = 0; i < encodedKeys.length; i++) {
-            encodedRedisKeyValues[i * 2] = encodedKeys[i];
-            encodedRedisKeyValues[i * 2 + 1] = encodedValues[i];
-        }
-
-        redis.execute(RedisCommands.MSET, (Object[]) encodedRedisKeyValues);
+        Map<ByteBuffer, ByteBuffer> encodedKeyValues = map.entrySet().stream()
+                .collect(Collectors.toMap(
+                        e -> codec.encodeKey(e.getKey()),
+                        e -> codec.encodeValue(e.getValue())));
+        commands.mset(encodedKeyValues);
     }
 
     @Override
     public boolean putIfAbsent(K key, V value) {
-        return redis.execute(RedisCommands.SETPXNX, encodeRedisKey(key), Codecs.encode(valueCodec, value), "NX");
+        return OK.equals(commands.set(codec.encodeKey(key), codec.encodeValue(value), NX));
     }
 
     @Override
