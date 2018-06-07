@@ -211,7 +211,7 @@ public class RedisKey<V> implements ConcurrentMap<String, V> {
     @Override
     public String toString() {
         return "RedisKey{" +
-                "redis=" + redis +
+                "redisClient=" + redis +
                 ", codec=" + codec +
                 '}';
     }

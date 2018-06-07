@@ -71,7 +71,7 @@ public class RedisBenchmark {
 
         @Setup
         public void setup() throws Exception {
-            try (InputStream stream = new FileInputStream("redis.properties")) {
+            try (InputStream stream = new FileInputStream("redisClient.properties")) {
                 properties = new Properties();
                 properties.load(stream);
 
@@ -82,7 +82,7 @@ public class RedisBenchmark {
 
                 config = new Config();
                 config.useSingleServer()
-                        .setAddress("redis://" + host + ":" + port)
+                        .setAddress("redisClient://" + host + ":" + port)
                         .setPassword(password)
                         .setDatabase(database)
                         .setConnectionPoolSize(200);
@@ -92,9 +92,9 @@ public class RedisBenchmark {
                 redis = new RedisConnectionManagerAdapter(redisson.getConnectionManager());
 
                 if (password == null) {
-                    jedisPool = new JedisPool("redis://" + host + ":" + port + "/" + database);
+                    jedisPool = new JedisPool("redisClient://" + host + ":" + port + "/" + database);
                 } else {
-                    jedisPool = new JedisPool("redis://:" + password + "@" + host + ":" + port + "/" + database);
+                    jedisPool = new JedisPool("redisClient://:" + password + "@" + host + ":" + port + "/" + database);
                 }
             }
         }

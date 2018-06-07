@@ -21,7 +21,7 @@ public @interface RedisCacheDefaults {
 
     TimeUnit expiryForUpdateTimeUnit() default TimeUnit.SECONDS;
 
-    // redis
+    // redisClient
 
     boolean redisCacheEnabled() default true;
 

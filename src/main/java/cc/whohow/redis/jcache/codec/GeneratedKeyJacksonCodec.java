@@ -3,8 +3,7 @@ package cc.whohow.redis.jcache.codec;
 import cc.whohow.redis.codec.ObjectArrayJacksonCodec;
 import cc.whohow.redis.codec.ObjectJacksonCodec;
 import cc.whohow.redis.codec.WrapCodec;
-import cc.whohow.redis.jcache.annotation.GeneratedKey;
-import cc.whohow.redis.jcache.annotation.GeneratedSimpleKey;
+import cc.whohow.redis.jcache.ImmutableGeneratedCacheKey;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import org.redisson.client.codec.Codec;
@@ -32,7 +31,7 @@ public class GeneratedKeyJacksonCodec extends WrapCodec {
         this(getDefaultCodec(types), getDefaultWrap(types), getDefaultUnwrap(types));
     }
 
-    public GeneratedKeyJacksonCodec(Codec codec, Function<Object, GeneratedKey> wrap, Function<GeneratedKey, Object> unwrap) {
+    public GeneratedKeyJacksonCodec(Codec codec, Function<Object, ImmutableGeneratedCacheKey> wrap, Function<ImmutableGeneratedCacheKey, Object> unwrap) {
         super(codec, wrap, unwrap);
     }
 
@@ -66,27 +65,27 @@ public class GeneratedKeyJacksonCodec extends WrapCodec {
         }
     }
 
-    public static Function<Object, GeneratedKey> getDefaultWrap(JavaType... types) {
+    public static Function<Object, ImmutableGeneratedCacheKey> getDefaultWrap(JavaType... types) {
         return (types.length == 1) ? GeneratedKeyJacksonCodec::wrapObject : GeneratedKeyJacksonCodec::wrapObjectArray;
     }
 
-    public static Function<GeneratedKey, Object> getDefaultUnwrap(JavaType... types) {
+    public static Function<ImmutableGeneratedCacheKey, Object> getDefaultUnwrap(JavaType... types) {
         return (types.length == 1) ? GeneratedKeyJacksonCodec::unwrapObject : GeneratedKeyJacksonCodec::unwrapObjectArray;
     }
 
-    public static GeneratedKey wrapObject(Object object) {
-        return GeneratedKey.of(object);
+    public static ImmutableGeneratedCacheKey wrapObject(Object object) {
+        return ImmutableGeneratedCacheKey.of(object);
     }
 
-    public static Object unwrapObject(GeneratedKey generatedKey) {
-        return ((GeneratedSimpleKey) generatedKey).getKey();
+    public static Object unwrapObject(ImmutableGeneratedCacheKey immutableGeneratedCacheKey) {
+        return ((ImmutableGeneratedSimpleCacheKey) immutableGeneratedCacheKey).getKey();
     }
 
-    public static GeneratedKey wrapObjectArray(Object object) {
-        return GeneratedKey.of((Object[]) object);
+    public static ImmutableGeneratedCacheKey wrapObjectArray(Object object) {
+        return ImmutableGeneratedCacheKey.of((Object[]) object);
     }
 
-    public static Object unwrapObjectArray(GeneratedKey generatedKey) {
-        return generatedKey.getKeys();
+    public static Object unwrapObjectArray(ImmutableGeneratedCacheKey immutableGeneratedCacheKey) {
+        return immutableGeneratedCacheKey.getKeys();
     }
 }

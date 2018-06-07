@@ -1,4 +1,6 @@
 .idea/
+benchmark/
 target/
 *.iml
-redis.properties
+*.txt
+*.xml

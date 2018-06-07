@@ -1,6 +1,7 @@
 package cc.whohow.redis;
 
 import cc.whohow.redis.client.RedisConnectionManagerAdapter;
+import cc.whohow.redis.codec.Codec;
 import cc.whohow.redis.codec.ObjectJacksonCodec;
 import cc.whohow.redis.codec.OptionalCodec;
 import org.junit.AfterClass;
@@ -27,7 +28,7 @@ public class TestRedis {
     private Codec optionalCodec = new OptionalCodec(new ObjectJacksonCodec(String.class));
 
     public static Redisson setupRedisson() throws Exception {
-        try (InputStream stream = new FileInputStream("redis.properties")) {
+        try (InputStream stream = new FileInputStream("redisClient.properties")) {
             Properties properties = new Properties();
             properties.load(stream);
 
@@ -38,7 +39,7 @@ public class TestRedis {
 
             Config config = new Config();
             config.useSingleServer()
-                    .setAddress("redis://" + host + ":" + port)
+                    .setAddress("redisClient://" + host + ":" + port)
                     .setPassword(password)
                     .setDatabase(database);
 
@@ -64,8 +65,8 @@ public class TestRedis {
 
     @Test
     public void testPublish() {
-//        System.out.println(redis.execute(RedisCommands.PUBLISH, "test", "test-1"));
-//        System.out.println(redis.execute(RedisCommands.PUBLISH,  "test-ex", "test-ex-2"));
+//        System.out.println(redisClient.execute(RedisCommands.PUBLISH, "test", "test-1"));
+//        System.out.println(redisClient.execute(RedisCommands.PUBLISH,  "test-ex", "test-ex-2"));
         System.out.println(redis.execute(RedisCommands.PUBLISH,  "RedisCacheManager", "SYNC doc"));
     }
 

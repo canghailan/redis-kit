@@ -4,7 +4,6 @@ import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import cc.whohow.redis.jcache.processor.CacheMutableEntry;
 import cc.whohow.redis.jcache.processor.EntryProcessorResultWrapper;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import org.redisson.jcache.JCacheEntry;
 
 import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
@@ -13,10 +12,8 @@ import javax.cache.integration.CompletionListener;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
+import java.nio.ByteBuffer;
+import java.util.*;
 import java.util.function.Function;
 
 /**
@@ -201,8 +198,30 @@ public class InProcessCache<K, V> implements Cache<K, V> {
     @Override
     public Iterator<Entry<K, V>> iterator() {
         return cache.asMap().entrySet().stream()
-                .map(e -> (Entry<K, V>) new JCacheEntry<>(e.getKey(), e.getValue()))
+                .map(e -> (Entry<K, V>) new ImmutableCacheEntry<>(e.getKey(), e.getValue()))
                 .iterator();
+    }
+
+    @Override
+    public RedisCacheCodec<K, V> getCodec() {
+        return null;
+    }
+
+    @Override
+    public void onRedisConnected() {
+    }
+
+    @Override
+    public void onRedisDisconnected() {
+    }
+
+    @Override
+    public void onKeyspaceNotification(ByteBuffer key, ByteBuffer message) {
+    }
+
+    @Override
+    public <CV extends CacheValue<V>> CV getValue(K key, Function<V, CV> ofNullable) {
+        return ofNullable.apply(cache.getIfPresent(key));
     }
 
     @Override

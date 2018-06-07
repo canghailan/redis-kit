@@ -76,7 +76,7 @@ public class RedisAtomicLong extends Number {
     @Override
     public String toString() {
         return "RedisAtomicLong{" +
-                "redis=" + redis +
+                "redisClient=" + redis +
                 ", name=" + name.toString(StandardCharsets.UTF_8) +
                 '}';
     }

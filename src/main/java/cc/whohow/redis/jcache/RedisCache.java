@@ -1,24 +1,14 @@
 package cc.whohow.redis.jcache;
 
-import cc.whohow.redis.Redis;
-import cc.whohow.redis.codec.Codecs;
-import cc.whohow.redis.codec.OptionalCodec;
-import cc.whohow.redis.codec.OptionalRedisCodec;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import cc.whohow.redis.jcache.processor.CacheMutableEntry;
 import cc.whohow.redis.jcache.processor.EntryProcessorResultWrapper;
-import io.lettuce.core.SetArgs;
-import io.lettuce.core.api.StatefulRedisConnection;
+import cc.whohow.redis.util.RedisConstants;
+import io.lettuce.core.KeyScanCursor;
+import io.lettuce.core.ScanArgs;
+import io.lettuce.core.ScanCursor;
 import io.lettuce.core.api.sync.RedisCommands;
 import io.lettuce.core.codec.RedisCodec;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import org.redisson.client.codec.Codec;
-import org.redisson.client.codec.ScanCodec;
-import org.redisson.client.codec.StringCodec;
-import org.redisson.client.protocol.RedisCommands;
-import org.redisson.client.protocol.decoder.ListScanResult;
-import org.redisson.client.protocol.decoder.ScanObjectEntry;
 
 import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
@@ -28,52 +18,55 @@ import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * 普通Redis缓存，不支持过期时间
  */
 public class RedisCache<K, V> implements Cache<K, V> {
-    public static final String OK = "OK";
-    public static final SetArgs NX = SetArgs.Builder.nx();
-
     protected final RedisCacheManager cacheManager;
     protected final RedisCacheConfiguration<K, V> configuration;
-    protected final RedisCommands<ByteBuffer, ByteBuffer> commands;
-    protected final OptionalRedisCodec<K, V> codec;
+    protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
+    protected final RedisCodec<K, V> codec;
 
-    public RedisCache(RedisCacheManager cacheManager, RedisCacheConfiguration<K, V> configuration, Redis redis) {
+    public RedisCache(RedisCacheManager cacheManager, RedisCacheConfiguration<K, V> configuration) {
         Objects.requireNonNull(configuration.getName());
-        Objects.requireNonNull(configuration.getKeyCodec());
-        Objects.requireNonNull(configuration.getValueCodec());
         this.cacheManager = cacheManager;
         this.configuration = configuration;
-        this.commands = null;
-        this.codec = null;
+        this.redis = cacheManager.getRedisCommands();
+        this.codec = cacheManager.newRedisCacheCodec(configuration);
+    }
+
+    public RedisCodec<K, V> getCodec() {
+        return codec;
+    }
+
+    @Override
+    public void onRedisConnected() {
+    }
+
+    @Override
+    public void onRedisDisconnected() {
+    }
+
+    @Override
+    public void onKeyspaceNotification(ByteBuffer key, ByteBuffer message) {
     }
 
     @Override
     public V get(K key) {
-        return codec.decodeValue(commands.get(codec.encodeKey(key)));
-    }
-
-    public Optional<V> getOptional(K key) {
-        return codec.decodeOptionalValue(commands.get(codec.encodeKey(key)));
+        return codec.decodeValue(redis.get(codec.encodeKey(key)));
     }
 
     @Override
-    public V get(K key, Function<? super K, ? extends V> cacheLoader) {
-        Optional<V> optional = getOptional(key);
-        if (optional != null) {
-            return optional.orElse(null);
+    public <CV extends CacheValue<V>> CV getValue(K key, Function<V, CV> ofNullable) {
+        ByteBuffer encodedValue = redis.get(codec.encodeKey(key));
+        if (RedisConstants.isNil(encodedValue)) {
+            return null;
         }
-        V value = cacheLoader.apply(key);
-        put(key, value);
-        return value;
+        return ofNullable.apply(codec.decodeValue(encodedValue));
     }
 
     @Override
@@ -82,7 +75,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
                 .map(key -> (K) key)
                 .map(codec::encodeKey)
                 .toArray(ByteBuffer[]::new);
-        return commands.mget(encodedKeys).stream()
+        return redis.mget(encodedKeys).stream()
                 .collect(Collectors.toMap(
                         kv -> codec.decodeKey(kv.getKey()),
                         kv -> codec.decodeValue(kv.getValueOrElse(null))));
@@ -90,7 +83,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public boolean containsKey(K key) {
-        return commands.exists(codec.encodeKey(key)) > 0;
+        return redis.exists(codec.encodeKey(key)) > 0;
     }
 
     @Override
@@ -100,12 +93,12 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public void put(K key, V value) {
-        commands.set(codec.encodeKey(key), codec.encodeValue(value));
+        redis.set(codec.encodeKey(key), codec.encodeValue(value));
     }
 
     @Override
     public V getAndPut(K key, V value) {
-        return codec.decodeValue(commands.getset(codec.encodeKey(key), codec.encodeValue(value)));
+        return codec.decodeValue(redis.getset(codec.encodeKey(key), codec.encodeValue(value)));
     }
 
     @Override
@@ -114,17 +107,17 @@ public class RedisCache<K, V> implements Cache<K, V> {
                 .collect(Collectors.toMap(
                         e -> codec.encodeKey(e.getKey()),
                         e -> codec.encodeValue(e.getValue())));
-        commands.mset(encodedKeyValues);
+        redis.mset(encodedKeyValues);
     }
 
     @Override
     public boolean putIfAbsent(K key, V value) {
-        return OK.equals(commands.set(codec.encodeKey(key), codec.encodeValue(value), NX));
+        return RedisConstants.ok(redis.set(codec.encodeKey(key), codec.encodeValue(value), RedisConstants.NX));
     }
 
     @Override
     public boolean remove(K key) {
-        return redis.execute(RedisCommands.DEL, encodeRedisKey(key)) == 1L;
+        return redis.del(codec.encodeKey(key)) > 0;
     }
 
     @Override
@@ -144,7 +137,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public boolean replace(K key, V value) {
-        return redis.execute(RedisCommands.SETPXNX, encodeRedisKey(key), Codecs.encode(valueCodec, value), "XX");
+        return RedisConstants.ok(redis.set(codec.encodeKey(key), codec.encodeValue(value), RedisConstants.XX));
     }
 
     @Override
@@ -154,22 +147,22 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public void removeAll(Set<? extends K> keys) {
-        redis.execute(RedisCommands.DEL, (Object[]) encodeRedisKeys(keys));
+        ByteBuffer[] encodedKeys = keys.stream()
+                .map(key -> (K) key)
+                .map(codec::encodeKey)
+                .toArray(ByteBuffer[]::new);
+        redis.del(encodedKeys);
     }
 
     @Override
     public void removeAll() {
-        Codec codec = new ScanCodec(StringCodec.INSTANCE);
-        ByteBuf pattern = keyPrefix.copy().writeByte('*');
-        Long pos = 0L;
-        do {
-            ListScanResult<ScanObjectEntry> result = redis.execute(
-                    codec, RedisCommands.SCAN, pos, "MATCH", pattern, "COUNT", 100);
-            if (!result.getValues().isEmpty()) {
-                redis.execute(RedisCommands.DEL, result.getValues().stream().map(ScanObjectEntry::getBuf).toArray());
-            }
-            pos = result.getPos();
-        } while (pos != 0);
+        ScanArgs scanArgs = ScanArgs.Builder.matches(getName() + ":*").limit(100);
+        ScanCursor scanCursor = ScanCursor.INITIAL;
+        while (!scanCursor.isFinished()) {
+            KeyScanCursor<ByteBuffer> keyScanCursor = redis.scan(scanArgs);
+            redis.del(keyScanCursor.getKeys().toArray(new ByteBuffer[0]));
+            scanCursor = keyScanCursor;
+        }
     }
 
     @Override
@@ -245,51 +238,13 @@ public class RedisCache<K, V> implements Cache<K, V> {
         throw new UnsupportedOperationException();
     }
 
-    public ByteBuf encodeRedisKey(K key) {
-        return toRedisKey(Codecs.encode(keyCodec, key));
-    }
-
-    public ByteBuf[] encodeRedisKeys(Collection<? extends K> keys) {
-        ByteBuf[] encodedRedisKeys = new ByteBuf[keys.size()];
-        try {
-            int i = 0;
-            for (K key : keys) {
-                encodedRedisKeys[i++] = encodeRedisKey(key);
-            }
-            return encodedRedisKeys;
-        } catch (RuntimeException e) {
-            Codecs.release(encodedRedisKeys);
-            throw e;
-        }
-    }
-
-    public ByteBuf toRedisKey(ByteBuf key) {
-        return Unpooled.wrappedBuffer(keyPrefix.retain(), key);
-    }
-
-    protected Map<K, V> toMap(Iterable<? extends K> keys, Iterable<? extends V> values) {
-        Map<K, V> map = new LinkedHashMap<>();
-        Iterator<? extends V> value = values.iterator();
-        for (K key : keys) {
-            if (value.hasNext()) {
-                map.put(key, value.next());
-            } else {
-                throw new IllegalStateException();
-            }
-        }
-        return map;
-    }
-
     @Override
     public String toString() {
         return getClass().getSimpleName() + "{" +
-                "redis=" + redis +
+                "redisClient=" + redis +
                 ", name=" + configuration.getName() +
-                ", keyCodec=" + keyCodec +
-                ", valueCodec=" + valueCodec +
                 ", expiryForUpdate=" + configuration.getExpiryForUpdate() +
                 ", expiryForUpdateTimeUnit=" + configuration.getExpiryForUpdateTimeUnit() +
-                ", keyNotificationEnabled=" + configuration.isKeyNotificationEnabled() +
                 ", keyTypeCanonicalName=" + Arrays.toString(configuration.getKeyTypeCanonicalName()) +
                 ", valueTypeCanonicalName='" + configuration.getValueTypeCanonicalName() + '\'' +
                 '}';

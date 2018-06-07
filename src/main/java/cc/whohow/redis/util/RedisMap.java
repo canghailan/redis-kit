@@ -188,7 +188,7 @@ public class RedisMap<K, V> implements ConcurrentMap<K, V> {
     @Override
     public String toString() {
         return "RedisMap{" +
-                "redis=" + redis +
+                "redisClient=" + redis +
                 ", name=" + name.toString(StandardCharsets.UTF_8) +
                 ", codec=" + codec +
                 '}';

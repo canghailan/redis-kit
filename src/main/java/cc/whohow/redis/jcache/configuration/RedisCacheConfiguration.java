@@ -1,7 +1,5 @@
 package cc.whohow.redis.jcache.configuration;
 
-import org.redisson.client.codec.Codec;
-
 import javax.cache.configuration.Configuration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -26,15 +24,9 @@ public interface RedisCacheConfiguration<K, V> extends Configuration<K, V> {
 
     TimeUnit getExpiryForUpdateTimeUnit();
 
-    // redis
+    // redisClient
 
     boolean isRedisCacheEnabled();
-
-    boolean isKeyNotificationEnabled();
-
-    Codec getKeyCodec();
-
-    Codec getValueCodec();
 
     String[] getKeyTypeCanonicalName();
 

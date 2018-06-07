@@ -16,7 +16,7 @@ public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfigura
     private long expiryForUpdate = -1;
     private TimeUnit expiryForUpdateTimeUnit = TimeUnit.SECONDS;
 
-    // redis
+    // redisClient
     private boolean redisCacheEnabled = true;
     private boolean keyNotificationEnabled = true;
     private Codec keyCodec;

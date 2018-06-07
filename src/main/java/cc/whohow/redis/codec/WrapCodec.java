@@ -1,6 +1,6 @@
 package cc.whohow.redis.codec;
 
-import cc.whohow.redis.jcache.annotation.GeneratedKey;
+import cc.whohow.redis.jcache.ImmutableGeneratedCacheKey;
 import io.netty.buffer.ByteBuf;
 import org.redisson.client.codec.Codec;
 import org.redisson.client.handler.State;
@@ -12,13 +12,13 @@ import java.util.function.Function;
 
 public class WrapCodec implements Codec {
     protected final Codec codec;
-    protected final Function<Object, GeneratedKey> wrap;
-    protected final Function<GeneratedKey, Object> unwrap;
+    protected final Function<Object, ImmutableGeneratedCacheKey> wrap;
+    protected final Function<ImmutableGeneratedCacheKey, Object> unwrap;
 
     private final Encoder valueEncoder = new Encoder() {
         @Override
         public ByteBuf encode(Object in) throws IOException {
-            return codec.getValueEncoder().encode(unwrap.apply((GeneratedKey) in));
+            return codec.getValueEncoder().encode(unwrap.apply((ImmutableGeneratedCacheKey) in));
         }
     };
 
@@ -32,7 +32,7 @@ public class WrapCodec implements Codec {
     private final Encoder mapKeyEncoder = new Encoder() {
         @Override
         public ByteBuf encode(Object in) throws IOException {
-            return codec.getMapKeyEncoder().encode(unwrap.apply((GeneratedKey) in));
+            return codec.getMapKeyEncoder().encode(unwrap.apply((ImmutableGeneratedCacheKey) in));
         }
     };
 
@@ -46,7 +46,7 @@ public class WrapCodec implements Codec {
     private final Encoder mapValueEncoder = new Encoder() {
         @Override
         public ByteBuf encode(Object in) throws IOException {
-            return codec.getMapValueEncoder().encode(unwrap.apply((GeneratedKey) in));
+            return codec.getMapValueEncoder().encode(unwrap.apply((ImmutableGeneratedCacheKey) in));
         }
     };
 
@@ -57,7 +57,7 @@ public class WrapCodec implements Codec {
         }
     };
 
-    public WrapCodec(Codec codec, Function<Object, GeneratedKey> wrap, Function<GeneratedKey, Object> unwrap) {
+    public WrapCodec(Codec codec, Function<Object, ImmutableGeneratedCacheKey> wrap, Function<ImmutableGeneratedCacheKey, Object> unwrap) {
         this.codec = codec;
         this.wrap = wrap;
         this.unwrap = unwrap;

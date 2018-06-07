@@ -28,7 +28,7 @@ public class CacheMethods {
         if (result.isEmpty()) {
             return parameterTypes;
         } else {
-            return result.toArray(new Type[result.size()]);
+            return result.toArray(new Type[0]);
         }
     }
 

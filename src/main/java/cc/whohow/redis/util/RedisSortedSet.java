@@ -176,7 +176,7 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number> {
     @Override
     public String toString() {
         return "RedisSortedSet{" +
-                "redis=" + redis +
+                "redisClient=" + redis +
                 ", name=" + name.toString(StandardCharsets.UTF_8) +
                 ", codec=" + codec +
                 '}';

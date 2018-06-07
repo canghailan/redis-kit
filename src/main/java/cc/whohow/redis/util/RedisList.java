@@ -375,7 +375,7 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
     @Override
     public String toString() {
         return "RedisList{" +
-                "redis=" + redis +
+                "redisClient=" + redis +
                 ", name=" + name.toString(StandardCharsets.UTF_8) +
                 ", codec=" + codec +
                 '}';

@@ -1,9 +1,8 @@
 package cc.whohow.redis.jcache;
 
-import cc.whohow.redis.Redis;
-import cc.whohow.redis.codec.Codecs;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
-import org.redisson.client.protocol.RedisCommands;
+import cc.whohow.redis.util.RedisConstants;
+import io.lettuce.core.SetArgs;
 
 import java.util.Map;
 
@@ -12,15 +11,21 @@ import java.util.Map;
  */
 public class RedisExpireCache<K, V> extends RedisCache<K, V> {
     protected final long ttl;
+    protected final SetArgs px;
+    protected final SetArgs pxNx;
+    protected final SetArgs pxXx;
 
-    public RedisExpireCache(RedisCacheManager cacheManager, RedisCacheConfiguration<K, V> configuration, Redis redis) {
-        super(cacheManager, configuration, redis);
+    public RedisExpireCache(RedisCacheManager cacheManager, RedisCacheConfiguration<K, V> configuration) {
+        super(cacheManager, configuration);
         this.ttl = configuration.getExpiryForUpdateTimeUnit().toMillis(configuration.getExpiryForUpdate());
+        this.px = SetArgs.Builder.px(ttl);
+        this.pxNx = SetArgs.Builder.px(ttl).nx();
+        this.pxXx = SetArgs.Builder.px(ttl).xx();
     }
 
     @Override
     public void put(K key, V value) {
-        redis.execute(RedisCommands.SETPXNX, encodeRedisKey(key), Codecs.encode(valueCodec, value), "PX", ttl);
+        redis.set(codec.encodeKey(key), codec.encodeValue(value), px);
     }
 
     @Override
@@ -35,7 +40,7 @@ public class RedisExpireCache<K, V> extends RedisCache<K, V> {
 
     @Override
     public boolean putIfAbsent(K key, V value) {
-        return redis.execute(RedisCommands.SETPXNX, encodeRedisKey(key), Codecs.encode(valueCodec, value), "PX", ttl, "NX");
+        return RedisConstants.ok(redis.set(codec.encodeKey(key), codec.encodeValue(value), pxNx));
     }
 
     @Override
@@ -45,7 +50,7 @@ public class RedisExpireCache<K, V> extends RedisCache<K, V> {
 
     @Override
     public boolean replace(K key, V value) {
-        return redis.execute(RedisCommands.SETPXNX, encodeRedisKey(key), Codecs.encode(valueCodec, value), "PX", ttl, "XX");
+        return RedisConstants.ok(redis.set(codec.encodeKey(key), codec.encodeValue(value), pxXx));
     }
 
     @Override

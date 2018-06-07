@@ -1,11 +1,6 @@
 package cc.whohow.redis.jcache;
 
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.redisson.client.RedisPubSubListener;
-import org.redisson.client.codec.Codec;
-import org.redisson.client.protocol.pubsub.PubSubType;
 
 import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
@@ -14,17 +9,17 @@ import javax.cache.integration.CompletionListener;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
+import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
 /**
  * 两级缓存，仅支持 Read Through 模式
  */
-public class RedisTierCache<K, V> implements Cache<K, V>, RedisPubSubListener<K> {
-    private static final Logger log = LogManager.getLogger();
-
+public class RedisTierCache<K, V> implements Cache<K, V> {
     protected final RedisCacheManager cacheManager;
     protected final RedisCacheConfiguration<K, V> configuration;
     protected final RedisCache<K, V> redisCache;
@@ -36,14 +31,6 @@ public class RedisTierCache<K, V> implements Cache<K, V>, RedisPubSubListener<K>
         this.configuration = configuration;
         this.redisCache = cacheManager.newRedisCache(configuration);
         this.inProcessCache = cacheManager.newInProcessCache(configuration);
-    }
-
-    public Codec getKeyCodec() {
-        return redisCache.getKeyCodec();
-    }
-
-    public Codec getValueCodec() {
-        return redisCache.getValueCodec();
     }
 
     @Override
@@ -240,39 +227,37 @@ public class RedisTierCache<K, V> implements Cache<K, V>, RedisPubSubListener<K>
     }
 
     @Override
-    public boolean onStatus(PubSubType type, String channel) {
-        synchronizeAll();
-        return false;
+    public RedisCacheCodec<K, V> getCodec() {
+        return redisCache.getCodec();
     }
 
     @Override
-    public void onPatternMessage(String pattern, String channel, K key) {
-        synchronize(key);
+    public void onRedisConnected() {
+        inProcessCache.clear();
     }
 
     @Override
-    public void onMessage(String channel, K key) {
-        synchronize(key);
+    public void onRedisDisconnected() {
+        inProcessCache.clear();
+    }
+
+    @Override
+    public void onKeyspaceNotification(ByteBuffer key, ByteBuffer message) {
+        inProcessCache.remove(getCodec().decodeKey(key));
+    }
+
+    @Override
+    public Optional<V> getValue(K key) {
+        V value = inProcessCache.get(key);
+        if (value != null) {
+            return Optional.of(value);
+        }
+        return redisCache.getValue(key);
     }
 
     @Override
     public V get(K key, Function<? super K, ? extends V> cacheLoader) {
         return inProcessCache.get(key, (k) -> redisCache.get(k, cacheLoader));
-    }
-
-    public void synchronize(K key) {
-        log.trace("synchronize {} {}", configuration.getName(), key);
-        inProcessCache.remove(key);
-    }
-
-    public void synchronizeAll(Set<? extends K> keys) {
-        log.trace("synchronize {} {}", configuration.getName(), keys);
-        inProcessCache.removeAll(keys);
-    }
-
-    public void synchronizeAll() {
-        log.trace("synchronize {}", configuration.getName());
-        inProcessCache.removeAll();
     }
 
     @Override

@@ -1,8 +1,9 @@
 package cc.whohow.redis;
 
+import cc.whohow.redis.codec.Codec;
 import cc.whohow.redis.codec.ObjectArrayJacksonCodec;
 import cc.whohow.redis.codec.ObjectJacksonCodec;
-import cc.whohow.redis.jcache.annotation.GeneratedKey;
+import cc.whohow.redis.jcache.ImmutableGeneratedCacheKey;
 import cc.whohow.redis.jcache.codec.GeneratedKeyJacksonCodec;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -90,12 +91,12 @@ public class TestCodec {
 
     @Test
     public void testCacheKeyEncoder() throws Exception {
-        GeneratedKey generatedKeyInteger = GeneratedKey.of(1);
-        System.out.println(generatedKeyCodecInteger.getValueEncoder().encode(generatedKeyInteger).toString(StandardCharsets.UTF_8));
-        GeneratedKey generatedKeyString = GeneratedKey.of("a");
-        System.out.println(generatedKeyCodecString.getValueEncoder().encode(generatedKeyString).toString(StandardCharsets.UTF_8));
-        GeneratedKey generatedKeyArray = GeneratedKey.of("a", 1, 3, 5L, 7L, "xyz".getBytes());
-        System.out.println(generatedKeyCodecArray.getValueEncoder().encode(generatedKeyArray).toString(StandardCharsets.UTF_8));
+        ImmutableGeneratedCacheKey immutableGeneratedCacheKeyInteger = ImmutableGeneratedCacheKey.of(1);
+        System.out.println(generatedKeyCodecInteger.getValueEncoder().encode(immutableGeneratedCacheKeyInteger).toString(StandardCharsets.UTF_8));
+        ImmutableGeneratedCacheKey immutableGeneratedCacheKeyString = ImmutableGeneratedCacheKey.of("a");
+        System.out.println(generatedKeyCodecString.getValueEncoder().encode(immutableGeneratedCacheKeyString).toString(StandardCharsets.UTF_8));
+        ImmutableGeneratedCacheKey immutableGeneratedCacheKeyArray = ImmutableGeneratedCacheKey.of("a", 1, 3, 5L, 7L, "xyz".getBytes());
+        System.out.println(generatedKeyCodecArray.getValueEncoder().encode(immutableGeneratedCacheKeyArray).toString(StandardCharsets.UTF_8));
     }
 
     @Test
@@ -106,11 +107,11 @@ public class TestCodec {
         System.out.println(generatedKeyCodecString.getValueDecoder().decode(Unpooled.copiedBuffer(
                 "\"a\"",
                 StandardCharsets.UTF_8), new State(false)));
-        GeneratedKey generatedKey = (GeneratedKey) generatedKeyCodecArray.getValueDecoder().decode(Unpooled.copiedBuffer(
+        ImmutableGeneratedCacheKey immutableGeneratedCacheKey = (ImmutableGeneratedCacheKey) generatedKeyCodecArray.getValueDecoder().decode(Unpooled.copiedBuffer(
                 "[\"a\",1,3,5,7,\"eHl6\"]",
                 StandardCharsets.UTF_8), new State(false));
-        System.out.println(generatedKey);
-        for (Object object : generatedKey.getKeys()) {
+        System.out.println(immutableGeneratedCacheKey);
+        for (Object object : immutableGeneratedCacheKey.getKeys()) {
             System.out.println(object);
             System.out.println(object.getClass());
         }

@@ -143,7 +143,7 @@ public class RedisSet<E> implements Set<E>, Queue<E> {
     @Override
     public String toString() {
         return "RedisSet{" +
-                "redis=" + redis +
+                "redisClient=" + redis +
                 ", name=" + name.toString(StandardCharsets.UTF_8) +
                 ", codec=" + codec +
                 '}';
