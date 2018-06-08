@@ -1,6 +1,5 @@
 package cc.whohow.redis.util;
 
-import cc.whohow.redis.Redis;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.redisson.client.codec.LongCodec;

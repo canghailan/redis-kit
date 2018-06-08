@@ -1,9 +1,9 @@
 package cc.whohow.redis.jcache;
 
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
-import cc.whohow.redis.jcache.processor.CacheMutableEntry;
 import cc.whohow.redis.jcache.processor.EntryProcessorResultWrapper;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import io.lettuce.core.codec.RedisCodec;
 
 import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
@@ -141,7 +141,7 @@ public class InProcessCache<K, V> implements Cache<K, V> {
 
     @Override
     public <T> T invoke(K key, EntryProcessor<K, V, T> entryProcessor, Object... arguments) throws EntryProcessorException {
-        return entryProcessor.process(new CacheMutableEntry<>(this, key), arguments);
+        return entryProcessor.process(new MutableCacheEntry<>(this, key), arguments);
     }
 
     @Override
@@ -203,7 +203,7 @@ public class InProcessCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    public RedisCacheCodec<K, V> getCodec() {
+    public RedisCodec<K, V> getCodec() {
         return null;
     }
 
@@ -221,7 +221,8 @@ public class InProcessCache<K, V> implements Cache<K, V> {
 
     @Override
     public <CV extends CacheValue<V>> CV getValue(K key, Function<V, CV> ofNullable) {
-        return ofNullable.apply(cache.getIfPresent(key));
+        V value = cache.getIfPresent(key);
+        return value == null ? null : ofNullable.apply(value);
     }
 
     @Override

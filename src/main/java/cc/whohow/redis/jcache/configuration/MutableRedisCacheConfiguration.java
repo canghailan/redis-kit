@@ -1,7 +1,5 @@
 package cc.whohow.redis.jcache.configuration;
 
-import org.redisson.client.codec.Codec;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -15,16 +13,12 @@ public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfigura
     private boolean managementEnabled = false;
     private long expiryForUpdate = -1;
     private TimeUnit expiryForUpdateTimeUnit = TimeUnit.SECONDS;
-
-    // redisClient
-    private boolean redisCacheEnabled = true;
-    private boolean keyNotificationEnabled = true;
-    private Codec keyCodec;
-    private Codec valueCodec;
     private String[] keyTypeCanonicalName;
     private String valueTypeCanonicalName;
+    private String codec;
 
-    // in-process
+    private boolean redisCacheEnabled = true;
+
     private boolean inProcessCacheEnabled = true;
     private int inProcessCacheMaxEntry = -1;
     private long inProcessCacheExpiryForUpdate = -1;
@@ -106,33 +100,6 @@ public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfigura
     }
 
     @Override
-    public boolean isKeyNotificationEnabled() {
-        return keyNotificationEnabled;
-    }
-
-    public void setKeyNotificationEnabled(boolean keyNotificationEnabled) {
-        this.keyNotificationEnabled = keyNotificationEnabled;
-    }
-
-    @Override
-    public Codec getKeyCodec() {
-        return keyCodec;
-    }
-
-    public void setKeyCodec(Codec keyCodec) {
-        this.keyCodec = keyCodec;
-    }
-
-    @Override
-    public Codec getValueCodec() {
-        return valueCodec;
-    }
-
-    public void setValueCodec(Codec valueCodec) {
-        this.valueCodec = valueCodec;
-    }
-
-    @Override
     public String[] getKeyTypeCanonicalName() {
         return keyTypeCanonicalName;
     }
@@ -206,9 +173,6 @@ public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfigura
                 ", expiryForUpdate=" + expiryForUpdate +
                 ", expiryForUpdateTimeUnit=" + expiryForUpdateTimeUnit +
                 ", redisCacheEnabled=" + redisCacheEnabled +
-                ", keyNotificationEnabled=" + keyNotificationEnabled +
-                ", keyCodec=" + keyCodec +
-                ", valueCodec=" + valueCodec +
                 ", keyTypeCanonicalName=" + Arrays.toString(keyTypeCanonicalName) +
                 ", valueTypeCanonicalName='" + valueTypeCanonicalName + '\'' +
                 ", inProcessCacheEnabled=" + inProcessCacheEnabled +

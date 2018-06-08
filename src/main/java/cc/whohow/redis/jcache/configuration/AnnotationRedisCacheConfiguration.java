@@ -2,11 +2,9 @@ package cc.whohow.redis.jcache.configuration;
 
 import cc.whohow.redis.jcache.annotation.RedisCacheDefaults;
 import cc.whohow.redis.jcache.util.CacheMethods;
-import org.redisson.client.codec.Codec;
 
 import javax.cache.annotation.CacheResult;
 import java.lang.reflect.Method;
-import java.lang.reflect.UndeclaredThrowableException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -17,8 +15,7 @@ public class AnnotationRedisCacheConfiguration<K, V> implements RedisCacheConfig
     private RedisCacheDefaults redisCacheDefaults;
     private String[] keyTypeCanonicalName;
     private String valueTypeCanonicalName;
-    private Codec keyCodec;
-    private Codec valueCodec;
+    private String codec;
 
     public AnnotationRedisCacheConfiguration(Method method, RedisCacheDefaults redisCacheDefaults) {
         this.method = method;
@@ -62,35 +59,6 @@ public class AnnotationRedisCacheConfiguration<K, V> implements RedisCacheConfig
     @Override
     public boolean isRedisCacheEnabled() {
         return redisCacheDefaults.redisCacheEnabled();
-    }
-
-    @Override
-    public boolean isKeyNotificationEnabled() {
-        return redisCacheDefaults.keyNotificationEnabled();
-    }
-
-    @Override
-    public Codec getKeyCodec() {
-        if (keyCodec == null) {
-            try {
-                keyCodec = redisCacheDefaults.keyCodecFactory().getDeclaredConstructor().newInstance().apply(method);
-            } catch (Exception e) {
-                throw new UndeclaredThrowableException(e);
-            }
-        }
-        return keyCodec;
-    }
-
-    @Override
-    public Codec getValueCodec() {
-        if (valueCodec == null) {
-            try {
-                valueCodec = redisCacheDefaults.valueCodecFactory().getDeclaredConstructor().newInstance().apply(method);
-            } catch (Exception e) {
-                throw new UndeclaredThrowableException(e);
-            }
-        }
-        return valueCodec;
     }
 
     @Override
@@ -146,15 +114,12 @@ public class AnnotationRedisCacheConfiguration<K, V> implements RedisCacheConfig
                 "method=" + method +
                 ", keyTypeCanonicalName=" + Arrays.toString(keyTypeCanonicalName) +
                 ", valueTypeCanonicalName='" + valueTypeCanonicalName + '\'' +
-                ", keyCodec=" + getKeyCodec() +
-                ", valueCodec=" + getValueCodec() +
                 ", name='" + getName() + '\'' +
                 ", statisticsEnabled=" + isStatisticsEnabled() +
                 ", managementEnabled=" + isManagementEnabled() +
                 ", expiryForUpdate=" + getExpiryForUpdate() +
                 ", expiryForUpdateTimeUnit=" + getExpiryForUpdateTimeUnit() +
                 ", redisCacheEnabled=" + isRedisCacheEnabled() +
-                ", keyNotificationEnabled=" + isKeyNotificationEnabled() +
                 ", inProcessCacheEnabled=" + isInProcessCacheEnabled() +
                 ", inProcessCacheMaxEntry=" + getInProcessCacheMaxEntry() +
                 ", inProcessCacheExpiryForUpdate=" + getInProcessCacheExpiryForUpdate() +

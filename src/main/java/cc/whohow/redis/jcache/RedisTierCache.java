@@ -1,6 +1,7 @@
 package cc.whohow.redis.jcache;
 
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
+import io.lettuce.core.codec.RedisCodec;
 
 import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
@@ -12,7 +13,6 @@ import javax.cache.processor.EntryProcessorResult;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -227,8 +227,17 @@ public class RedisTierCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    public RedisCacheCodec<K, V> getCodec() {
+    public RedisCodec<K, V> getCodec() {
         return redisCache.getCodec();
+    }
+
+    @Override
+    public <CV extends CacheValue<V>> CV getValue(K key, Function<V, CV> ofNullable) {
+        CV value = inProcessCache.getValue(key, ofNullable);
+        if (value != null) {
+            return value;
+        }
+        return redisCache.getValue(key, ofNullable);
     }
 
     @Override
@@ -244,15 +253,6 @@ public class RedisTierCache<K, V> implements Cache<K, V> {
     @Override
     public void onKeyspaceNotification(ByteBuffer key, ByteBuffer message) {
         inProcessCache.remove(getCodec().decodeKey(key));
-    }
-
-    @Override
-    public Optional<V> getValue(K key) {
-        V value = inProcessCache.get(key);
-        if (value != null) {
-            return Optional.of(value);
-        }
-        return redisCache.getValue(key);
     }
 
     @Override

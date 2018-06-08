@@ -1,13 +1,13 @@
-package cc.whohow.redis.jcache.processor;
+package cc.whohow.redis.jcache;
 
 import javax.cache.Cache;
 import javax.cache.processor.MutableEntry;
 
-public class CacheMutableEntry<K, V> implements MutableEntry<K, V> {
+public class MutableCacheEntry<K, V> implements MutableEntry<K, V> {
     protected final Cache<K, V> cache;
     protected final K key;
 
-    public CacheMutableEntry(Cache<K, V> cache, K key) {
+    public MutableCacheEntry(Cache<K, V> cache, K key) {
         this.cache = cache;
         this.key = key;
     }
@@ -47,9 +47,6 @@ public class CacheMutableEntry<K, V> implements MutableEntry<K, V> {
 
     @Override
     public String toString() {
-        return "CacheMutableEntry{" +
-                "key=" + key +
-                ", value=" + getValue() +
-                '}';
+        return key + "@" + cache;
     }
 }

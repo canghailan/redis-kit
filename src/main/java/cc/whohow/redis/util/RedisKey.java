@@ -1,7 +1,5 @@
 package cc.whohow.redis.util;
 
-import cc.whohow.redis.Redis;
-import cc.whohow.redis.RedisPipeline;
 import cc.whohow.redis.codec.Codecs;
 import cc.whohow.redis.codec.OptionalCodec;
 import io.netty.buffer.ByteBuf;

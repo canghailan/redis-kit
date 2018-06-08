@@ -8,6 +8,7 @@ import io.lettuce.core.RedisConnectionStateListener;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
+import io.lettuce.core.codec.RedisCodec;
 import io.lettuce.core.pubsub.RedisPubSubListener;
 import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
 
@@ -93,7 +94,7 @@ public class RedisCacheManager implements
         return cache;
     }
 
-    public <K, V> RedisCacheCodec<K, V> newRedisCacheCodec(RedisCacheConfiguration<K, V> configuration) {
+    public <K, V> RedisCodec<K, V> newRedisCacheCodec(RedisCacheConfiguration<K, V> configuration) {
         return null;
     }
 

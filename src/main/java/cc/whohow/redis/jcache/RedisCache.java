@@ -1,7 +1,6 @@
 package cc.whohow.redis.jcache;
 
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
-import cc.whohow.redis.jcache.processor.CacheMutableEntry;
 import cc.whohow.redis.jcache.processor.EntryProcessorResultWrapper;
 import cc.whohow.redis.util.RedisConstants;
 import io.lettuce.core.KeyScanCursor;
@@ -180,7 +179,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public <T> T invoke(K key, EntryProcessor<K, V, T> entryProcessor, Object... arguments) throws EntryProcessorException {
-        return entryProcessor.process(new CacheMutableEntry<>(this, key), arguments);
+        return entryProcessor.process(new MutableCacheEntry<>(this, key), arguments);
     }
 
     @Override
