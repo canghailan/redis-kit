@@ -1,19 +1,18 @@
 package cc.whohow.redis.util;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import org.redisson.client.codec.LongCodec;
-import org.redisson.client.protocol.RedisCommands;
+import io.lettuce.core.api.sync.RedisCommands;
+import io.lettuce.core.codec.RedisCodec;
 
-import java.nio.charset.StandardCharsets;
+import java.nio.ByteBuffer;
 
 public class RedisAtomicLong extends Number {
-    protected final Redis redis;
-    protected final ByteBuf name;
+    protected static final RedisCodec<String, Long> codec = null;
+    protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
+    protected final String key;
 
-    public RedisAtomicLong(Redis redis, String name) {
+    public RedisAtomicLong(RedisCommands<ByteBuffer, ByteBuffer> redis, String key) {
         this.redis = redis;
-        this.name = Unpooled.copiedBuffer(name, StandardCharsets.UTF_8).asReadOnly();
+        this.key = key;
     }
 
     public long get() {
@@ -21,11 +20,11 @@ public class RedisAtomicLong extends Number {
     }
 
     public void set(long newValue) {
-        redis.execute(RedisCommands.SET, name.retain(), newValue);
+        redis.set(key, newValue);
     }
 
     public long getAndSet(long newValue) {
-        return redis.execute(LongCodec.INSTANCE, RedisCommands.GETSET, name.retain(), newValue);
+        return redis.getset(key, newValue);
     }
 
     public long getAndIncrement() {
@@ -41,15 +40,15 @@ public class RedisAtomicLong extends Number {
     }
 
     public long incrementAndGet() {
-        return redis.execute(RedisCommands.INCR, name.retain());
+        return redis.incr(key);
     }
 
     public long decrementAndGet() {
-        return redis.execute(RedisCommands.DECR, name.retain());
+        return redis.decr(key);
     }
 
     public long addAndGet(long delta) {
-        return redis.execute(RedisCommands.INCRBY, name.retain(), delta);
+        return redis.incrby(key, delta);
     }
 
     @Override
@@ -59,7 +58,7 @@ public class RedisAtomicLong extends Number {
 
     @Override
     public long longValue() {
-        return redis.execute(LongCodec.INSTANCE, RedisCommands.GET, name.retain());
+        return redis.get(key);
     }
 
     @Override
@@ -74,9 +73,6 @@ public class RedisAtomicLong extends Number {
 
     @Override
     public String toString() {
-        return "RedisAtomicLong{" +
-                "redisClient=" + redis +
-                ", name=" + name.toString(StandardCharsets.UTF_8) +
-                '}';
+        return key;
     }
 }

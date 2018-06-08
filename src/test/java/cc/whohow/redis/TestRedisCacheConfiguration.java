@@ -1,6 +1,5 @@
 package cc.whohow.redis;
 
-import cc.whohow.redis.jcache.util.CacheMethods;
 import org.junit.Test;
 
 import javax.cache.annotation.CacheKey;

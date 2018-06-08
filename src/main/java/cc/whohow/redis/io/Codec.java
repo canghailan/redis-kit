@@ -1,4 +1,4 @@
-package cc.whohow.redis.codec;
+package cc.whohow.redis.io;
 
 import java.nio.ByteBuffer;
 

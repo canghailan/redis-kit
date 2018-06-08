@@ -1,7 +1,7 @@
 package cc.whohow.redis.jcache;
 
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
-import cc.whohow.redis.util.RedisConstants;
+import cc.whohow.redis.util.RedisUtils;
 import io.lettuce.core.SetArgs;
 
 import java.util.Map;
@@ -40,7 +40,7 @@ public class RedisExpireCache<K, V> extends RedisCache<K, V> {
 
     @Override
     public boolean putIfAbsent(K key, V value) {
-        return RedisConstants.ok(redis.set(codec.encodeKey(key), codec.encodeValue(value), pxNx));
+        return RedisUtils.ok(redis.set(codec.encodeKey(key), codec.encodeValue(value), pxNx));
     }
 
     @Override
@@ -50,7 +50,7 @@ public class RedisExpireCache<K, V> extends RedisCache<K, V> {
 
     @Override
     public boolean replace(K key, V value) {
-        return RedisConstants.ok(redis.set(codec.encodeKey(key), codec.encodeValue(value), pxXx));
+        return RedisUtils.ok(redis.set(codec.encodeKey(key), codec.encodeValue(value), pxXx));
     }
 
     @Override

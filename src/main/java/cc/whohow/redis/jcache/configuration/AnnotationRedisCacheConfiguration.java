@@ -1,131 +1,136 @@
 package cc.whohow.redis.jcache.configuration;
 
-import cc.whohow.redis.jcache.annotation.RedisCacheDefaults;
-import cc.whohow.redis.jcache.util.CacheMethods;
+import cc.whohow.redis.jcache.annotation.RedisCacheResult;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 
-import javax.cache.annotation.CacheResult;
+import javax.cache.annotation.CacheKey;
+import javax.cache.annotation.CacheMethodDetails;
+import javax.cache.annotation.GeneratedCacheKey;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.List;
+import java.lang.reflect.Type;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-public class AnnotationRedisCacheConfiguration<K, V> implements RedisCacheConfiguration<K, V> {
-    private Method method;
-    private CacheResult cacheResult;
-    private RedisCacheDefaults redisCacheDefaults;
-    private String[] keyTypeCanonicalName;
-    private String valueTypeCanonicalName;
-    private String codec;
+public class AnnotationRedisCacheConfiguration implements RedisCacheConfiguration {
+    private final CacheMethodDetails<? extends Annotation> cacheMethodDetails;
+    private final Method method;
+    private final RedisCacheResult redisCacheResult;
 
-    public AnnotationRedisCacheConfiguration(Method method, RedisCacheDefaults redisCacheDefaults) {
-        this.method = method;
-        this.cacheResult = method.getAnnotation(CacheResult.class);
-        this.redisCacheDefaults = redisCacheDefaults;
-        this.keyTypeCanonicalName = redisCacheDefaults.keyTypeCanonicalName();
-        if (this.keyTypeCanonicalName.length == 0) {
-            this.keyTypeCanonicalName = CacheMethods.getKeyTypeCanonicalName(method);
+    public AnnotationRedisCacheConfiguration(CacheMethodDetails<? extends Annotation> cacheMethodDetails) {
+        this.cacheMethodDetails = cacheMethodDetails;
+        this.method = cacheMethodDetails.getMethod();
+        this.redisCacheResult = method.getAnnotation(RedisCacheResult.class);
+    }
+
+    public Type[] getGenericKeyType() {
+        List<Type> result = new ArrayList<>(method.getParameterCount());
+        Type[] parameterTypes = method.getGenericParameterTypes();
+        Annotation[][] parameterAnnotations = method.getParameterAnnotations();
+        for (int i = 0; i < parameterTypes.length; i++) {
+            Annotation[] annotations = parameterAnnotations[i];
+            for (Annotation annotation : annotations) {
+                if (annotation.annotationType() == CacheKey.class) {
+                    result.add(parameterTypes[i]);
+                    break;
+                }
+            }
         }
-        this.valueTypeCanonicalName = redisCacheDefaults.valueTypeCanonicalName();
-        if (this.valueTypeCanonicalName.isEmpty()) {
-            this.valueTypeCanonicalName = CacheMethods.getValueTypeCanonicalName(method);
+        if (result.isEmpty()) {
+            return parameterTypes;
+        } else {
+            return result.toArray(new Type[0]);
         }
     }
 
     @Override
     public String getName() {
-        return cacheResult.cacheName();
+        return cacheMethodDetails.getCacheName();
+    }
+
+    public String[] getKeyTypeCanonicalName() {
+        return Arrays.stream(getGenericKeyType())
+                .map(TypeFactory.defaultInstance()::constructType)
+                .map(JavaType::toCanonical)
+                .toArray(String[]::new);
+    }
+
+    public Type getGenericValueType() {
+        return method.getGenericReturnType();
+    }
+
+    public String getValueTypeCanonicalName() {
+        return TypeFactory.defaultInstance().constructType(getGenericValueType()).toCanonical();
+    }
+
+    @Override
+    public String getKeyCodec() {
+        return redisCacheResult.keyCodec();
+    }
+
+    @Override
+    public String getValueCodec() {
+        return redisCacheResult.valueCodec();
     }
 
     @Override
     public boolean isStatisticsEnabled() {
-        return redisCacheDefaults.statisticsEnabled();
+        return redisCacheResult.statisticsEnabled();
     }
 
     @Override
     public boolean isManagementEnabled() {
-        return redisCacheDefaults.managementEnabled();
+        return redisCacheResult.managementEnabled();
     }
 
     @Override
     public long getExpiryForUpdate() {
-        return redisCacheDefaults.expiryForUpdate();
+        return redisCacheResult.expiryForUpdate();
     }
 
     @Override
     public TimeUnit getExpiryForUpdateTimeUnit() {
-        return redisCacheDefaults.expiryForUpdateTimeUnit();
+        return redisCacheResult.expiryForUpdateTimeUnit();
     }
 
     @Override
     public boolean isRedisCacheEnabled() {
-        return redisCacheDefaults.redisCacheEnabled();
-    }
-
-    @Override
-    public String[] getKeyTypeCanonicalName() {
-        return keyTypeCanonicalName;
-    }
-
-    @Override
-    public String getValueTypeCanonicalName() {
-        return valueTypeCanonicalName;
+        return redisCacheResult.redisCacheEnabled();
     }
 
     @Override
     public boolean isInProcessCacheEnabled() {
-        return redisCacheDefaults.inProcessCacheEnabled();
+        return redisCacheResult.inProcessCacheEnabled();
     }
 
     @Override
     public int getInProcessCacheMaxEntry() {
-        return redisCacheDefaults.inProcessCacheMaxEntry();
+        return redisCacheResult.inProcessCacheMaxEntry();
     }
 
     @Override
     public long getInProcessCacheExpiryForUpdate() {
-        return redisCacheDefaults.inProcessCacheExpiryForUpdate();
+        return redisCacheResult.inProcessCacheExpiryForUpdate();
     }
 
     @Override
     public TimeUnit getInProcessCacheExpiryForUpdateTimeUnit() {
-        return redisCacheDefaults.inProcessCacheExpiryForUpdateTimeUnit();
+        return redisCacheResult.inProcessCacheExpiryForUpdateTimeUnit();
     }
 
     @Override
     public List<String> getCustomConfiguration() {
-        return Arrays.asList(redisCacheDefaults.custom());
+        return Arrays.asList(redisCacheResult.custom());
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public Class<K> getKeyType() {
-        return (Class<K>) Object.class;
+    public Class<?> getKeyType() {
+        return GeneratedCacheKey.class;
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public Class<V> getValueType() {
-        return (Class<V>) Object.class;
-    }
-
-    @Override
-    public String toString() {
-        return "AnnotationRedisCacheConfiguration{" +
-                "method=" + method +
-                ", keyTypeCanonicalName=" + Arrays.toString(keyTypeCanonicalName) +
-                ", valueTypeCanonicalName='" + valueTypeCanonicalName + '\'' +
-                ", name='" + getName() + '\'' +
-                ", statisticsEnabled=" + isStatisticsEnabled() +
-                ", managementEnabled=" + isManagementEnabled() +
-                ", expiryForUpdate=" + getExpiryForUpdate() +
-                ", expiryForUpdateTimeUnit=" + getExpiryForUpdateTimeUnit() +
-                ", redisCacheEnabled=" + isRedisCacheEnabled() +
-                ", inProcessCacheEnabled=" + isInProcessCacheEnabled() +
-                ", inProcessCacheMaxEntry=" + getInProcessCacheMaxEntry() +
-                ", inProcessCacheExpiryForUpdate=" + getInProcessCacheExpiryForUpdate() +
-                ", inProcessCacheExpiryForUpdateTimeUnit=" + getInProcessCacheExpiryForUpdateTimeUnit() +
-                ", keyType=" + getKeyType() +
-                ", valueType=" + getValueType() +
-                '}';
+    public Class<?> getValueType() {
+        return method.getReturnType();
     }
 }

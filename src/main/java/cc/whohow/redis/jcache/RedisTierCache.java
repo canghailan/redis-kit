@@ -1,7 +1,6 @@
 package cc.whohow.redis.jcache;
 
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
-import io.lettuce.core.codec.RedisCodec;
 
 import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
@@ -227,11 +226,6 @@ public class RedisTierCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    public RedisCodec<K, V> getCodec() {
-        return redisCache.getCodec();
-    }
-
-    @Override
     public <CV extends CacheValue<V>> CV getValue(K key, Function<V, CV> ofNullable) {
         CV value = inProcessCache.getValue(key, ofNullable);
         if (value != null) {
@@ -252,7 +246,7 @@ public class RedisTierCache<K, V> implements Cache<K, V> {
 
     @Override
     public void onKeyspaceNotification(ByteBuffer key, ByteBuffer message) {
-        inProcessCache.remove(getCodec().decodeKey(key));
+        inProcessCache.remove(redisCache.getCodec().decodeKey(key));
     }
 
     @Override

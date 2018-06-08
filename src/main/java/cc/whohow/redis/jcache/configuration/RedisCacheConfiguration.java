@@ -16,6 +16,14 @@ public interface RedisCacheConfiguration<K, V> extends Configuration<K, V> {
 
     String getName();
 
+    String[] getKeyTypeCanonicalName();
+
+    String getValueTypeCanonicalName();
+
+    String getKeyCodec();
+
+    String getValueCodec();
+
     boolean isStatisticsEnabled();
 
     boolean isManagementEnabled();
@@ -24,13 +32,9 @@ public interface RedisCacheConfiguration<K, V> extends Configuration<K, V> {
 
     TimeUnit getExpiryForUpdateTimeUnit();
 
-    // redisClient
+    // redis
 
     boolean isRedisCacheEnabled();
-
-    String[] getKeyTypeCanonicalName();
-
-    String getValueTypeCanonicalName();
 
     // in-process
 

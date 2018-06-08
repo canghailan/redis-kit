@@ -1,7 +1,5 @@
 package cc.whohow.redis.util;
 
-import cc.whohow.redis.codec.Codecs;
-import cc.whohow.redis.codec.OptionalCodec;
 import io.netty.buffer.ByteBuf;
 import org.redisson.api.RFuture;
 import org.redisson.client.codec.Codec;

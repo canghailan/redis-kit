@@ -7,6 +7,14 @@ import java.util.List;
 import java.util.Objects;
 
 public class ImmutableGeneratedCacheKey implements GeneratedCacheKey {
+    public static ImmutableGeneratedCacheKey empty() {
+        return new ImmutableGeneratedCacheKey();
+    }
+
+    public static ImmutableGeneratedCacheKey of(Object key) {
+        return new ImmutableGeneratedCacheKey(key);
+    }
+
     public static ImmutableGeneratedCacheKey of(Object... keys) {
         return new ImmutableGeneratedCacheKey(keys);
     }
@@ -22,6 +30,14 @@ public class ImmutableGeneratedCacheKey implements GeneratedCacheKey {
         } else {
             this.keys = Arrays.asList(keys);
         }
+    }
+
+    public Object getKey(int index) {
+        return keys.get(index);
+    }
+
+    public int size() {
+        return keys.size();
     }
 
     public List<Object> getKeys() {

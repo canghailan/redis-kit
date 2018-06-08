@@ -2,7 +2,7 @@ package cc.whohow.redis.jcache;
 
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import cc.whohow.redis.jcache.processor.EntryProcessorResultWrapper;
-import cc.whohow.redis.util.RedisConstants;
+import cc.whohow.redis.util.RedisUtils;
 import io.lettuce.core.KeyScanCursor;
 import io.lettuce.core.ScanArgs;
 import io.lettuce.core.ScanCursor;
@@ -62,7 +62,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
     @Override
     public <CV extends CacheValue<V>> CV getValue(K key, Function<V, CV> ofNullable) {
         ByteBuffer encodedValue = redis.get(codec.encodeKey(key));
-        if (RedisConstants.isNil(encodedValue)) {
+        if (RedisUtils.isNil(encodedValue)) {
             return null;
         }
         return ofNullable.apply(codec.decodeValue(encodedValue));
@@ -111,7 +111,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public boolean putIfAbsent(K key, V value) {
-        return RedisConstants.ok(redis.set(codec.encodeKey(key), codec.encodeValue(value), RedisConstants.NX));
+        return RedisUtils.ok(redis.set(codec.encodeKey(key), codec.encodeValue(value), RedisUtils.NX));
     }
 
     @Override
@@ -136,7 +136,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public boolean replace(K key, V value) {
-        return RedisConstants.ok(redis.set(codec.encodeKey(key), codec.encodeValue(value), RedisConstants.XX));
+        return RedisUtils.ok(redis.set(codec.encodeKey(key), codec.encodeValue(value), RedisUtils.XX));
     }
 
     @Override

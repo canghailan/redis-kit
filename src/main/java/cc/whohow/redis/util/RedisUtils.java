@@ -4,7 +4,7 @@ import io.lettuce.core.SetArgs;
 
 import java.nio.ByteBuffer;
 
-public class RedisConstants {
+public class RedisUtils {
     public static final SetArgs NX = SetArgs.Builder.nx();
     public static final SetArgs XX = SetArgs.Builder.xx();
 

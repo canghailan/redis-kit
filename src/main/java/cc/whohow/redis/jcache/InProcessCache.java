@@ -3,7 +3,6 @@ package cc.whohow.redis.jcache;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import cc.whohow.redis.jcache.processor.EntryProcessorResultWrapper;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import io.lettuce.core.codec.RedisCodec;
 
 import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
@@ -200,11 +199,6 @@ public class InProcessCache<K, V> implements Cache<K, V> {
         return cache.asMap().entrySet().stream()
                 .map(e -> (Entry<K, V>) new ImmutableCacheEntry<>(e.getKey(), e.getValue()))
                 .iterator();
-    }
-
-    @Override
-    public RedisCodec<K, V> getCodec() {
-        return null;
     }
 
     @Override

@@ -1,6 +1,11 @@
 package cc.whohow.redis.jcache;
 
 import cc.whohow.redis.codec.ByteBufferCodec;
+import cc.whohow.redis.io.Codec;
+import cc.whohow.redis.io.JacksonCodec;
+import cc.whohow.redis.jcache.codec.ImmutableGeneratedCacheKeyCodec;
+import cc.whohow.redis.jcache.codec.RedisCacheCodec;
+import cc.whohow.redis.jcache.codec.RedisCacheKeyCodec;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import io.lettuce.core.RedisChannelHandler;
 import io.lettuce.core.RedisClient;
@@ -75,7 +80,7 @@ public class RedisCacheManager implements
         return null;
     }
 
-    public <K, V> Cache<K, V> resolveCache(RedisCacheConfiguration configuration) {
+    public synchronized <K, V> Cache<K, V> resolveCache(RedisCacheConfiguration configuration) {
         Cache<K, V> cache = caches.get(configuration.getName());
         if (cache == null) {
             cache = createCache(configuration.getName(), configuration);
@@ -88,14 +93,30 @@ public class RedisCacheManager implements
         if (caches.containsKey(cacheName)) {
             throw new IllegalStateException();
         }
-        RedisCacheConfiguration<K, V> redisCacheConfiguration = (RedisCacheConfiguration<K, V>) configuration;
-        Cache<K, V> cache = newCache(redisCacheConfiguration);
+        Cache<K, V> cache = newCache((RedisCacheConfiguration<K, V>) configuration);
         caches.put(cacheName, cache);
         return cache;
     }
 
     public <K, V> RedisCodec<K, V> newRedisCacheCodec(RedisCacheConfiguration<K, V> configuration) {
-        return null;
+        String separator = configuration.getKeyTypeCanonicalName().length == 0 ? "" : ":";
+        Codec<K> keyCodec = (Codec<K>) newKeyCodec(configuration);
+        Codec<V> valueCodec = (Codec<V>) newValueCodec(configuration);
+        return new RedisCacheCodec<>(new RedisCacheKeyCodec<>(configuration.getName(), separator, keyCodec), valueCodec);
+    }
+
+    private <K, V> Codec<?> newKeyCodec(RedisCacheConfiguration<K, V> configuration) {
+        if (configuration.getKeyCodec() == null) {
+            return new ImmutableGeneratedCacheKeyCodec(configuration.getKeyTypeCanonicalName());
+        }
+        throw new AssertionError("Not Implemented");
+    }
+
+    private <K, V> Codec<?> newValueCodec(RedisCacheConfiguration<K, V> configuration) {
+        if (configuration.getValueCodec() == null) {
+            return new JacksonCodec<>(configuration.getValueTypeCanonicalName());
+        }
+        throw new AssertionError("Not Implemented");
     }
 
     public <K, V> Cache<K, V> newCache(RedisCacheConfiguration<K, V> configuration) {
@@ -181,7 +202,7 @@ public class RedisCacheManager implements
 
     @Override
     public boolean isClosed() {
-        return false;
+        return !redisConnection.isOpen();
     }
 
     @Override
@@ -264,19 +285,16 @@ public class RedisCacheManager implements
         while (cacheName.hasRemaining()) {
             if (cacheName.get() == ':') {
                 cacheName.limit(cacheName.position());
-                cacheName.reset();
-                return StandardCharsets.UTF_8.decode(cacheName).toString();
+                break;
             }
         }
-        return null;
+        cacheName.reset();
+        return StandardCharsets.UTF_8.decode(cacheName).toString();
     }
 
     public void onKeyNotification(ByteBuffer channel, ByteBuffer message) {
         ByteBuffer key = getKeyFromKeyNotificationChannel(channel);
         String cacheName = getCacheNameFromKey(key);
-        if (cacheName == null) {
-            return;
-        }
         Cache<?, ?> cache = caches.get(cacheName);
         if (cache != null) {
             cache.onKeyspaceNotification(key, message);

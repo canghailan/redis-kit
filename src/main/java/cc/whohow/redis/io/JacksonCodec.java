@@ -1,11 +1,9 @@
-package cc.whohow.redis.codec;
+package cc.whohow.redis.io;
 
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 
 public class JacksonCodec<T> extends AbstractStreamCodec<T> {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -32,12 +30,12 @@ public class JacksonCodec<T> extends AbstractStreamCodec<T> {
     }
 
     @Override
-    public void encode(T value, OutputStream stream) throws IOException {
+    public void encode(T value, ByteBufferOutputStream stream) throws IOException {
         objectMapper.writeValue(stream, value);
     }
 
     @Override
-    public T decode(InputStream stream) throws IOException {
+    public T decode(ByteBufferInputStream stream) throws IOException {
         return objectMapper.readValue(stream, type);
     }
 }

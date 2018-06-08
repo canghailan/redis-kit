@@ -1,9 +1,7 @@
 package cc.whohow.redis;
 
 import cc.whohow.redis.client.RedisConnectionManagerAdapter;
-import cc.whohow.redis.codec.Codec;
-import cc.whohow.redis.codec.ObjectJacksonCodec;
-import cc.whohow.redis.codec.OptionalCodec;
+import cc.whohow.redis.io.Codec;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Ignore;

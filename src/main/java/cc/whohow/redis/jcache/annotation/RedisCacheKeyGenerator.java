@@ -12,6 +12,16 @@ import java.util.Arrays;
 public class RedisCacheKeyGenerator implements CacheKeyGenerator {
     @Override
     public GeneratedCacheKey generateCacheKey(CacheKeyInvocationContext<? extends Annotation> cacheKeyInvocationContext) {
-        return ImmutableGeneratedCacheKey.of(Arrays.stream(cacheKeyInvocationContext.getKeyParameters()).map(CacheInvocationParameter::getValue).toArray());
+        CacheInvocationParameter[] keyParameters = cacheKeyInvocationContext.getKeyParameters();
+        if (keyParameters.length == 1) {
+            return ImmutableGeneratedCacheKey.of(keyParameters[0].getValue());
+        } else if (keyParameters.length == 0) {
+            return ImmutableGeneratedCacheKey.empty();
+        } else {
+            return ImmutableGeneratedCacheKey.of(
+                    Arrays.stream(cacheKeyInvocationContext.getKeyParameters())
+                            .map(CacheInvocationParameter::getValue)
+                            .toArray());
+        }
     }
 }

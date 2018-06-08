@@ -1,11 +1,6 @@
-package cc.whohow.redis.codec;
-
-import cc.whohow.redis.io.ByteBufferInputStream;
-import cc.whohow.redis.io.ByteBufferOutputStream;
+package cc.whohow.redis.io;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 
@@ -54,7 +49,7 @@ public abstract class AbstractStreamCodec<T> implements Codec<T> {
         }
     }
 
-    public abstract void encode(T value, OutputStream stream) throws IOException ;
+    public abstract void encode(T value, ByteBufferOutputStream stream) throws IOException ;
 
-    public abstract T decode(InputStream stream) throws IOException;
+    public abstract T decode(ByteBufferInputStream stream) throws IOException;
 }
