@@ -7,18 +7,22 @@ import net.jpountz.lz4.LZ4FastDecompressor;
 import java.nio.ByteBuffer;
 
 public class Lz4Codec<T> implements Codec<T> {
-    private LZ4Factory factory = LZ4Factory.fastestInstance();
-    private LZ4Compressor compressor = factory.fastCompressor();
-    private LZ4FastDecompressor decompressor = factory.fastDecompressor();
+    private static final LZ4Factory FACTORY = LZ4Factory.fastestInstance();
+    private static final LZ4Compressor COMPRESSOR = FACTORY.fastCompressor();
+    private static final LZ4FastDecompressor DECOMPRESSOR = FACTORY.fastDecompressor();
 
-    private Codec<T> codec;
+    private final Codec<T> codec;
+
+    public Lz4Codec(Codec<T> codec) {
+        this.codec = codec;
+    }
 
     @Override
     public ByteBuffer encode(T value) {
         ByteBuffer uncompressed = codec.encode(value);
         ByteBuffer compressed = ByteBuffer.allocate(uncompressed.remaining() + 4);
         compressed.putInt(uncompressed.remaining());
-        compressor.compress(uncompressed, compressed);
+        COMPRESSOR.compress(uncompressed, compressed);
         compressed.flip();
         return compressed;
     }
@@ -26,7 +30,7 @@ public class Lz4Codec<T> implements Codec<T> {
     @Override
     public T decode(ByteBuffer bytes) {
         ByteBuffer uncompressed = ByteBuffer.allocate(bytes.getInt());
-        decompressor.decompress(bytes, uncompressed);
+        DECOMPRESSOR.decompress(bytes, uncompressed);
         uncompressed.flip();
         return codec.decode(uncompressed);
     }

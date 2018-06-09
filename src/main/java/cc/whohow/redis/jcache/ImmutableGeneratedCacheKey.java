@@ -6,63 +6,167 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-public class ImmutableGeneratedCacheKey implements GeneratedCacheKey {
-    public static ImmutableGeneratedCacheKey empty() {
-        return new ImmutableGeneratedCacheKey();
+public interface ImmutableGeneratedCacheKey extends GeneratedCacheKey {
+    static ImmutableGeneratedCacheKey empty() {
+        return EmptyGeneratedCacheKey.INSTANCE;
     }
 
-    public static ImmutableGeneratedCacheKey of(Object key) {
-        return new ImmutableGeneratedCacheKey(key);
+    static ImmutableGeneratedCacheKey ofNull() {
+        return SingletonGeneratedCacheKey.NULL;
     }
 
-    public static ImmutableGeneratedCacheKey of(Object... keys) {
-        return new ImmutableGeneratedCacheKey(keys);
+    static ImmutableGeneratedCacheKey of(Object key) {
+        return key == null ? ofNull() : new SingletonGeneratedCacheKey(key);
     }
 
-    private final List<Object> keys;
-
-    private ImmutableGeneratedCacheKey(Object... keys) {
-        Objects.requireNonNull(keys);
+    static ImmutableGeneratedCacheKey of(Object... keys) {
         if (keys.length == 0) {
-            this.keys = Collections.emptyList();
-        } else if (keys.length == 1) {
-            this.keys = Collections.singletonList(keys[0]);
-        } else {
-            this.keys = Arrays.asList(keys);
+            return empty();
+        }
+        if (keys.length == 1) {
+            return of(keys[0]);
+        }
+        return new ArrayGeneratedCacheKey(keys);
+    }
+
+    Object getKey(int index);
+
+    int size();
+
+    List<Object> getKeys();
+
+    final class EmptyGeneratedCacheKey implements ImmutableGeneratedCacheKey {
+        private static final EmptyGeneratedCacheKey INSTANCE = new EmptyGeneratedCacheKey();
+
+        private EmptyGeneratedCacheKey() {}
+
+        public Object getKey(int index) {
+            throw new IndexOutOfBoundsException();
+        }
+
+        public int size() {
+            return 0;
+        }
+
+        public List<Object> getKeys() {
+            return Collections.emptyList();
+        }
+
+        @Override
+        public int hashCode() {
+            return 0;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o == this) {
+                return true;
+            }
+            if (o instanceof ImmutableGeneratedCacheKey) {
+                ImmutableGeneratedCacheKey that = (ImmutableGeneratedCacheKey) o;
+                return that.size() == this.size();
+            }
+            return false;
+        }
+
+        @Override
+        public String toString() {
+            return "";
         }
     }
 
-    public Object getKey(int index) {
-        return keys.get(index);
-    }
+    final class SingletonGeneratedCacheKey implements ImmutableGeneratedCacheKey {
+        private static final SingletonGeneratedCacheKey NULL = new SingletonGeneratedCacheKey(null);
+        private final Object key;
 
-    public int size() {
-        return keys.size();
-    }
-
-    public List<Object> getKeys() {
-        return keys;
-    }
-
-    @Override
-    public int hashCode() {
-        return keys.hashCode();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (o == this) {
-            return true;
+        private SingletonGeneratedCacheKey(Object key) {
+            this.key = key;
         }
-        if (o instanceof ImmutableGeneratedCacheKey) {
-            ImmutableGeneratedCacheKey that = (ImmutableGeneratedCacheKey) o;
-            return that.keys.equals(keys);
+
+        public Object getKey(int index) {
+            if (index == 0) {
+                return key;
+            }
+            throw new IndexOutOfBoundsException();
         }
-        return false;
+
+        public int size() {
+            return 1;
+        }
+
+        public List<Object> getKeys() {
+            return Collections.singletonList(key);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(key);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o == this) {
+                return true;
+            }
+            if (o instanceof ImmutableGeneratedCacheKey) {
+                ImmutableGeneratedCacheKey that = (ImmutableGeneratedCacheKey) o;
+                return that.size() == this.size() && Objects.equals(that.getKey(0), this.getKey(0));
+            }
+            return false;
+        }
+
+        @Override
+        public String toString() {
+            return Objects.toString(key);
+        }
     }
 
-    @Override
-    public String toString() {
-        return keys.toString();
+    final class ArrayGeneratedCacheKey implements ImmutableGeneratedCacheKey {
+        private final Object[] keys;
+
+        private ArrayGeneratedCacheKey(Object[] keys) {
+            this.keys = keys;
+        }
+
+        @Override
+        public Object getKey(int index) {
+            return keys[index];
+        }
+
+        @Override
+        public int size() {
+            return keys.length;
+        }
+
+        @Override
+        public List<Object> getKeys() {
+            return Arrays.asList(keys);
+        }
+
+        @Override
+        public int hashCode() {
+            return Arrays.hashCode(keys);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o == this) {
+                return true;
+            }
+            if (o instanceof ArrayGeneratedCacheKey) {
+                ArrayGeneratedCacheKey that = (ArrayGeneratedCacheKey) o;
+                return Arrays.equals(that.keys, this.keys);
+            }
+            if (o instanceof ImmutableGeneratedCacheKey) {
+                ImmutableGeneratedCacheKey that = (ImmutableGeneratedCacheKey) o;
+                return that.size() == this.size() && Objects.equals(that.getKeys(), this.getKeys());
+            }
+            return false;
+        }
+
+        @Override
+        public String toString() {
+            return Arrays.toString(keys);
+        }
     }
 }

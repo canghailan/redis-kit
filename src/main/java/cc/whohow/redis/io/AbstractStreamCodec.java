@@ -5,12 +5,13 @@ import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 
 public abstract class AbstractStreamCodec<T> implements Codec<T> {
-    private volatile int count = 0;
+    private volatile long count = 0;
+    private volatile double avgSize = 0.0;
+    private volatile int minSize = 0;
     private volatile int maxSize = 0;
-    private volatile int averageSize = 0;
 
     protected int newByteBufferSize() {
-        int size =  (averageSize + maxSize) / 2;
+        int size = (int) (avgSize + maxSize) / 2;
         return size == 0 ? 32 : size;
     }
 
@@ -18,13 +19,16 @@ public abstract class AbstractStreamCodec<T> implements Codec<T> {
         int size = byteBuffer.remaining();
 
         count++;
+        if (minSize > size) {
+            minSize = size;
+        }
         if (maxSize < size) {
             maxSize = size;
         }
-        //   (averageSize *  n +       size)                / (n + 1)
-        // = (averageSize * (n + 1) + (size - averageSize)) / (n + 1)
-        // =  averageSize +           (size - averageSize)  / (n + 1)
-        averageSize = averageSize + (int) (((double) (size - averageSize)) / count);
+        //   (avgSize *  n +       size           ) / (n + 1)
+        // = (avgSize * (n + 1) + (size - avgSize)) / (n + 1)
+        // =  avgSize +           (size - avgSize ) / (n + 1)
+        avgSize = avgSize + (size - avgSize) / count;
     }
 
     @Override
@@ -49,7 +53,7 @@ public abstract class AbstractStreamCodec<T> implements Codec<T> {
         }
     }
 
-    public abstract void encode(T value, ByteBufferOutputStream stream) throws IOException ;
+    public abstract void encode(T value, ByteBufferOutputStream stream) throws IOException;
 
     public abstract T decode(ByteBufferInputStream stream) throws IOException;
 }

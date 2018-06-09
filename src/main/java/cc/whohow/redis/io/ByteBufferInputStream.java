@@ -53,6 +53,6 @@ public class ByteBufferInputStream extends InputStream {
 
     @Override
     public int read() {
-        return byteBuffer.get();
+        return byteBuffer.hasRemaining() ? byteBuffer.get() : -1;
     }
 }

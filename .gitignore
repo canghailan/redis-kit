@@ -4,3 +4,4 @@ target/
 *.iml
 *.txt
 *.xml
+*.properties

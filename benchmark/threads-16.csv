@@ -1,7 +1,0 @@
-"Benchmark","Mode","Threads","Samples","Score","Score Error (99.9%)","Unit"
-"cc.whohow.redis.RedisBenchmark.testJedis","thrpt",16,60,91.215661,1.532096,"ops/ms"
-"cc.whohow.redis.RedisBenchmark.testRedisConnectionPool","thrpt",16,60,51.515345,1.679135,"ops/ms"
-"cc.whohow.redis.RedisBenchmark.testRedisson","thrpt",16,60,51.891431,0.746293,"ops/ms"
-"cc.whohow.redis.RedisBenchmark.testJedis","avgt",16,60,0.179622,0.002478,"ms/op"
-"cc.whohow.redis.RedisBenchmark.testRedisConnectionPool","avgt",16,60,0.303361,0.001601,"ms/op"
-"cc.whohow.redis.RedisBenchmark.testRedisson","avgt",16,60,0.298477,0.001922,"ms/op"

@@ -1,12 +1,12 @@
 package cc.whohow.redis.util;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import org.redisson.api.RFuture;
-import org.redisson.client.codec.Codec;
-import org.redisson.client.protocol.RedisCommands;
+import cc.whohow.redis.io.Codec;
+import cc.whohow.redis.io.StringCodec;
+import io.lettuce.core.KeyValue;
+import io.lettuce.core.api.sync.RedisCommands;
 
-import java.nio.charset.StandardCharsets;
+import java.lang.reflect.Array;
+import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.TimeUnit;
@@ -15,24 +15,34 @@ import java.util.concurrent.TimeUnit;
  * 链表、双向阻塞队列
  */
 public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
-    protected final Redis redis;
-    protected final ByteBuf name;
-    protected final Codec codec;
+    protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
+    protected final Codec<E> codec;
+    protected final String id;
+    protected final ByteBuffer encodedId;
 
-    public RedisList(Redis redis, String name, Codec codec) {
+    public RedisList(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, String id) {
         this.redis = redis;
-        this.name = Unpooled.copiedBuffer(name, StandardCharsets.UTF_8).asReadOnly();
         this.codec = codec;
+        this.id = id;
+        this.encodedId = StringCodec.UTF_8.encode(id);
+    }
+
+    public ByteBuffer encode(E value) {
+        return codec.encode(value);
+    }
+
+    public E decode(ByteBuffer bytes) {
+        return codec.decode(bytes);
     }
 
     @Override
     public void addFirst(E e) {
-        redis.execute(RedisCommands.LPUSH, name.retain(), Codecs.encode(codec, e));
+        redis.lpush(encodedId.duplicate(), encode(e));
     }
 
     @Override
     public void addLast(E e) {
-        redis.execute(RedisCommands.RPUSH, name.retain(), Codecs.encode(codec, e));
+        redis.rpush(encodedId.duplicate(), encode(e));
     }
 
     @Override
@@ -59,12 +69,12 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
 
     @Override
     public E pollFirst() {
-        return redis.execute(codec, RedisCommands.LPOP, name.retain());
+        return decode(redis.lpop(encodedId.duplicate()));
     }
 
     @Override
     public E pollLast() {
-        return redis.execute(codec, RedisCommands.RPOP, name.retain());
+        return decode(redis.rpop(encodedId.duplicate()));
     }
 
     @Override
@@ -79,22 +89,24 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
 
     @Override
     public E peekFirst() {
-        return redis.execute(codec, RedisCommands.LINDEX, name.retain(), 0);
+        return decode(redis.lindex(encodedId.duplicate(), 0));
     }
 
     @Override
     public E peekLast() {
-        return redis.execute(codec, RedisCommands.LINDEX, name.retain(), -1);
+        return decode(redis.lindex(encodedId.duplicate(), -1));
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public boolean removeFirstOccurrence(Object o) {
-        return redis.execute(RedisCommands.LREM_SINGLE, name.retain(), 1, Codecs.encode(codec, o));
+        return redis.lrem(encodedId.duplicate(), 1, encode((E) o)) > 0;
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public boolean removeLastOccurrence(Object o) {
-        return redis.execute(RedisCommands.LREM_SINGLE, name.retain(), -1, Codecs.encode(codec, o));
+        return redis.lrem(encodedId.duplicate(), -1, encode((E) o)) > 0;
     }
 
     @Override
@@ -132,15 +144,17 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
         return removeFirst();
     }
 
+    /**
+     * @throws UnsupportedOperationException UnsupportedOperation
+     */
     @Override
-    @Deprecated
     public Iterator<E> descendingIterator() {
         throw new UnsupportedOperationException();
     }
 
     @Override
     public int size() {
-        return redis.execute(RedisCommands.LLEN_INT, name.retain());
+        return redis.llen(encodedId.duplicate()).intValue();
     }
 
     @Override
@@ -148,28 +162,35 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
         return size() == 0;
     }
 
+    /**
+     * @throws UnsupportedOperationException UnsupportedOperation
+     */
     @Override
-    @Deprecated
     public boolean contains(Object o) {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @throws UnsupportedOperationException UnsupportedOperation
+     */
     @Override
-    @Deprecated
     public Iterator<E> iterator() {
         throw new UnsupportedOperationException();
     }
 
     @Override
     public Object[] toArray() {
-        List<?> list = redis.execute(codec, RedisCommands.LRANGE, name.retain(), 0, -1);
-        return list.toArray();
+        return redis.lrange(encodedId.duplicate(), 0, -1).stream()
+                .map(this::decode)
+                .toArray();
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public <T> T[] toArray(T[] a) {
-        List<T> list = redis.execute(codec, RedisCommands.LRANGE, name.retain(), 0, -1);
-        return list.toArray(a);
+        return redis.lrange(encodedId.duplicate(), 0, -1).stream()
+                .map(this::decode)
+                .toArray((length) -> (T[]) Array.newInstance(a.getClass().getComponentType(), length));
     }
 
     @Override
@@ -182,99 +203,118 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
         return removeFirstOccurrence(o);
     }
 
+    /**
+     * @throws UnsupportedOperationException UnsupportedOperation
+     */
     @Override
-    @Deprecated
     public boolean containsAll(Collection<?> c) {
         throw new UnsupportedOperationException();
     }
 
     @Override
     public boolean addAll(Collection<? extends E> c) {
-        redis.execute(RedisCommands.RPUSH, (Object[]) Codecs.concat(name.retain(), Codecs.encode(codec, c)));
+        ByteBuffer[] encodedKeys = c.stream()
+                .map(this::encode)
+                .toArray(ByteBuffer[]::new);
+        redis.rpush(encodedId.duplicate(), encodedKeys);
         return true;
     }
 
+    /**
+     * @throws UnsupportedOperationException UnsupportedOperation
+     */
     @Override
-    @Deprecated
     public boolean addAll(int index, Collection<? extends E> c) {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @throws UnsupportedOperationException UnsupportedOperation
+     */
     @Override
-    @Deprecated
     public boolean removeAll(Collection<?> c) {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @throws UnsupportedOperationException UnsupportedOperation
+     */
     @Override
-    @Deprecated
     public boolean retainAll(Collection<?> c) {
         throw new UnsupportedOperationException();
     }
 
     @Override
     public void clear() {
-        redis.execute(RedisCommands.DEL, name.retain());
+        redis.del(encodedId.duplicate());
     }
 
     @Override
     public E get(int index) {
-        return redis.execute(codec, RedisCommands.LINDEX, name.retain(), index);
+        return decode(redis.lindex(encodedId.duplicate(), index));
     }
 
+    /**
+     * @return null
+     */
     @Override
     public E set(int index, E element) {
-        RedisPipeline pipeline = redis.pipeline();
-        pipeline.execute(RedisCommands.MULTI);
-        RFuture<E> r = pipeline.execute(codec, RedisCommands.LINDEX, name.retain(), index);
-        pipeline.execute(RedisCommands.LSET, name.retain(), index, Codecs.encode(codec, element));
-        pipeline.execute(RedisCommands.EXEC);
-        pipeline.flush();
-        return r.getNow();
+        redis.lset(encodedId.duplicate(), index, encode(element));
+        return null;
     }
 
-    public void lset(int index, E element) {
-        redis.execute(RedisCommands.LSET, name.retain(), index, Codecs.encode(codec, element));
-    }
-
+    /**
+     * @throws UnsupportedOperationException UnsupportedOperation
+     */
     @Override
-    @Deprecated
     public void add(int index, E element) {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @throws UnsupportedOperationException UnsupportedOperation
+     */
     @Override
-    @Deprecated
     public E remove(int index) {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @throws UnsupportedOperationException UnsupportedOperation
+     */
     @Override
-    @Deprecated
     public int indexOf(Object o) {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @throws UnsupportedOperationException UnsupportedOperation
+     */
     @Override
-    @Deprecated
     public int lastIndexOf(Object o) {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @throws UnsupportedOperationException UnsupportedOperation
+     */
     @Override
-    @Deprecated
     public ListIterator<E> listIterator() {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @throws UnsupportedOperationException UnsupportedOperation
+     */
     @Override
-    @Deprecated
     public ListIterator<E> listIterator(int index) {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @throws UnsupportedOperationException UnsupportedOperation
+     */
     @Override
-    @Deprecated
     public List<E> subList(int fromIndex, int toIndex) {
         throw new UnsupportedOperationException();
     }
@@ -301,22 +341,26 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
 
     @Override
     public E takeFirst() {
-        return pollFirst(0, TimeUnit.SECONDS);
+        KeyValue<ByteBuffer, ByteBuffer> encodedKeyValue = redis.blpop(0, encodedId.duplicate());
+        return decode(encodedKeyValue.getValue());
     }
 
     @Override
     public E takeLast() {
-        return pollLast(0, TimeUnit.SECONDS);
+        KeyValue<ByteBuffer, ByteBuffer> encodedKeyValue = redis.brpop(0, encodedId.duplicate());
+        return decode(encodedKeyValue.getValue());
     }
 
     @Override
     public E pollFirst(long timeout, TimeUnit unit) {
-        return redis.execute(codec, RedisCommands.BLPOP_VALUE, name.retain(), unit.toSeconds(timeout));
+        KeyValue<ByteBuffer, ByteBuffer> encodedKeyValue = redis.blpop(unit.toSeconds(timeout), encodedId.duplicate());
+        return encodedKeyValue.hasValue() ? decode(encodedKeyValue.getValue()) : null;
     }
 
     @Override
     public E pollLast(long timeout, TimeUnit unit) {
-        return redis.execute(codec, RedisCommands.BRPOP_VALUE, name.retain(), unit.toSeconds(timeout));
+        KeyValue<ByteBuffer, ByteBuffer> encodedKeyValue = redis.brpop(unit.toSeconds(timeout), encodedId.duplicate());
+        return encodedKeyValue.hasValue() ? decode(encodedKeyValue.getValue()) : null;
     }
 
     @Override
@@ -346,20 +390,17 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
 
     @Override
     public int drainTo(Collection<? super E> c) {
-        return drainTo(c, 0);
+        return drainTo(c, 1);
     }
 
     @Override
     public int drainTo(Collection<? super E> c, int maxElements) {
-        RedisPipeline pipeline = redis.pipeline();
-        pipeline.execute(RedisCommands.MULTI);
-        RFuture<List<E>> r = pipeline.execute(codec, RedisCommands.LRANGE, name.retain(), 0, maxElements - 1);
-        pipeline.execute(RedisCommands.LTRIM, name.retain(), maxElements, -1);
-        pipeline.execute(RedisCommands.EXEC);
-        pipeline.flush();
-        List<E> list = r.getNow();
-        c.addAll(list);
-        return list.size();
+        E head = poll();
+        if (head == null) {
+            return 0;
+        }
+        c.add(head);
+        return 1;
     }
 
     protected E checkElement(E e) {
@@ -371,10 +412,6 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
 
     @Override
     public String toString() {
-        return "RedisList{" +
-                "redisClient=" + redis +
-                ", name=" + name.toString(StandardCharsets.UTF_8) +
-                ", codec=" + codec +
-                '}';
+        return id;
     }
 }

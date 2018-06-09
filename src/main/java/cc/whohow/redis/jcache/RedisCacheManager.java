@@ -1,12 +1,11 @@
 package cc.whohow.redis.jcache;
 
-import cc.whohow.redis.codec.ByteBufferCodec;
 import cc.whohow.redis.io.Codec;
 import cc.whohow.redis.io.JacksonCodec;
 import cc.whohow.redis.jcache.codec.ImmutableGeneratedCacheKeyCodec;
-import cc.whohow.redis.jcache.codec.RedisCacheCodec;
-import cc.whohow.redis.jcache.codec.RedisCacheKeyCodec;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
+import cc.whohow.redis.lettuce.Lettuce;
+import cc.whohow.redis.lettuce.RedisCodecAdapter;
 import io.lettuce.core.RedisChannelHandler;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisConnectionStateListener;
@@ -46,18 +45,18 @@ public class RedisCacheManager implements
         this.uri = uri.toURI();
         this.redisClient = redisClient;
         this.redisClient.addListener(this);
-        this.redisConnection = redisClient.connect(ByteBufferCodec.INSTANCE, uri);
-        this.redisPubSubConnection = redisClient.connectPubSub(ByteBufferCodec.INSTANCE, uri);
+        this.redisConnection = redisClient.connect(Lettuce.BYTE_BUFFER_CODEC, uri);
+        this.redisPubSubConnection = redisClient.connectPubSub(Lettuce.BYTE_BUFFER_CODEC, uri);
         this.redisPubSubConnection.addListener(this);
 
         this.keyspace = "__keyspace@" + uri.getDatabase() + "__:";
-        this.encodedKeyspace = StandardCharsets.UTF_8.encode(keyspace).asReadOnlyBuffer();
+        this.encodedKeyspace = StandardCharsets.UTF_8.encode(keyspace);
         this.redisPubSubConnection.async().psubscribe(getKeyspaceChannel());
         RedisCachingProvider.getInstance().addCacheManager(this);
     }
 
     private ByteBuffer getKeyspaceChannel() {
-        return StandardCharsets.UTF_8.encode(keyspace + "*").asReadOnlyBuffer();
+        return StandardCharsets.UTF_8.encode(keyspace + "*");
     }
 
     @Override
@@ -102,7 +101,7 @@ public class RedisCacheManager implements
         String separator = configuration.getKeyTypeCanonicalName().length == 0 ? "" : ":";
         Codec<K> keyCodec = (Codec<K>) newKeyCodec(configuration);
         Codec<V> valueCodec = (Codec<V>) newValueCodec(configuration);
-        return new RedisCacheCodec<>(new RedisCacheKeyCodec<>(configuration.getName(), separator, keyCodec), valueCodec);
+        return new RedisCodecAdapter<>(new RedisCacheKeyCodec<>(configuration.getName(), separator, keyCodec), valueCodec);
     }
 
     private <K, V> Codec<?> newKeyCodec(RedisCacheConfiguration<K, V> configuration) {

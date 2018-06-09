@@ -12,11 +12,9 @@ import java.lang.annotation.Annotation;
 
 @SuppressWarnings("unchecked")
 public class RedisCacheResolver implements CacheResolver {
-    private final CacheMethodDetails<? extends Annotation> cacheMethodDetails;
     private final Cache cache;
 
     public RedisCacheResolver(CacheMethodDetails<? extends Annotation> cacheMethodDetails) {
-        this.cacheMethodDetails = cacheMethodDetails;
         this.cache = RedisCachingProvider.getInstance().getCacheManager().resolveCache(
                 new MutableRedisCacheConfiguration(new AnnotationRedisCacheConfiguration(cacheMethodDetails)));
     }

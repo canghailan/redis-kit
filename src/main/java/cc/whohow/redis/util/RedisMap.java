@@ -1,39 +1,56 @@
 package cc.whohow.redis.util;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import org.redisson.api.RFuture;
-import org.redisson.client.codec.Codec;
-import org.redisson.client.protocol.RedisCommands;
+import cc.whohow.redis.io.Codec;
+import cc.whohow.redis.io.StringCodec;
+import cc.whohow.redis.lettuce.Lettuce;
+import io.lettuce.core.api.sync.RedisCommands;
 
-import java.nio.charset.StandardCharsets;
+import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * 散列表
  */
 public class RedisMap<K, V> implements ConcurrentMap<K, V> {
-    protected final Redis redis;
-    protected final ByteBuf name;
-    protected final Codec codec;
-    protected final Codec optionalCodec;
+    protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
+    protected final Codec<K> keyCodec;
+    protected final Codec<V> valueCodec;
+    protected final String id;
+    protected final ByteBuffer encodedId;
 
-    public RedisMap(Redis redis, String name, Codec codec) {
+    public RedisMap(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<K> keyCodec, Codec<V> valueCodec, String id) {
         this.redis = redis;
-        this.name = Unpooled.copiedBuffer(name, StandardCharsets.UTF_8).asReadOnly();
-        this.codec = codec;
-        this.optionalCodec = new OptionalCodec(codec);
+        this.keyCodec = keyCodec;
+        this.valueCodec = valueCodec;
+        this.id = id;
+        this.encodedId = StringCodec.UTF_8.encode(id);
+    }
+
+    public ByteBuffer encodeKey(K key) {
+        return keyCodec.encode(key);
+    }
+
+    public K decodeKey(ByteBuffer bytes) {
+        return keyCodec.decode(bytes);
+    }
+
+    public ByteBuffer encodeValue(V value) {
+        return valueCodec.encode(value);
+    }
+
+    public V decodeValue(ByteBuffer bytes) {
+        return valueCodec.decode(bytes);
     }
 
     @Override
     public int size() {
-        return redis.execute(RedisCommands.HLEN, name.retain());
+        return redis.hlen(encodedId.duplicate()).intValue();
     }
 
     @Override
@@ -42,151 +59,156 @@ public class RedisMap<K, V> implements ConcurrentMap<K, V> {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public boolean containsKey(Object key) {
-        return redis.execute(RedisCommands.HEXISTS, name.retain(), Codecs.encodeMapKey(codec, key));
+        return redis.hexists(encodedId.duplicate(), encodeKey((K) key));
     }
 
+    /**
+     * @throws UnsupportedOperationException UnsupportedOperation
+     */
     @Override
-    @Deprecated
     public boolean containsValue(Object value) {
         throw new UnsupportedOperationException();
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public V get(Object key) {
-        return redis.execute(codec, RedisCommands.HGET, name.retain(), Codecs.encodeMapKey(codec, key));
+        return decodeValue(redis.hget(encodedId.duplicate(), encodeKey((K) key)));
     }
 
+    /**
+     * @return null
+     */
     @Override
     public V put(K key, V value) {
-        ByteBuf encodedKey = Codecs.encodeMapKey(codec, key);
-        RedisPipeline pipeline = redis.pipeline();
-        pipeline.execute(RedisCommands.MULTI);
-        RFuture<V> r = pipeline.execute(codec, RedisCommands.HGET, name.retain(), encodedKey.retain());
-        pipeline.execute(RedisCommands.HSET, name.retain(), encodedKey, Codecs.encodeMapValue(codec, value));
-        pipeline.execute(RedisCommands.EXEC);
-        pipeline.flush();
-        return r.getNow();
+        redis.hset(encodedId.duplicate(), encodeKey(key), encodeValue(value));
+        return null;
     }
 
-    public boolean hset(K key, V value) {
-        return redis.execute(RedisCommands.HSET, name.retain(), Codecs.encodeMapKey(codec, key), Codecs.encodeMapValue(codec, value));
-    }
-
+    /**
+     * @return null
+     */
     @Override
+    @SuppressWarnings("unchecked")
     public V remove(Object key) {
-        ByteBuf encodedKey = Codecs.encodeMapKey(codec, key);
-        RedisPipeline pipeline = redis.pipeline();
-        pipeline.execute(RedisCommands.MULTI);
-        RFuture<V> r = pipeline.execute(codec, RedisCommands.HGET, name.retain(), encodedKey.retain());
-        pipeline.execute(RedisCommands.HDEL, name.retain(), encodedKey);
-        pipeline.execute(RedisCommands.EXEC);
-        pipeline.flush();
-        return r.getNow();
-    }
-
-    public boolean hdel(K key) {
-        return redis.execute(RedisCommands.HDEL, name.retain(), Codecs.encodeMapKey(codec, key)) > 0;
+        redis.hdel(encodedId.duplicate(), encodeKey((K) key));
+        return null;
     }
 
     @Override
     public void putAll(Map<? extends K, ? extends V> m) {
-        redis.execute(RedisCommands.HMSET, (Object[]) Codecs.concat(name.retain(), Codecs.encodeMapKeyValue(codec, m)));
+        Map<ByteBuffer, ByteBuffer> encodedKeyValues = m.entrySet().stream()
+                .collect(Collectors.toMap(
+                        e -> encodeKey(e.getKey()),
+                        e -> encodeValue(e.getValue())));
+        redis.hmset(encodedId.duplicate(), encodedKeyValues);
     }
 
     @Override
     public void clear() {
-        redis.execute(RedisCommands.DEL, name.retain());
+        redis.del(encodedId.duplicate());
     }
 
+    /**
+     * @throws UnsupportedOperationException UnsupportedOperation
+     */
     @Override
-    @Deprecated
     public Set<K> keySet() {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @throws UnsupportedOperationException UnsupportedOperation
+     */
     @Override
-    @Deprecated
     public Collection<V> values() {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @throws UnsupportedOperationException UnsupportedOperation
+     */
     @Override
-    @Deprecated
     public Set<Entry<K, V>> entrySet() {
         throw new UnsupportedOperationException();
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public V getOrDefault(Object key, V defaultValue) {
-        Optional<V> optionalValue = redis.execute(optionalCodec, RedisCommands.HGET, name.retain(), Codecs.encodeMapKey(codec, key));
-        return optionalValue == null ? defaultValue : optionalValue.orElse(null);
+        ByteBuffer encodedValue = redis.get(encodeKey((K) key));
+        return Lettuce.isNil(encodedValue) ? defaultValue : decodeValue(encodedValue);
     }
 
+    /**
+     * @return null
+     */
     @Override
     public V putIfAbsent(K key, V value) {
-        ByteBuf encodedKey = Codecs.encodeMapKey(codec, key);
-        RedisPipeline pipeline = redis.pipeline();
-        pipeline.execute(RedisCommands.MULTI);
-        RFuture<V> r = pipeline.execute(codec, RedisCommands.HGET, name.retain(), encodedKey.retain());
-        pipeline.execute(RedisCommands.HSETNX, name.retain(), encodedKey, Codecs.encodeMapValue(codec, value));
-        pipeline.execute(RedisCommands.EXEC);
-        pipeline.flush();
-        return r.getNow();
+        redis.hsetnx(encodedId.duplicate(), encodeKey(key), encodeValue(value));
+        return null;
     }
 
-    public boolean hsetnx(K key, V value) {
-        return redis.execute(RedisCommands.HSETNX, name.retain(), Codecs.encodeMapKey(codec, key), Codecs.encodeMapValue(codec, value));
-    }
-
+    /**
+     * @throws UnsupportedOperationException UnsupportedOperation
+     */
     @Override
-    @Deprecated
     public boolean remove(Object key, Object value) {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @throws UnsupportedOperationException UnsupportedOperation
+     */
     @Override
-    @Deprecated
     public boolean replace(K key, V oldValue, V newValue) {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @throws UnsupportedOperationException UnsupportedOperation
+     */
     @Override
-    @Deprecated
     public V replace(K key, V value) {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @throws UnsupportedOperationException UnsupportedOperation
+     */
     @Override
-    @Deprecated
     public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @throws UnsupportedOperationException UnsupportedOperation
+     */
     @Override
-    @Deprecated
     public V computeIfPresent(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @throws UnsupportedOperationException UnsupportedOperation
+     */
     @Override
-    @Deprecated
     public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @throws UnsupportedOperationException UnsupportedOperation
+     */
     @Override
-    @Deprecated
     public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
         throw new UnsupportedOperationException();
     }
 
     @Override
     public String toString() {
-        return "RedisMap{" +
-                "redisClient=" + redis +
-                ", name=" + name.toString(StandardCharsets.UTF_8) +
-                ", codec=" + codec +
-                '}';
+        return id;
     }
 }

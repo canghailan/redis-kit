@@ -1,23 +1,18 @@
 package cc.whohow.redis.jcache.codec;
 
-import cc.whohow.redis.io.AbstractStreamCodec;
-import cc.whohow.redis.io.Codec;
-import cc.whohow.redis.io.ByteBufferInputStream;
-import cc.whohow.redis.io.ByteBufferOutputStream;
+import cc.whohow.redis.io.*;
 import cc.whohow.redis.jcache.ImmutableGeneratedCacheKey;
+import cc.whohow.redis.lettuce.Lettuce;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.function.Function;
 
 public class ImmutableGeneratedCacheKeyCodec implements Codec<ImmutableGeneratedCacheKey> {
-    private static final ByteBuffer EMPTY = ByteBuffer.allocate(0);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     protected Codec<ImmutableGeneratedCacheKey> delegate;
@@ -29,16 +24,16 @@ public class ImmutableGeneratedCacheKeyCodec implements Codec<ImmutableGenerated
         } else if (cacheKeyTypeCanonicalNames.length == 1) {
             switch (cacheKeyTypeCanonicalNames[0]) {
                 case "java.lang.String": {
-                    delegate = StringKeyCodec.INSTANCE;
+                    delegate = SingletonKeyCodec.STRING_KEY_CODEC;
                 }
                 case "java.lang.Integer": {
-                    delegate = PlainKeyCodec.INTEGER;
+                    delegate = SingletonKeyCodec.INTEGER_KEY_CODEC;
                 }
                 case "java.lang.Long": {
-                    delegate = PlainKeyCodec.LONG;
+                    delegate = SingletonKeyCodec.LONG_KEY_CODEC;
                 }
                 default: {
-                    delegate = new ObjectKeyCodec(cacheKeyTypeCanonicalNames[0]);
+                    delegate = new SingletonKeyCodec(new JacksonCodec(cacheKeyTypeCanonicalNames[0]));
                 }
             }
         } else {
@@ -61,7 +56,7 @@ public class ImmutableGeneratedCacheKeyCodec implements Codec<ImmutableGenerated
 
         @Override
         public ByteBuffer encode(ImmutableGeneratedCacheKey value) {
-            return EMPTY;
+            return Lettuce.NIL;
         }
 
         @Override
@@ -70,67 +65,33 @@ public class ImmutableGeneratedCacheKeyCodec implements Codec<ImmutableGenerated
         }
     }
 
-    private static class StringKeyCodec implements Codec<ImmutableGeneratedCacheKey> {
-        static final StringKeyCodec INSTANCE = new StringKeyCodec();
+    @SuppressWarnings("unchecked")
+    private static class SingletonKeyCodec implements Codec<ImmutableGeneratedCacheKey> {
+        static final SingletonKeyCodec STRING_KEY_CODEC = new SingletonKeyCodec(StringCodec.UTF_8);
+        static final SingletonKeyCodec INTEGER_KEY_CODEC = new SingletonKeyCodec(PrimitiveCodec.INTEGER);
+        static final SingletonKeyCodec LONG_KEY_CODEC = new SingletonKeyCodec(PrimitiveCodec.LONG);
 
-        @Override
-        public ByteBuffer encode(ImmutableGeneratedCacheKey value) {
-            return StandardCharsets.UTF_8.encode(value.getKey(0).toString());
-        }
+        private final Codec keyCodec;
 
-        @Override
-        public ImmutableGeneratedCacheKey decode(ByteBuffer bytes) {
-            return ImmutableGeneratedCacheKey.of(StandardCharsets.UTF_8.decode(bytes).toString());
-        }
-    }
-
-    private static class PlainKeyCodec implements Codec<ImmutableGeneratedCacheKey> {
-        static final PlainKeyCodec INTEGER = new PlainKeyCodec(Integer::parseInt);
-        static final PlainKeyCodec LONG = new PlainKeyCodec(Long::parseLong);
-
-        private final Function<String, ?> parse;
-
-        private PlainKeyCodec(Function<String, ?> parse) {
-            this.parse = parse;
+        private SingletonKeyCodec(Codec keyCodec) {
+            this.keyCodec = keyCodec;
         }
 
         @Override
         public ByteBuffer encode(ImmutableGeneratedCacheKey value) {
-            Object key = value.getKey(0);
-            return key == null ? EMPTY : StandardCharsets.UTF_8.encode(key.toString());
+            return keyCodec.encode(value.getKey(0));
         }
 
         @Override
         public ImmutableGeneratedCacheKey decode(ByteBuffer bytes) {
-            if (bytes.hasRemaining()) {
-                return ImmutableGeneratedCacheKey.of(parse.apply(StandardCharsets.UTF_8.decode(bytes).toString()));
-            }
-            return ImmutableGeneratedCacheKey.of((Object) null);
-        }
-    }
-
-    private static class ObjectKeyCodec extends AbstractStreamCodec<ImmutableGeneratedCacheKey> {
-        private final JavaType type;
-
-        private ObjectKeyCodec(String canonicalName) {
-            this.type = OBJECT_MAPPER.getTypeFactory().constructFromCanonical(canonicalName);
-        }
-
-        @Override
-        public void encode(ImmutableGeneratedCacheKey value, ByteBufferOutputStream stream) throws IOException {
-            OBJECT_MAPPER.writeValue(stream, value.getKey(0));
-        }
-
-        @Override
-        public ImmutableGeneratedCacheKey decode(ByteBufferInputStream stream) throws IOException {
-            return ImmutableGeneratedCacheKey.of(OBJECT_MAPPER.readValue(stream, type));
+            return ImmutableGeneratedCacheKey.of(keyCodec.decode(bytes));
         }
     }
 
     private static class ArrayKeyCodec extends AbstractStreamCodec<ImmutableGeneratedCacheKey> {
         private final JavaType[] types;
 
-        public ArrayKeyCodec(String... canonicalName) {
+        private ArrayKeyCodec(String... canonicalName) {
             this.types = Arrays.stream(canonicalName)
                     .map(OBJECT_MAPPER.getTypeFactory()::constructFromCanonical)
                     .toArray(JavaType[]::new);
