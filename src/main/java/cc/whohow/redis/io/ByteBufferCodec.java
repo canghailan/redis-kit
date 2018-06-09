@@ -14,7 +14,7 @@ public class ByteBufferCodec implements Codec<ByteBuffer> {
     }
 
     @Override
-    public ByteBuffer decode(ByteBuffer bytes) {
-        return bytes;
+    public ByteBuffer decode(ByteBuffer buffer) {
+        return buffer;
     }
 }

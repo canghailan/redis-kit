@@ -27,8 +27,8 @@ public class PrimitiveCodec<T> implements Codec<T> {
     }
 
     @Override
-    public T decode(ByteBuffer bytes) {
-        return (bytes != null && bytes.hasRemaining()) ?
-                parse.apply(StandardCharsets.US_ASCII.decode(bytes).toString()) : null;
+    public T decode(ByteBuffer buffer) {
+        return (buffer != null && buffer.hasRemaining()) ?
+                parse.apply(StandardCharsets.US_ASCII.decode(buffer).toString()) : null;
     }
 }

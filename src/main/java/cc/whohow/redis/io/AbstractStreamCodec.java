@@ -45,9 +45,9 @@ public abstract class AbstractStreamCodec<T> implements Codec<T> {
     }
 
     @Override
-    public T decode(ByteBuffer bytes) {
+    public T decode(ByteBuffer buffer) {
         try {
-            return bytes == null ? null : decode(new ByteBufferInputStream(bytes));
+            return buffer == null ? null : decode(new ByteBufferInputStream(buffer));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

@@ -5,5 +5,5 @@ import java.nio.ByteBuffer;
 public interface Codec<T> {
     ByteBuffer encode(T value);
 
-    T decode(ByteBuffer bytes);
+    T decode(ByteBuffer buffer);
 }

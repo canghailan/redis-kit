@@ -47,8 +47,8 @@ public class ImmutableGeneratedCacheKeyCodec implements Codec<ImmutableGenerated
     }
 
     @Override
-    public ImmutableGeneratedCacheKey decode(ByteBuffer bytes) {
-        return delegate.decode(bytes);
+    public ImmutableGeneratedCacheKey decode(ByteBuffer buffer) {
+        return delegate.decode(buffer);
     }
 
     private static class NoKeyCodec implements Codec<ImmutableGeneratedCacheKey> {
@@ -60,7 +60,7 @@ public class ImmutableGeneratedCacheKeyCodec implements Codec<ImmutableGenerated
         }
 
         @Override
-        public ImmutableGeneratedCacheKey decode(ByteBuffer bytes) {
+        public ImmutableGeneratedCacheKey decode(ByteBuffer buffer) {
             return ImmutableGeneratedCacheKey.empty();
         }
     }
@@ -83,8 +83,8 @@ public class ImmutableGeneratedCacheKeyCodec implements Codec<ImmutableGenerated
         }
 
         @Override
-        public ImmutableGeneratedCacheKey decode(ByteBuffer bytes) {
-            return ImmutableGeneratedCacheKey.of(keyCodec.decode(bytes));
+        public ImmutableGeneratedCacheKey decode(ByteBuffer buffer) {
+            return ImmutableGeneratedCacheKey.of(keyCodec.decode(buffer));
         }
     }
 

@@ -20,7 +20,7 @@ public class StringCodec implements Codec<String> {
     }
 
     @Override
-    public String decode(ByteBuffer bytes) {
-        return charset.decode(bytes).toString();
+    public String decode(ByteBuffer buffer) {
+        return charset.decode(buffer).toString();
     }
 }

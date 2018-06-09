@@ -28,9 +28,9 @@ public class Lz4Codec<T> implements Codec<T> {
     }
 
     @Override
-    public T decode(ByteBuffer bytes) {
-        ByteBuffer uncompressed = ByteBuffer.allocate(bytes.getInt());
-        DECOMPRESSOR.decompress(bytes, uncompressed);
+    public T decode(ByteBuffer buffer) {
+        ByteBuffer uncompressed = ByteBuffer.allocate(buffer.getInt());
+        DECOMPRESSOR.decompress(buffer, uncompressed);
         uncompressed.flip();
         return codec.decode(uncompressed);
     }
