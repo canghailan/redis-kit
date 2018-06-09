@@ -21,8 +21,8 @@ public class RedisAtomicLong extends Number {
         return PrimitiveCodec.LONG.encode(value);
     }
 
-    public Long decodeLong(ByteBuffer bytes) {
-        return PrimitiveCodec.LONG.decode(bytes);
+    public Long decodeLong(ByteBuffer buffer) {
+        return PrimitiveCodec.LONG.decode(buffer);
     }
 
     public long get() {

@@ -31,8 +31,8 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
         return codec.encode(value);
     }
 
-    public E decode(ByteBuffer bytes) {
-        return codec.decode(bytes);
+    public E decode(ByteBuffer buffer) {
+        return codec.decode(buffer);
     }
 
     @Override

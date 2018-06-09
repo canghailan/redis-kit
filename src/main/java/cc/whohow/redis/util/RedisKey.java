@@ -30,16 +30,16 @@ public class RedisKey<V> implements ConcurrentMap<String, V> {
         return StringCodec.UTF_8.encode(key);
     }
 
-    public String decodeKey(ByteBuffer bytes) {
-        return StringCodec.UTF_8.decode(bytes);
+    public String decodeKey(ByteBuffer buffer) {
+        return StringCodec.UTF_8.decode(buffer);
     }
 
     public ByteBuffer encodeValue(V value) {
         return codec.encode(value);
     }
 
-    public V decodeValue(ByteBuffer bytes) {
-        return codec.decode(bytes);
+    public V decodeValue(ByteBuffer buffer) {
+        return codec.decode(buffer);
     }
 
     @Override

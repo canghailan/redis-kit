@@ -36,16 +36,16 @@ public class RedisMap<K, V> implements ConcurrentMap<K, V> {
         return keyCodec.encode(key);
     }
 
-    public K decodeKey(ByteBuffer bytes) {
-        return keyCodec.decode(bytes);
+    public K decodeKey(ByteBuffer buffer) {
+        return keyCodec.decode(buffer);
     }
 
     public ByteBuffer encodeValue(V value) {
         return valueCodec.encode(value);
     }
 
-    public V decodeValue(ByteBuffer bytes) {
-        return valueCodec.decode(bytes);
+    public V decodeValue(ByteBuffer buffer) {
+        return valueCodec.decode(buffer);
     }
 
     @Override
