@@ -3,13 +3,11 @@ package cc.whohow.redis.jcache.codec;
 import cc.whohow.redis.io.*;
 import cc.whohow.redis.jcache.ImmutableGeneratedCacheKey;
 import cc.whohow.redis.lettuce.Lettuce;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Objects;
@@ -90,7 +88,7 @@ public class ImmutableGeneratedCacheKeyCodec implements Codec<ImmutableGenerated
         }
     }
 
-    private static class ArrayKeyCodec implements Codec<ImmutableGeneratedCacheKey> {
+    private static class ArrayKeyCodec extends AbstractStreamCodec<ImmutableGeneratedCacheKey> {
         private final JavaType[] types;
 
         private ArrayKeyCodec(String... canonicalName) {
@@ -100,34 +98,18 @@ public class ImmutableGeneratedCacheKeyCodec implements Codec<ImmutableGenerated
         }
 
         @Override
-        public ByteBuffer encode(ImmutableGeneratedCacheKey value) {
-            try {
-                return ByteBuffer.wrap(OBJECT_MAPPER.writeValueAsBytes(value.getKeys()));
-            } catch (JsonProcessingException e) {
-                throw new UncheckedIOException(e);
-            }
+        public void encode(ImmutableGeneratedCacheKey value, ByteBufferOutputStream stream) throws IOException {
+            OBJECT_MAPPER.writeValue(stream, value.getKeys());
         }
 
         @Override
-        public ImmutableGeneratedCacheKey decode(ByteBuffer bytes) {
-            ArrayNode arrayNode = parse(bytes);
+        public ImmutableGeneratedCacheKey decode(ByteBufferInputStream stream) throws IOException {
+            ArrayNode arrayNode = OBJECT_MAPPER.readValue(stream, ArrayNode.class);
             Object[] objectArray = new Object[arrayNode.size()];
             for (int i = 0; i < arrayNode.size(); i++) {
                 objectArray[i] = OBJECT_MAPPER.convertValue(arrayNode.get(i), types[i]);
             }
             return ImmutableGeneratedCacheKey.of(objectArray);
-        }
-
-        private ArrayNode parse(ByteBuffer bytes) {
-            try {
-                if (bytes.hasArray()) {
-                    return OBJECT_MAPPER.readValue(bytes.array(), bytes.arrayOffset(), bytes.remaining(), ArrayNode.class);
-                } else {
-                    return OBJECT_MAPPER.readValue(new ByteBufferInputStream(bytes), ArrayNode.class);
-                }
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
         }
     }
 }

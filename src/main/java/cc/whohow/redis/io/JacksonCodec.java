@@ -1,14 +1,11 @@
 package cc.whohow.redis.io;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.ByteBuffer;
 
-public class JacksonCodec<T> implements Codec<T> {
+public class JacksonCodec<T> extends AbstractStreamCodec<T> {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     protected final ObjectMapper objectMapper;
@@ -33,27 +30,12 @@ public class JacksonCodec<T> implements Codec<T> {
     }
 
     @Override
-    public ByteBuffer encode(T value) {
-        try {
-            return ByteBuffer.wrap(objectMapper.writeValueAsBytes(value));
-        } catch (JsonProcessingException e) {
-            throw new UncheckedIOException(e);
-        }
+    public void encode(T value, ByteBufferOutputStream stream) throws IOException {
+        objectMapper.writeValue(stream, value);
     }
 
     @Override
-    public T decode(ByteBuffer bytes) {
-        try {
-            if (bytes == null || !bytes.hasRemaining()) {
-                return null;
-            }
-            if (bytes.hasArray()) {
-                return objectMapper.readValue(bytes.array(), bytes.arrayOffset(), bytes.remaining(), type);
-            } else {
-                return objectMapper.readValue(new ByteBufferInputStream(bytes), type);
-            }
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+    public T decode(ByteBufferInputStream stream) throws IOException {
+        return objectMapper.readValue(stream, type);
     }
 }
