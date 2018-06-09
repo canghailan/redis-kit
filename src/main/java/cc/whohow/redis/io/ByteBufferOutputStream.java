@@ -7,9 +7,6 @@ public class ByteBufferOutputStream extends OutputStream {
     protected ByteBuffer byteBuffer;
 
     public ByteBufferOutputStream(int size) {
-        if (size == 0) {
-            size = 32;
-        }
         this.byteBuffer = ByteBuffer.allocate(size);
     }
 
