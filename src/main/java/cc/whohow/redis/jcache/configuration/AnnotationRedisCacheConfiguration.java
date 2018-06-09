@@ -10,7 +10,9 @@ import javax.cache.annotation.GeneratedCacheKey;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class AnnotationRedisCacheConfiguration implements RedisCacheConfiguration {
@@ -120,8 +122,8 @@ public class AnnotationRedisCacheConfiguration implements RedisCacheConfiguratio
     }
 
     @Override
-    public List<String> getCustomConfiguration() {
-        return Arrays.asList(redisCacheResult.custom());
+    public List<String> getExtraConfigurations() {
+        return Arrays.asList(redisCacheResult.extra());
     }
 
     @Override

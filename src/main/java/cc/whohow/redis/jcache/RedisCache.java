@@ -60,7 +60,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    public <CV extends CacheValue<V>> CV getValue(K key, Function<V, CV> ofNullable) {
+    public CacheValue<V> getValue(K key, Function<V, ? extends CacheValue<V>> ofNullable) {
         ByteBuffer encodedValue = redis.get(codec.encodeKey(key));
         if (Lettuce.isNil(encodedValue)) {
             return null;
@@ -239,13 +239,6 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "{" +
-                "redisClient=" + redis +
-                ", name=" + configuration.getName() +
-                ", expiryForUpdate=" + configuration.getExpiryForUpdate() +
-                ", expiryForUpdateTimeUnit=" + configuration.getExpiryForUpdateTimeUnit() +
-                ", keyTypeCanonicalName=" + Arrays.toString(configuration.getKeyTypeCanonicalName()) +
-                ", valueTypeCanonicalName='" + configuration.getValueTypeCanonicalName() + '\'' +
-                '}';
+        return getName();
     }
 }

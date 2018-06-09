@@ -226,8 +226,8 @@ public class RedisTierCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    public <CV extends CacheValue<V>> CV getValue(K key, Function<V, CV> ofNullable) {
-        CV value = inProcessCache.getValue(key, ofNullable);
+    public CacheValue<V> getValue(K key, Function<V, ? extends CacheValue<V>> ofNullable) {
+        CacheValue<V> value = inProcessCache.getValue(key, ofNullable);
         if (value != null) {
             return value;
         }
@@ -256,9 +256,6 @@ public class RedisTierCache<K, V> implements Cache<K, V> {
 
     @Override
     public String toString() {
-        return "RedisTierCache{" +
-                "redisCache=" + redisCache +
-                ", inProcessCache=" + inProcessCache +
-                '}';
+        return redisCache.toString();
     }
 }

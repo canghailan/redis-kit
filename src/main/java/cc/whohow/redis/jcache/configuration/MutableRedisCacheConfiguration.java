@@ -1,7 +1,6 @@
 package cc.whohow.redis.jcache.configuration;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -9,13 +8,15 @@ public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfigura
     protected String name;
     protected Class<K> keyType;
     protected Class<V> valueType;
+    protected String[] keyTypeCanonicalName = {};
+    protected String valueTypeCanonicalName = "";
+    protected String keyCodec = "";
+    protected String valueCodec = "";
+
     protected boolean statisticsEnabled = true;
     protected boolean managementEnabled = false;
     protected long expiryForUpdate = -1;
     protected TimeUnit expiryForUpdateTimeUnit = TimeUnit.SECONDS;
-    protected String[] keyTypeCanonicalName;
-    protected String valueTypeCanonicalName;
-    protected String codec;
 
     protected boolean redisCacheEnabled = true;
 
@@ -24,8 +25,7 @@ public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfigura
     protected long inProcessCacheExpiryForUpdate = -1;
     protected TimeUnit inProcessCacheExpiryForUpdateTimeUnit = TimeUnit.SECONDS;
 
-    // custom
-    private List<String> customConfiguration = new ArrayList<>();
+    private List<String> extraConfigurations = new ArrayList<>();
 
     public MutableRedisCacheConfiguration() {
     }
@@ -34,18 +34,20 @@ public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfigura
         this.name = that.getName();
         this.keyType = that.getKeyType();
         this.valueType = that.getValueType();
+        this.keyTypeCanonicalName = that.getKeyTypeCanonicalName();
+        this.valueTypeCanonicalName = that.getValueTypeCanonicalName();
+        this.keyCodec = that.getKeyCodec();
+        this.valueCodec = that.getValueCodec();
         this.statisticsEnabled = that.isStatisticsEnabled();
         this.managementEnabled = that.isManagementEnabled();
         this.expiryForUpdate = that.getExpiryForUpdate();
         this.expiryForUpdateTimeUnit = that.getExpiryForUpdateTimeUnit();
-        this.keyTypeCanonicalName = that.getKeyTypeCanonicalName();
-        this.valueTypeCanonicalName = that.getValueTypeCanonicalName();
         this.redisCacheEnabled = that.isRedisCacheEnabled();
         this.inProcessCacheEnabled = that.isInProcessCacheEnabled();
         this.inProcessCacheMaxEntry = that.getInProcessCacheMaxEntry();
         this.inProcessCacheExpiryForUpdate = that.getInProcessCacheExpiryForUpdate();
         this.inProcessCacheExpiryForUpdateTimeUnit = that.getInProcessCacheExpiryForUpdateTimeUnit();
-        this.customConfiguration = that.getCustomConfiguration();
+        this.extraConfigurations = that.getExtraConfigurations();
     }
 
     @Override
@@ -73,6 +75,42 @@ public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfigura
 
     public void setValueType(Class<V> valueType) {
         this.valueType = valueType;
+    }
+
+    @Override
+    public String[] getKeyTypeCanonicalName() {
+        return keyTypeCanonicalName;
+    }
+
+    public void setKeyTypeCanonicalName(String[] keyTypeCanonicalName) {
+        this.keyTypeCanonicalName = keyTypeCanonicalName;
+    }
+
+    @Override
+    public String getValueTypeCanonicalName() {
+        return valueTypeCanonicalName;
+    }
+
+    public void setValueTypeCanonicalName(String valueTypeCanonicalName) {
+        this.valueTypeCanonicalName = valueTypeCanonicalName;
+    }
+
+    @Override
+    public String getKeyCodec() {
+        return keyCodec;
+    }
+
+    public void setKeyCodec(String keyCodec) {
+        this.keyCodec = keyCodec;
+    }
+
+    @Override
+    public String getValueCodec() {
+        return valueCodec;
+    }
+
+    public void setValueCodec(String valueCodec) {
+        this.valueCodec = valueCodec;
     }
 
     @Override
@@ -121,34 +159,6 @@ public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfigura
     }
 
     @Override
-    public String[] getKeyTypeCanonicalName() {
-        return keyTypeCanonicalName;
-    }
-
-    public void setKeyTypeCanonicalName(String[] keyTypeCanonicalName) {
-        this.keyTypeCanonicalName = keyTypeCanonicalName;
-    }
-
-    @Override
-    public String getValueTypeCanonicalName() {
-        return valueTypeCanonicalName;
-    }
-
-    @Override
-    public String getKeyCodec() {
-        return null;
-    }
-
-    @Override
-    public String getValueCodec() {
-        return null;
-    }
-
-    public void setValueTypeCanonicalName(String valueTypeCanonicalName) {
-        this.valueTypeCanonicalName = valueTypeCanonicalName;
-    }
-
-    @Override
     public boolean isInProcessCacheEnabled() {
         return inProcessCacheEnabled;
     }
@@ -185,31 +195,11 @@ public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfigura
     }
 
     @Override
-    public List<String> getCustomConfiguration() {
-        return customConfiguration;
+    public List<String> getExtraConfigurations() {
+        return extraConfigurations;
     }
 
-    public void setCustomConfiguration(List<String> customConfiguration) {
-        this.customConfiguration = customConfiguration;
-    }
-
-    @Override
-    public String toString() {
-        return "MutableRedisCacheConfiguration{" +
-                "name='" + name + '\'' +
-                ", keyType=" + keyType +
-                ", valueType=" + valueType +
-                ", statisticsEnabled=" + statisticsEnabled +
-                ", managementEnabled=" + managementEnabled +
-                ", expiryForUpdate=" + expiryForUpdate +
-                ", expiryForUpdateTimeUnit=" + expiryForUpdateTimeUnit +
-                ", redisCacheEnabled=" + redisCacheEnabled +
-                ", keyTypeCanonicalName=" + Arrays.toString(keyTypeCanonicalName) +
-                ", valueTypeCanonicalName='" + valueTypeCanonicalName + '\'' +
-                ", inProcessCacheEnabled=" + inProcessCacheEnabled +
-                ", inProcessCacheMaxEntry=" + inProcessCacheMaxEntry +
-                ", inProcessCacheExpiryForUpdate=" + inProcessCacheExpiryForUpdate +
-                ", inProcessCacheExpiryForUpdateTimeUnit=" + inProcessCacheExpiryForUpdateTimeUnit +
-                '}';
+    public void setExtraConfigurations(List<String> extraConfigurations) {
+        this.extraConfigurations = extraConfigurations;
     }
 }

@@ -1,42 +1,18 @@
 package cc.whohow.redis;
 
-import cc.whohow.redis.io.Codec;
 import cc.whohow.redis.jcache.ImmutableGeneratedCacheKey;
+import cc.whohow.redis.jcache.codec.ImmutableGeneratedCacheKeyCodec;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.type.TypeFactory;
-import io.netty.buffer.Unpooled;
 import org.junit.Test;
-import org.redisson.client.codec.Codec;
-import org.redisson.client.handler.State;
 
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Date;
-import java.util.List;
 
 public class TestCodec {
-    private ObjectJacksonCodec objectCodec = new ObjectJacksonCodec("java.util.List<java.lang.Integer>");
-    private ObjectArrayJacksonCodec objectArrayCodec = new ObjectArrayJacksonCodec(
-            "java.lang.String",
-            "int",
-            "java.lang.Integer",
-            "long",
-            "java.lang.Long",
-            "[B");
-    private Codec generatedKeyCodecInteger = new GeneratedKeyJacksonCodec(
-            "java.lang.Integer");
-    private Codec generatedKeyCodecString = new GeneratedKeyJacksonCodec(
-            "java.lang.String");
-    private Codec generatedKeyCodecArray = new GeneratedKeyJacksonCodec(
-            "java.lang.String",
-            "int",
-            "java.lang.Integer",
-            "long",
-            "java.lang.Long",
-            "[B");
-
     @Test
     public void testTypeCanonicalName() {
         System.out.println(String.class.getCanonicalName());
@@ -57,61 +33,21 @@ public class TestCodec {
     }
 
     @Test
-    public void testObjectEncoder() throws Exception {
-        List<Integer> object = Arrays.asList(1, 2, 3, 4);
-        System.out.println(objectCodec.getValueEncoder().encode(object).toString(StandardCharsets.UTF_8));
-    }
+    public void testImmutableGeneratedCacheKeyCodec() throws Exception {
+        ImmutableGeneratedCacheKeyCodec codec = new ImmutableGeneratedCacheKeyCodec(
+                String.class.getCanonicalName(),
+                Integer.class.getCanonicalName(),
+                Integer.class.getCanonicalName(),
+                Long.class.getCanonicalName(),
+                Long.class.getCanonicalName(),
+                byte[].class.getCanonicalName()
+        );
 
-    @Test
-    public void testObjectDecoder() throws Exception {
-        System.out.println(objectCodec.getValueDecoder().decode(Unpooled.copiedBuffer(
-                "[1,2,3,4]",
-                StandardCharsets.UTF_8), new State(false)).getClass());
-    }
-
-    @Test
-    public void testObjectArrayEncoder() throws Exception {
         Object[] objectArray = {"a", 1, 3, 5L, 7L, "xyz".getBytes()};
-        System.out.println(objectArrayCodec.getValueEncoder().encode(objectArray).toString(StandardCharsets.UTF_8));
-    }
+        ByteBuffer encoded = codec.encode(ImmutableGeneratedCacheKey.of(objectArray));
 
-    @Test
-    public void testObjectArrayDecoder() throws Exception {
-        Object[] objectArray = (Object[]) objectArrayCodec.getValueDecoder().decode(Unpooled.copiedBuffer(
-                "[\"a\",1,3,5,7,\"eHl6\"]",
-                StandardCharsets.UTF_8), new State(false));
-        for (Object object : objectArray) {
-            System.out.println(object);
-            System.out.println(object.getClass());
-        }
-    }
-
-    @Test
-    public void testCacheKeyEncoder() throws Exception {
-        ImmutableGeneratedCacheKey immutableGeneratedCacheKeyInteger = ImmutableGeneratedCacheKey.of(1);
-        System.out.println(generatedKeyCodecInteger.getValueEncoder().encode(immutableGeneratedCacheKeyInteger).toString(StandardCharsets.UTF_8));
-        ImmutableGeneratedCacheKey immutableGeneratedCacheKeyString = ImmutableGeneratedCacheKey.of("a");
-        System.out.println(generatedKeyCodecString.getValueEncoder().encode(immutableGeneratedCacheKeyString).toString(StandardCharsets.UTF_8));
-        ImmutableGeneratedCacheKey immutableGeneratedCacheKeyArray = ImmutableGeneratedCacheKey.of("a", 1, 3, 5L, 7L, "xyz".getBytes());
-        System.out.println(generatedKeyCodecArray.getValueEncoder().encode(immutableGeneratedCacheKeyArray).toString(StandardCharsets.UTF_8));
-    }
-
-    @Test
-    public void testCacheKeyDecoder() throws Exception {
-        System.out.println(generatedKeyCodecInteger.getValueDecoder().decode(Unpooled.copiedBuffer(
-                "1",
-                StandardCharsets.UTF_8), new State(false)));
-        System.out.println(generatedKeyCodecString.getValueDecoder().decode(Unpooled.copiedBuffer(
-                "\"a\"",
-                StandardCharsets.UTF_8), new State(false)));
-        ImmutableGeneratedCacheKey immutableGeneratedCacheKey = (ImmutableGeneratedCacheKey) generatedKeyCodecArray.getValueDecoder().decode(Unpooled.copiedBuffer(
-                "[\"a\",1,3,5,7,\"eHl6\"]",
-                StandardCharsets.UTF_8), new State(false));
-        System.out.println(immutableGeneratedCacheKey);
-        for (Object object : immutableGeneratedCacheKey.getKeys()) {
-            System.out.println(object);
-            System.out.println(object.getClass());
-        }
+        System.out.println(StandardCharsets.UTF_8.decode(encoded.duplicate()));
+        System.out.println(codec.decode(encoded.duplicate()));
     }
 
     @Test

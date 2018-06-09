@@ -38,7 +38,8 @@ public interface ImmutableGeneratedCacheKey extends GeneratedCacheKey {
     final class EmptyGeneratedCacheKey implements ImmutableGeneratedCacheKey {
         private static final EmptyGeneratedCacheKey INSTANCE = new EmptyGeneratedCacheKey();
 
-        private EmptyGeneratedCacheKey() {}
+        private EmptyGeneratedCacheKey() {
+        }
 
         public Object getKey(int index) {
             throw new IndexOutOfBoundsException();

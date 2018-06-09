@@ -26,7 +26,7 @@ public class RedisCacheManagerAdapter implements org.springframework.cache.Cache
         cc.whohow.redis.jcache.Cache cache = redisCacheManager.getCache(name);
         RedisCacheConfiguration configuration = (RedisCacheConfiguration)
                 cache.getConfiguration(RedisCacheConfiguration.class);
-        if (configuration.getCustomConfiguration().contains("TransactionAware")) {
+        if (configuration.getExtraConfigurations().contains("TransactionAware")) {
             return new TransactionAwareCacheAdapter(cache);
         } else {
             return new CacheAdapter(cache);

@@ -99,12 +99,4 @@ public class RedisCachingProvider implements CachingProvider {
             }
         }
     }
-
-    @Override
-    public String toString() {
-        return "RedisCachingProvider{" +
-                "cacheManagers=" + cacheManagers +
-                ", defaultCacheManager=" + defaultCacheManager +
-                '}';
-    }
 }

@@ -105,14 +105,14 @@ public class RedisCacheManager implements
     }
 
     private <K, V> Codec<?> newKeyCodec(RedisCacheConfiguration<K, V> configuration) {
-        if (configuration.getKeyCodec() == null) {
+        if (configuration.getKeyCodec().isEmpty()) {
             return new ImmutableGeneratedCacheKeyCodec(configuration.getKeyTypeCanonicalName());
         }
         throw new AssertionError("Not Implemented");
     }
 
     private <K, V> Codec<?> newValueCodec(RedisCacheConfiguration<K, V> configuration) {
-        if (configuration.getValueCodec() == null) {
+        if (configuration.getValueCodec().isEmpty()) {
             return new JacksonCodec<>(configuration.getValueTypeCanonicalName());
         }
         throw new AssertionError("Not Implemented");
@@ -306,9 +306,6 @@ public class RedisCacheManager implements
 
     @Override
     public String toString() {
-        return "RedisCacheManager{" +
-                "redisClient=" + redisClient +
-                ", caches=" + caches +
-                '}';
+        return uri.toString();
     }
 }

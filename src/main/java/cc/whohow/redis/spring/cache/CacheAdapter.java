@@ -1,9 +1,7 @@
 package cc.whohow.redis.spring.cache;
 
 import cc.whohow.redis.jcache.Cache;
-import org.springframework.cache.support.SimpleValueWrapper;
 
-import java.util.Optional;
 import java.util.concurrent.Callable;
 
 @SuppressWarnings("unchecked")
@@ -26,7 +24,7 @@ public class CacheAdapter implements org.springframework.cache.Cache {
 
     @Override
     public ValueWrapper get(Object key) {
-        return cache.<ValueWrapperAdapter>getValue(key, ValueWrapperAdapter::ofNullable);
+        return (ValueWrapperAdapter) cache.getValue(key, ValueWrapperAdapter::ofNullable);
     }
 
     @Override

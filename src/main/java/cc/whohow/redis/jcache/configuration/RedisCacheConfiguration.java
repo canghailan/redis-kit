@@ -46,5 +46,7 @@ public interface RedisCacheConfiguration<K, V> extends Configuration<K, V> {
 
     TimeUnit getInProcessCacheExpiryForUpdateTimeUnit();
 
-    List<String> getCustomConfiguration();
+    // extra
+
+    List<String> getExtraConfigurations();
 }

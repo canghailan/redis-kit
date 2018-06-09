@@ -12,7 +12,10 @@ import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 
 /**
@@ -214,7 +217,7 @@ public class InProcessCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    public <CV extends CacheValue<V>> CV getValue(K key, Function<V, CV> ofNullable) {
+    public CacheValue<V> getValue(K key, Function<V, ? extends CacheValue<V>> ofNullable) {
         V value = cache.getIfPresent(key);
         return value == null ? null : ofNullable.apply(value);
     }

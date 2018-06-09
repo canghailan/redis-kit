@@ -22,9 +22,9 @@ public @interface RedisCacheResult {
 
     String valueTypeCanonicalName() default "";
 
-    String keyCodec();
+    String keyCodec() default "";
 
-    String valueCodec();
+    String valueCodec() default "";
 
     boolean redisCacheEnabled() default true;
 
@@ -36,5 +36,5 @@ public @interface RedisCacheResult {
 
     TimeUnit inProcessCacheExpiryForUpdateTimeUnit() default TimeUnit.SECONDS;
 
-    String[] custom() default {};
+    String[] extra() default {};
 }

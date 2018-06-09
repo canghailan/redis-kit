@@ -4,15 +4,14 @@ import java.util.Objects;
 
 public class ImmutableCacheValue<V> implements CacheValue<V> {
     private static final ImmutableCacheValue NULL = new ImmutableCacheValue<>(null);
-
-    public static <V> ImmutableCacheValue<V> ofNullable(V value) {
-        return value == null ? NULL : new ImmutableCacheValue<>(value);
-    }
-
     protected final V value;
 
     protected ImmutableCacheValue(V value) {
         this.value = value;
+    }
+
+    public static <V> ImmutableCacheValue<V> ofNullable(V value) {
+        return value == null ? NULL : new ImmutableCacheValue<>(value);
     }
 
     @Override
