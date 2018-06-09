@@ -19,9 +19,7 @@ public class ImmutableGeneratedCacheKeyCodec implements Codec<ImmutableGenerated
 
     public ImmutableGeneratedCacheKeyCodec(String... cacheKeyTypeCanonicalNames) {
         Objects.requireNonNull(cacheKeyTypeCanonicalNames);
-        if (cacheKeyTypeCanonicalNames.length == 0) {
-            delegate = NoKeyCodec.INSTANCE;
-        } else if (cacheKeyTypeCanonicalNames.length == 1) {
+        if (cacheKeyTypeCanonicalNames.length == 1) {
             switch (cacheKeyTypeCanonicalNames[0]) {
                 case "java.lang.String": {
                     delegate = SingletonKeyCodec.STRING_KEY_CODEC;
@@ -36,6 +34,8 @@ public class ImmutableGeneratedCacheKeyCodec implements Codec<ImmutableGenerated
                     delegate = new SingletonKeyCodec(new JacksonCodec(cacheKeyTypeCanonicalNames[0]));
                 }
             }
+        } else if (cacheKeyTypeCanonicalNames.length == 0) {
+            delegate = NoKeyCodec.INSTANCE;
         } else {
             delegate = new ArrayKeyCodec(cacheKeyTypeCanonicalNames);
         }
