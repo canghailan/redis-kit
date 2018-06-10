@@ -4,11 +4,12 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
-public class StringCodec implements Codec<String> {
-    public static final StringCodec ASCII = new StringCodec(StandardCharsets.US_ASCII);
-    public static final StringCodec UTF_8 = new StringCodec(StandardCharsets.UTF_8);
-
+public class StringCodec extends AbstractCodec<String> {
     private final Charset charset;
+
+    public StringCodec() {
+        this(StandardCharsets.UTF_8);
+    }
 
     public StringCodec(Charset charset) {
         this.charset = charset;
@@ -16,7 +17,9 @@ public class StringCodec implements Codec<String> {
 
     @Override
     public ByteBuffer encode(String value) {
-        return charset.encode(value);
+        ByteBuffer buffer = charset.encode(value);
+        record(buffer);
+        return buffer;
     }
 
     @Override

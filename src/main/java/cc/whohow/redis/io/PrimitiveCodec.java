@@ -4,7 +4,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.function.Function;
 
-public class PrimitiveCodec<T> implements Codec<T> {
+public class PrimitiveCodec<T> extends AbstractCodec<T> {
     public static final PrimitiveCodec<Boolean> BOOLEAN = new PrimitiveCodec<>(Boolean::parseBoolean);
     public static final PrimitiveCodec<Byte> BYTE = new PrimitiveCodec<>(Byte::parseByte);
     public static final PrimitiveCodec<Short> SHORT = new PrimitiveCodec<>(Short::parseShort);
@@ -23,7 +23,9 @@ public class PrimitiveCodec<T> implements Codec<T> {
 
     @Override
     public ByteBuffer encode(T value) {
-        return value == null ? NULL : StandardCharsets.US_ASCII.encode(value.toString());
+        ByteBuffer buffer = (value == null) ? NULL : StandardCharsets.US_ASCII.encode(value.toString());
+        record(buffer);
+        return buffer;
     }
 
     @Override

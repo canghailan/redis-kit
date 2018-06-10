@@ -10,6 +10,7 @@ public class ImmutableCacheValue<V> implements CacheValue<V> {
         this.value = value;
     }
 
+    @SuppressWarnings("unchecked")
     public static <V> ImmutableCacheValue<V> ofNullable(V value) {
         return value == null ? NULL : new ImmutableCacheValue<>(value);
     }

@@ -3,7 +3,9 @@ package cc.whohow.redis.jcache;
 import cc.whohow.redis.io.Codec;
 import cc.whohow.redis.io.JacksonCodec;
 import cc.whohow.redis.jcache.codec.ImmutableGeneratedCacheKeyCodec;
+import cc.whohow.redis.jcache.codec.RedisCacheKeyCodec;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
+import cc.whohow.redis.lettuce.ByteBufferCodec;
 import cc.whohow.redis.lettuce.Lettuce;
 import cc.whohow.redis.lettuce.RedisCodecAdapter;
 import io.lettuce.core.RedisChannelHandler;
@@ -45,8 +47,8 @@ public class RedisCacheManager implements
         this.uri = uri.toURI();
         this.redisClient = redisClient;
         this.redisClient.addListener(this);
-        this.redisConnection = redisClient.connect(Lettuce.BYTE_BUFFER_CODEC, uri);
-        this.redisPubSubConnection = redisClient.connectPubSub(Lettuce.BYTE_BUFFER_CODEC, uri);
+        this.redisConnection = redisClient.connect(ByteBufferCodec.INSTANCE, uri);
+        this.redisPubSubConnection = redisClient.connectPubSub(ByteBufferCodec.INSTANCE, uri);
         this.redisPubSubConnection.addListener(this);
 
         this.keyspace = "__keyspace@" + uri.getDatabase() + "__:";

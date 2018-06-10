@@ -1,10 +1,12 @@
 package cc.whohow.redis.io;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 
-public abstract class AbstractStreamCodec<T> implements Codec<T> {
+public abstract class AbstractCodec<T> implements Codec<T> {
     private volatile long count = 0;
     private volatile double avgSize = 0.0;
     private volatile int minSize = 0;
@@ -15,7 +17,7 @@ public abstract class AbstractStreamCodec<T> implements Codec<T> {
         return size == 0 ? 32 : size;
     }
 
-    protected synchronized void updateStatistic(ByteBuffer byteBuffer) {
+    protected synchronized void record(ByteBuffer byteBuffer) {
         int size = byteBuffer.remaining();
 
         count++;
@@ -37,23 +39,38 @@ public abstract class AbstractStreamCodec<T> implements Codec<T> {
             encode(value, stream);
             ByteBuffer byteBuffer = stream.getByteBuffer();
             byteBuffer.flip();
-            updateStatistic(byteBuffer);
+            record(byteBuffer);
             return byteBuffer;
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
     }
 
-    @Override
     public T decode(ByteBuffer buffer) {
-        try {
-            return buffer == null ? null : decode(new ByteBufferInputStream(buffer));
+        if (buffer == null) {
+            return null;
+        }
+        try (ByteBufferInputStream stream = new ByteBufferInputStream(buffer)) {
+            return decode(stream);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
     }
 
-    public abstract void encode(T value, ByteBufferOutputStream stream) throws IOException;
+    public void encode(T value, OutputStream stream) throws IOException {
+        ByteBuffer buffer = encode(value);
+        if (buffer.hasArray()) {
+            if (buffer.hasRemaining()) {
+                stream.write(buffer.array(), buffer.arrayOffset(), buffer.remaining());
+            }
+        } else {
+            while (buffer.hasRemaining()) {
+                stream.write(buffer.get());
+            }
+        }
+    }
 
-    public abstract T decode(ByteBufferInputStream stream) throws IOException;
+    public T decode(InputStream stream) throws IOException {
+        return decode(new Java9InputStream(stream).readAllBytes(newByteBufferSize()));
+    }
 }

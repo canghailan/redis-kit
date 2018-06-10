@@ -4,8 +4,10 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
-public class JacksonCodec<T> extends AbstractStreamCodec<T> {
+public class JacksonCodec<T> extends AbstractCodec<T> {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     protected final ObjectMapper objectMapper;
@@ -30,12 +32,12 @@ public class JacksonCodec<T> extends AbstractStreamCodec<T> {
     }
 
     @Override
-    public void encode(T value, ByteBufferOutputStream stream) throws IOException {
+    public void encode(T value, OutputStream stream) throws IOException {
         objectMapper.writeValue(stream, value);
     }
 
     @Override
-    public T decode(ByteBufferInputStream stream) throws IOException {
+    public T decode(InputStream stream) throws IOException {
         return objectMapper.readValue(stream, type);
     }
 }

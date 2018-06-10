@@ -10,6 +10,7 @@ public class ValueWrapperAdapter extends ImmutableCacheValue<Object> implements 
         super(value);
     }
 
+    @SuppressWarnings("unchecked")
     public static ValueWrapperAdapter ofNullable(Object value) {
         return value == null ? NULL : new ValueWrapperAdapter(value);
     }

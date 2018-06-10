@@ -39,11 +39,10 @@ public class TestCodec {
                 Integer.class.getCanonicalName(),
                 Integer.class.getCanonicalName(),
                 Long.class.getCanonicalName(),
-                Long.class.getCanonicalName(),
-                byte[].class.getCanonicalName()
+                Long.class.getCanonicalName()
         );
 
-        Object[] objectArray = {"a", 1, 3, 5L, 7L, "xyz".getBytes()};
+        Object[] objectArray = {"a", 1, 3, 5L, 7L};
         ByteBuffer encoded = codec.encode(ImmutableGeneratedCacheKey.of(objectArray));
 
         System.out.println(StandardCharsets.UTF_8.decode(encoded.duplicate()));

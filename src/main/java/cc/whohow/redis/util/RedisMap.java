@@ -6,6 +6,7 @@ import cc.whohow.redis.lettuce.Lettuce;
 import io.lettuce.core.api.sync.RedisCommands;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
@@ -29,7 +30,7 @@ public class RedisMap<K, V> implements ConcurrentMap<K, V> {
         this.keyCodec = keyCodec;
         this.valueCodec = valueCodec;
         this.id = id;
-        this.encodedId = StringCodec.UTF_8.encode(id);
+        this.encodedId = StandardCharsets.UTF_8.encode(id);
     }
 
     public ByteBuffer encodeKey(K key) {

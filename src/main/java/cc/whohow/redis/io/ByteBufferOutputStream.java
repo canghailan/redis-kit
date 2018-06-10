@@ -6,6 +6,10 @@ import java.nio.ByteBuffer;
 public class ByteBufferOutputStream extends OutputStream {
     protected ByteBuffer byteBuffer;
 
+    public ByteBufferOutputStream() {
+        this(128);
+    }
+
     public ByteBufferOutputStream(int size) {
         this.byteBuffer = ByteBuffer.allocate(size);
     }

@@ -8,6 +8,7 @@ import io.lettuce.core.ScoredValue;
 import io.lettuce.core.api.sync.RedisCommands;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
@@ -26,7 +27,7 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number> {
         this.redis = redis;
         this.codec = codec;
         this.id = id;
-        this.encodedId = StringCodec.UTF_8.encode(id);
+        this.encodedId = StandardCharsets.UTF_8.encode(id);
     }
 
     public ByteBuffer encode(E value) {

@@ -2,14 +2,13 @@ package cc.whohow.redis.io;
 
 import java.nio.ByteBuffer;
 
-public class ByteBufferCodec implements Codec<ByteBuffer> {
-    public static final ByteBufferCodec INSTANCE = new ByteBufferCodec();
-
-    private ByteBufferCodec() {
+public class ByteBufferCodec extends AbstractCodec<ByteBuffer> {
+    public ByteBufferCodec() {
     }
 
     @Override
     public ByteBuffer encode(ByteBuffer value) {
+        record(value);
         return value;
     }
 

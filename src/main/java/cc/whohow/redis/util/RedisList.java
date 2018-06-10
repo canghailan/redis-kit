@@ -7,6 +7,7 @@ import io.lettuce.core.api.sync.RedisCommands;
 
 import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.TimeUnit;
@@ -24,7 +25,7 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
         this.redis = redis;
         this.codec = codec;
         this.id = id;
-        this.encodedId = StringCodec.UTF_8.encode(id);
+        this.encodedId = StandardCharsets.UTF_8.encode(id);
     }
 
     public ByteBuffer encode(E value) {

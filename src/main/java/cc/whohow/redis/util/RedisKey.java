@@ -19,27 +19,28 @@ import java.util.stream.Collectors;
  */
 public class RedisKey<V> implements ConcurrentMap<String, V> {
     protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
-    protected final Codec<V> codec;
+    protected final Codec<String> keyCodec = new StringCodec();
+    protected final Codec<V> valueCodec;
 
     public RedisKey(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<V> codec) {
         this.redis = redis;
-        this.codec = codec;
+        this.valueCodec = codec;
     }
 
     public ByteBuffer encodeKey(String key) {
-        return StringCodec.UTF_8.encode(key);
+        return keyCodec.encode(key);
     }
 
     public String decodeKey(ByteBuffer buffer) {
-        return StringCodec.UTF_8.decode(buffer);
+        return keyCodec.decode(buffer);
     }
 
     public ByteBuffer encodeValue(V value) {
-        return codec.encode(value);
+        return valueCodec.encode(value);
     }
 
     public V decodeValue(ByteBuffer buffer) {
-        return codec.decode(buffer);
+        return valueCodec.decode(buffer);
     }
 
     @Override
