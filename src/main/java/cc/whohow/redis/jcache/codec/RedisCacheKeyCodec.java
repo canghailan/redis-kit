@@ -35,7 +35,7 @@ public class RedisCacheKeyCodec<K> extends AbstractCodec<K> {
     }
 
     @Override
-    public K decode(ByteBuffer buffer) {
+    public K decodeByteBuffer(ByteBuffer buffer) {
         ByteBuffer keyPrefix = this.keyPrefix.duplicate();
         while (keyPrefix.hasRemaining()) {
             if (buffer.hasRemaining()) {
@@ -50,13 +50,13 @@ public class RedisCacheKeyCodec<K> extends AbstractCodec<K> {
     }
 
     @Override
-    public void encode(K value, OutputStream stream) throws IOException {
+    public void encodeToStream(K value, OutputStream stream) throws IOException {
         stream.write(keyPrefix.array(), keyPrefix.arrayOffset(), keyPrefix.remaining());
         keyCodec.encode(value, stream);
     }
 
     @Override
-    public K decode(InputStream stream) throws IOException {
+    public K decodeStream(InputStream stream) throws IOException {
         ByteBuffer keyPrefix = this.keyPrefix.duplicate();
         byte[] buffer = new byte[keyPrefix.remaining()];
         int offset = 0;

@@ -17,7 +17,18 @@ public abstract class AbstractCodec<T> implements Codec<T> {
         return size == 0 ? 32 : size;
     }
 
-    protected synchronized void record(ByteBuffer byteBuffer) {
+    private synchronized void recordEncode(ByteBuffer byteBuffer) {
+        record(byteBuffer);
+    }
+
+    private synchronized void recordDecode(ByteBuffer byteBuffer) {
+//        record(byteBuffer);
+    }
+
+    private synchronized void record(ByteBuffer byteBuffer) {
+        if (byteBuffer == null) {
+            return;
+        }
         int size = byteBuffer.remaining();
 
         count++;
@@ -34,19 +45,40 @@ public abstract class AbstractCodec<T> implements Codec<T> {
     }
 
     @Override
-    public ByteBuffer encode(T value) {
+    public final ByteBuffer encode(T value) {
+        ByteBuffer buffer = encodeToByteBuffer(value);
+        recordEncode(buffer);
+        return buffer;
+    }
+
+    @Override
+    public final T decode(ByteBuffer buffer) {
+        recordDecode(buffer);
+        return decodeByteBuffer(buffer);
+    }
+
+    @Override
+    public final void encode(T value, OutputStream stream) throws IOException {
+        encodeToStream(value, stream);
+    }
+
+    @Override
+    public final T decode(InputStream stream) throws IOException {
+        return decodeStream(stream);
+    }
+
+    protected ByteBuffer encodeToByteBuffer(T value) {
         try (ByteBufferOutputStream stream = new ByteBufferOutputStream(newByteBufferSize())) {
             encode(value, stream);
             ByteBuffer byteBuffer = stream.getByteBuffer();
             byteBuffer.flip();
-            record(byteBuffer);
             return byteBuffer;
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
     }
 
-    public T decode(ByteBuffer buffer) {
+    protected T decodeByteBuffer(ByteBuffer buffer) {
         if (buffer == null) {
             return null;
         }
@@ -57,7 +89,7 @@ public abstract class AbstractCodec<T> implements Codec<T> {
         }
     }
 
-    public void encode(T value, OutputStream stream) throws IOException {
+    protected void encodeToStream(T value, OutputStream stream) throws IOException {
         ByteBuffer buffer = encode(value);
         if (buffer.hasArray()) {
             if (buffer.hasRemaining()) {
@@ -70,7 +102,7 @@ public abstract class AbstractCodec<T> implements Codec<T> {
         }
     }
 
-    public T decode(InputStream stream) throws IOException {
+    protected T decodeStream(InputStream stream) throws IOException {
         return decode(new Java9InputStream(stream).readAllBytes(newByteBufferSize()));
     }
 }

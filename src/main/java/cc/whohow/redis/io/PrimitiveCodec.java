@@ -22,14 +22,12 @@ public class PrimitiveCodec<T> extends AbstractCodec<T> {
     }
 
     @Override
-    public ByteBuffer encode(T value) {
-        ByteBuffer buffer = (value == null) ? NULL : StandardCharsets.US_ASCII.encode(value.toString());
-        record(buffer);
-        return buffer;
+    public ByteBuffer encodeToByteBuffer(T value) {
+        return (value == null) ? NULL : StandardCharsets.US_ASCII.encode(value.toString());
     }
 
     @Override
-    public T decode(ByteBuffer buffer) {
+    public T decodeByteBuffer(ByteBuffer buffer) {
         return (buffer != null && buffer.hasRemaining()) ?
                 parse.apply(StandardCharsets.US_ASCII.decode(buffer).toString()) : null;
     }

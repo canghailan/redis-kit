@@ -32,12 +32,12 @@ public class JacksonCodec<T> extends AbstractCodec<T> {
     }
 
     @Override
-    public void encode(T value, OutputStream stream) throws IOException {
+    public void encodeToStream(T value, OutputStream stream) throws IOException {
         objectMapper.writeValue(stream, value);
     }
 
     @Override
-    public T decode(InputStream stream) throws IOException {
+    public T decodeStream(InputStream stream) throws IOException {
         return objectMapper.readValue(stream, type);
     }
 }

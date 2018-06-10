@@ -7,13 +7,12 @@ public class ByteBufferCodec extends AbstractCodec<ByteBuffer> {
     }
 
     @Override
-    public ByteBuffer encode(ByteBuffer value) {
-        record(value);
+    public ByteBuffer encodeToByteBuffer(ByteBuffer value) {
         return value;
     }
 
     @Override
-    public ByteBuffer decode(ByteBuffer buffer) {
+    public ByteBuffer decodeByteBuffer(ByteBuffer buffer) {
         return buffer;
     }
 }

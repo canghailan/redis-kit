@@ -16,14 +16,12 @@ public class StringCodec extends AbstractCodec<String> {
     }
 
     @Override
-    public ByteBuffer encode(String value) {
-        ByteBuffer buffer = charset.encode(value);
-        record(buffer);
-        return buffer;
+    public ByteBuffer encodeToByteBuffer(String value) {
+        return charset.encode(value);
     }
 
     @Override
-    public String decode(ByteBuffer buffer) {
+    public String decodeByteBuffer(ByteBuffer buffer) {
         return charset.decode(buffer).toString();
     }
 }

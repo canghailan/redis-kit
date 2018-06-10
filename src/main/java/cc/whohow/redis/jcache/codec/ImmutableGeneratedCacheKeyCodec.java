@@ -128,12 +128,12 @@ public class ImmutableGeneratedCacheKeyCodec implements Codec<ImmutableGenerated
         }
 
         @Override
-        public void encode(ImmutableGeneratedCacheKey value, OutputStream stream) throws IOException {
+        public void encodeToStream(ImmutableGeneratedCacheKey value, OutputStream stream) throws IOException {
             OBJECT_MAPPER.writeValue(stream, value.getKeys());
         }
 
         @Override
-        public ImmutableGeneratedCacheKey decode(InputStream stream) throws IOException {
+        public ImmutableGeneratedCacheKey decodeStream(InputStream stream) throws IOException {
             ArrayNode arrayNode = OBJECT_MAPPER.readValue(stream, ArrayNode.class);
             Object[] objectArray = new Object[arrayNode.size()];
             for (int i = 0; i < arrayNode.size(); i++) {

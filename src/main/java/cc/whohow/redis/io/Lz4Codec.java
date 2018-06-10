@@ -21,18 +21,17 @@ public class Lz4Codec<T> extends AbstractCodec<T> {
     }
 
     @Override
-    public ByteBuffer encode(T value) {
+    public ByteBuffer encodeToByteBuffer(T value) {
         ByteBuffer uncompressed = codec.encode(value);
         ByteBuffer compressed = ByteBuffer.allocate(uncompressed.remaining() + 4);
         compressed.putInt(uncompressed.remaining());
         COMPRESSOR.compress(uncompressed, compressed);
         compressed.flip();
-        record(compressed);
         return compressed;
     }
 
     @Override
-    public T decode(ByteBuffer buffer) {
+    public T decodeByteBuffer(ByteBuffer buffer) {
         ByteBuffer uncompressed = ByteBuffer.allocate(buffer.getInt());
         DECOMPRESSOR.decompress(buffer, uncompressed);
         uncompressed.flip();
