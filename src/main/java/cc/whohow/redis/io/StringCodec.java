@@ -22,7 +22,7 @@ public class StringCodec extends AbstractAdaptiveCodec<String> {
 
     @Override
     public ByteBuffer encodeToByteBuffer(String value) {
-        return value == null ? NIL : charset.encode(value);
+        return value == null ? NIL.duplicate() : charset.encode(value);
     }
 
     @Override
