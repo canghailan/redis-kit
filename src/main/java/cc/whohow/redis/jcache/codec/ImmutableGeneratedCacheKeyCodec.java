@@ -68,7 +68,7 @@ public class ImmutableGeneratedCacheKeyCodec implements Codec<ImmutableGenerated
 
         @Override
         public ByteBuffer encode(ImmutableGeneratedCacheKey value) {
-            return Lettuce.NIL;
+            return Lettuce.nil();
         }
 
         @Override
