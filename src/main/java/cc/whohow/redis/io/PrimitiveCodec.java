@@ -27,6 +27,10 @@ public class PrimitiveCodec<T> extends AbstractCodec<T> {
         this.bufferSize = bufferSize;
     }
 
+    private static boolean isNull(ByteBuffer buffer) {
+        return (buffer == null) || (buffer.remaining() == 0);
+    }
+
     @Override
     protected int getBufferSize() {
         return bufferSize;
@@ -39,7 +43,6 @@ public class PrimitiveCodec<T> extends AbstractCodec<T> {
 
     @Override
     public T decode(ByteBuffer buffer) {
-        return (buffer != null && buffer.hasRemaining()) ?
-                parse.apply(StandardCharsets.US_ASCII.decode(buffer).toString()) : null;
+        return isNull(buffer) ? null : parse.apply(StandardCharsets.US_ASCII.decode(buffer).toString());
     }
 }

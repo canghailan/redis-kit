@@ -36,6 +36,9 @@ public class RedisCacheKeyCodec<K> extends AbstractAdaptiveCodec<K> {
 
     @Override
     public K decodeByteBuffer(ByteBuffer buffer) {
+        if (buffer == null || buffer.remaining() == 0) {
+            return null;
+        }
         ByteBuffer keyPrefix = this.keyPrefix.duplicate();
         while (keyPrefix.hasRemaining()) {
             if (buffer.hasRemaining()) {

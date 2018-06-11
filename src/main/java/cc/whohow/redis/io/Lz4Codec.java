@@ -29,6 +29,9 @@ public class Lz4Codec<T> extends AbstractAdaptiveCodec<T> {
 
     @Override
     public T decodeByteBuffer(ByteBuffer buffer) {
+        if (buffer == null || buffer.remaining() == 0) {
+            return null;
+        }
         ByteBuffer uncompressed = ByteBuffer.allocate(buffer.getInt());
         DECOMPRESSOR.decompress(buffer, uncompressed);
         uncompressed.flip();
