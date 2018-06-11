@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD})
-public @interface RedisCacheResult {
+public @interface RedisCacheable {
     boolean statisticsEnabled() default true;
 
     boolean managementEnabled() default false;

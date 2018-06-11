@@ -1,6 +1,6 @@
 package cc.whohow.redis.jcache.configuration;
 
-import cc.whohow.redis.jcache.annotation.RedisCacheResult;
+import cc.whohow.redis.jcache.annotation.RedisCacheable;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 
@@ -18,12 +18,12 @@ import java.util.concurrent.TimeUnit;
 public class AnnotationRedisCacheConfiguration implements RedisCacheConfiguration {
     private final CacheMethodDetails<? extends Annotation> cacheMethodDetails;
     private final Method method;
-    private final RedisCacheResult redisCacheResult;
+    private final RedisCacheable redisCacheable;
 
     public AnnotationRedisCacheConfiguration(CacheMethodDetails<? extends Annotation> cacheMethodDetails) {
         this.cacheMethodDetails = cacheMethodDetails;
         this.method = cacheMethodDetails.getMethod();
-        this.redisCacheResult = method.getAnnotation(RedisCacheResult.class);
+        this.redisCacheable = method.getAnnotation(RedisCacheable.class);
     }
 
     public Type[] getGenericKeyType() {
@@ -68,62 +68,62 @@ public class AnnotationRedisCacheConfiguration implements RedisCacheConfiguratio
 
     @Override
     public String getKeyCodec() {
-        return redisCacheResult.keyCodec();
+        return redisCacheable.keyCodec();
     }
 
     @Override
     public String getValueCodec() {
-        return redisCacheResult.valueCodec();
+        return redisCacheable.valueCodec();
     }
 
     @Override
     public boolean isStatisticsEnabled() {
-        return redisCacheResult.statisticsEnabled();
+        return redisCacheable.statisticsEnabled();
     }
 
     @Override
     public boolean isManagementEnabled() {
-        return redisCacheResult.managementEnabled();
+        return redisCacheable.managementEnabled();
     }
 
     @Override
     public long getExpiryForUpdate() {
-        return redisCacheResult.expiryForUpdate();
+        return redisCacheable.expiryForUpdate();
     }
 
     @Override
     public TimeUnit getExpiryForUpdateTimeUnit() {
-        return redisCacheResult.expiryForUpdateTimeUnit();
+        return redisCacheable.expiryForUpdateTimeUnit();
     }
 
     @Override
     public boolean isRedisCacheEnabled() {
-        return redisCacheResult.redisCacheEnabled();
+        return redisCacheable.redisCacheEnabled();
     }
 
     @Override
     public boolean isInProcessCacheEnabled() {
-        return redisCacheResult.inProcessCacheEnabled();
+        return redisCacheable.inProcessCacheEnabled();
     }
 
     @Override
     public int getInProcessCacheMaxEntry() {
-        return redisCacheResult.inProcessCacheMaxEntry();
+        return redisCacheable.inProcessCacheMaxEntry();
     }
 
     @Override
     public long getInProcessCacheExpiryForUpdate() {
-        return redisCacheResult.inProcessCacheExpiryForUpdate();
+        return redisCacheable.inProcessCacheExpiryForUpdate();
     }
 
     @Override
     public TimeUnit getInProcessCacheExpiryForUpdateTimeUnit() {
-        return redisCacheResult.inProcessCacheExpiryForUpdateTimeUnit();
+        return redisCacheable.inProcessCacheExpiryForUpdateTimeUnit();
     }
 
     @Override
     public List<String> getExtraConfigurations() {
-        return Arrays.asList(redisCacheResult.extra());
+        return Arrays.asList(redisCacheable.extra());
     }
 
     @Override
