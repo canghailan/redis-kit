@@ -33,7 +33,7 @@ public class ImmutableGeneratedCacheKeyCodec implements Codec<ImmutableGenerated
                     delegate = SingletonKeyCodec.LONG_KEY_CODEC;
                 }
                 default: {
-                    delegate = new SingletonKeyCodec(new JacksonCodec(cacheKeyTypeCanonicalNames[0]));
+                    delegate = new SingletonKeyCodec(new JacksonCodec(OBJECT_MAPPER, cacheKeyTypeCanonicalNames[0]));
                 }
             }
         } else if (cacheKeyTypeCanonicalNames.length == 0) {
