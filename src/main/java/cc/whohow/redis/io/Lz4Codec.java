@@ -4,12 +4,9 @@ import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
-public class Lz4Codec<T> extends AbstractCodec<T> {
+public class Lz4Codec<T> extends AbstractAdaptiveCodec<T> {
     private static final LZ4Factory FACTORY = LZ4Factory.fastestInstance();
     private static final LZ4Compressor COMPRESSOR = FACTORY.fastCompressor();
     private static final LZ4FastDecompressor DECOMPRESSOR = FACTORY.fastDecompressor();

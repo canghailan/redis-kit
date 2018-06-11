@@ -118,7 +118,7 @@ public class ImmutableGeneratedCacheKeyCodec implements Codec<ImmutableGenerated
         }
     }
 
-    private static class ArrayKeyCodec extends AbstractCodec<ImmutableGeneratedCacheKey> {
+    private static class ArrayKeyCodec extends AbstractAdaptiveCodec<ImmutableGeneratedCacheKey> {
         private final JavaType[] types;
 
         private ArrayKeyCodec(String... canonicalName) {

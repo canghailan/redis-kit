@@ -4,7 +4,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
-public class StringCodec extends AbstractCodec<String> {
+public class StringCodec extends AbstractAdaptiveCodec<String> {
     private final Charset charset;
 
     public StringCodec() {

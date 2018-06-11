@@ -1,7 +1,6 @@
 package cc.whohow.redis.util;
 
 import cc.whohow.redis.io.PrimitiveCodec;
-import cc.whohow.redis.io.StringCodec;
 import io.lettuce.core.api.sync.RedisCommands;
 
 import java.nio.ByteBuffer;

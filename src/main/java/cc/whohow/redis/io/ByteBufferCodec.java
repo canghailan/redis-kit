@@ -2,7 +2,7 @@ package cc.whohow.redis.io;
 
 import java.nio.ByteBuffer;
 
-public class ByteBufferCodec extends AbstractCodec<ByteBuffer> {
+public class ByteBufferCodec extends AbstractAdaptiveCodec<ByteBuffer> {
     public ByteBufferCodec() {
     }
 

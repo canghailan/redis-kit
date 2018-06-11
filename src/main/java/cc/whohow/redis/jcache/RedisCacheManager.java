@@ -6,7 +6,6 @@ import cc.whohow.redis.jcache.codec.ImmutableGeneratedCacheKeyCodec;
 import cc.whohow.redis.jcache.codec.RedisCacheKeyCodec;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import cc.whohow.redis.lettuce.ByteBufferCodec;
-import cc.whohow.redis.lettuce.Lettuce;
 import cc.whohow.redis.lettuce.RedisCodecAdapter;
 import io.lettuce.core.RedisChannelHandler;
 import io.lettuce.core.RedisClient;

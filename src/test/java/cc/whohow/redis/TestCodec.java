@@ -57,4 +57,21 @@ public class TestCodec {
         System.out.println(objectMapper.writeValueAsString(new Date()));
         System.out.println(objectMapper.readValue("\"2017-12-14T15:08:14.599+0000\"", Date.class));
     }
+
+    @Test
+    public void testCodec() throws Exception {
+        System.out.println(Double.MAX_VALUE);
+        System.out.println(Double.MIN_VALUE);
+        System.out.println(Double.MIN_NORMAL);
+        System.out.println(Double.MIN_EXPONENT);
+        System.out.println(Boolean.FALSE);
+        System.out.println(Byte.MIN_VALUE);
+        System.out.println(Short.MIN_VALUE);
+        System.out.println(Integer.MIN_VALUE);
+        System.out.println(Long.MIN_VALUE);
+        System.out.println(Float.MIN_VALUE);
+        System.out.println(Float.MIN_NORMAL);
+
+        System.out.println(Double.parseDouble("1.7976931348623157E308"));
+    }
 }

@@ -1,6 +1,6 @@
 package cc.whohow.redis.jcache.codec;
 
-import cc.whohow.redis.io.AbstractCodec;
+import cc.whohow.redis.io.AbstractAdaptiveCodec;
 import cc.whohow.redis.io.Codec;
 
 import java.io.IOException;
@@ -9,7 +9,7 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
-public class RedisCacheKeyCodec<K> extends AbstractCodec<K> {
+public class RedisCacheKeyCodec<K> extends AbstractAdaptiveCodec<K> {
     private final String cacheName;
     private final String separator;
     private final Codec<K> keyCodec;
