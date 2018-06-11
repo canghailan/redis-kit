@@ -2,12 +2,13 @@ package cc.whohow.redis.io;
 
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.WritableByteChannel;
 
-public class ByteBufferOutputStream extends OutputStream {
+public class ByteBufferOutputStream extends OutputStream implements WritableByteChannel {
     protected ByteBuffer byteBuffer;
 
     public ByteBufferOutputStream() {
-        this(128);
+        this(32);
     }
 
     public ByteBufferOutputStream(int size) {
@@ -18,7 +19,7 @@ public class ByteBufferOutputStream extends OutputStream {
         return byteBuffer;
     }
 
-    private void ensureRemaining(int minRemaining) {
+    private void ensureByteBufferRemaining(int minRemaining) {
         if (byteBuffer.remaining() < minRemaining) {
             int growth = byteBuffer.capacity();
             if (growth < minRemaining) {
@@ -33,18 +34,27 @@ public class ByteBufferOutputStream extends OutputStream {
         return ByteBuffer.allocate(capacity).put(byteBuffer);
     }
 
-    public void write(ByteBuffer b) {
+    public int write(ByteBuffer b) {
+        int n = b.remaining();
+        ensureByteBufferRemaining(n);
         byteBuffer.put(b);
+        return n;
     }
 
     @Override
     public void write(byte[] b, int off, int len) {
-        ensureRemaining(len);
+        ensureByteBufferRemaining(len);
         byteBuffer.put(b, off, len);
     }
 
     @Override
     public void write(int b) {
+        ensureByteBufferRemaining(1);
         byteBuffer.put((byte) b);
+    }
+
+    @Override
+    public boolean isOpen() {
+        return true;
     }
 }

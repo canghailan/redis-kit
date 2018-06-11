@@ -30,8 +30,16 @@ public abstract class AbstractAdaptiveCodec<T> extends AbstractCodec<T> {
      * 获取新缓冲区大小
      */
     protected int getBufferSize() {
-        int size = (int) (avgBufferSize + maxBufferSize) / 2;
-        return size == 0 ? 32 : size;
+        if (maxBufferSize == 0) {
+            return 128;
+        }
+        if (maxBufferSize < 256) {
+            return maxBufferSize;
+        }
+        if (maxBufferSize > avgBufferSize * 2) {
+            return (int) avgBufferSize;
+        }
+        return (int) (avgBufferSize + maxBufferSize) / 2;
     }
 
     private synchronized void recordEncode(ByteBuffer byteBuffer) {

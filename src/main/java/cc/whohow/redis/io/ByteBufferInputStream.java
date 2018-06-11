@@ -2,8 +2,9 @@ package cc.whohow.redis.io;
 
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.ReadableByteChannel;
 
-public class ByteBufferInputStream extends InputStream {
+public class ByteBufferInputStream extends InputStream implements ReadableByteChannel {
     private ByteBuffer byteBuffer;
 
     public ByteBufferInputStream(ByteBuffer byteBuffer) {
@@ -54,5 +55,26 @@ public class ByteBufferInputStream extends InputStream {
     @Override
     public int read() {
         return byteBuffer.hasRemaining() ? byteBuffer.get() : -1;
+    }
+
+    @Override
+    public int read(ByteBuffer dst) {
+        if(byteBuffer.hasRemaining()) {
+            int n = dst.remaining();
+            if (n < byteBuffer.remaining()) {
+                dst.put(byteBuffer.duplicate().limit(byteBuffer.position() + n));
+                byteBuffer.position(byteBuffer.position() + n);
+            } else {
+                n = byteBuffer.remaining();
+                dst.put(byteBuffer);
+            }
+            return n;
+        }
+        return -1;
+    }
+
+    @Override
+    public boolean isOpen() {
+        return true;
     }
 }
