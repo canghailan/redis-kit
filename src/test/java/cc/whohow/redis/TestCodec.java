@@ -74,4 +74,9 @@ public class TestCodec {
 
         System.out.println(Double.parseDouble("1.7976931348623157E308"));
     }
+
+    @Test
+    public void testNullString() {
+        System.out.println("\0");
+    }
 }
