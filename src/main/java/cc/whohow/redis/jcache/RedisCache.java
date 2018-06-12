@@ -1,5 +1,6 @@
 package cc.whohow.redis.jcache;
 
+import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import cc.whohow.redis.jcache.processor.EntryProcessorResultWrapper;
 import cc.whohow.redis.lettuce.Lettuce;
@@ -43,18 +44,6 @@ public class RedisCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    public void onRedisConnected() {
-    }
-
-    @Override
-    public void onRedisDisconnected() {
-    }
-
-    @Override
-    public void onKeyspaceNotification(ByteBuffer key, ByteBuffer message) {
-    }
-
-    @Override
     public V get(K key) {
         return codec.decodeValue(redis.get(codec.encodeKey(key)));
     }
@@ -62,7 +51,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
     @Override
     public CacheValue<V> getValue(K key, Function<V, ? extends CacheValue<V>> ofNullable) {
         ByteBuffer encodedValue = redis.get(codec.encodeKey(key));
-        if (Lettuce.isNil(encodedValue)) {
+        if (ByteBuffers.isEmpty(encodedValue)) {
             return null;
         }
         return ofNullable.apply(codec.decodeValue(encodedValue));

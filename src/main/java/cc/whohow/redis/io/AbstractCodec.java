@@ -6,9 +6,12 @@ import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 
+/**
+ * 编码器默认实现，实现类需重写一组encode及decode
+ */
 public abstract class AbstractCodec<T> implements Codec<T> {
     /**
-     * 获取新缓冲区大小
+     * 新缓冲区大小
      */
     protected abstract int getBufferSize();
 

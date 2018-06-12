@@ -6,11 +6,17 @@ import net.jpountz.lz4.LZ4FastDecompressor;
 
 import java.nio.ByteBuffer;
 
+/**
+ * LZ4压缩编码器
+ */
 public class Lz4Codec<T> extends AbstractAdaptiveCodec<T> {
     private static final LZ4Factory FACTORY = LZ4Factory.fastestInstance();
     private static final LZ4Compressor COMPRESSOR = FACTORY.fastCompressor();
     private static final LZ4FastDecompressor DECOMPRESSOR = FACTORY.fastDecompressor();
 
+    /**
+     * 底层编码器
+     */
     private final Codec<T> codec;
 
     public Lz4Codec(Codec<T> codec) {

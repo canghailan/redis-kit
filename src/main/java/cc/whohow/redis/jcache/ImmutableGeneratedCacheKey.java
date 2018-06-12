@@ -6,20 +6,23 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-public interface ImmutableGeneratedCacheKey extends GeneratedCacheKey {
-    static ImmutableGeneratedCacheKey empty() {
+/**
+ * 缓存键（不可变）
+ */
+public abstract class ImmutableGeneratedCacheKey implements GeneratedCacheKey {
+    public static ImmutableGeneratedCacheKey empty() {
         return EmptyGeneratedCacheKey.INSTANCE;
     }
 
-    static ImmutableGeneratedCacheKey ofNull() {
+    public static ImmutableGeneratedCacheKey ofNull() {
         return SingletonGeneratedCacheKey.NULL;
     }
 
-    static ImmutableGeneratedCacheKey of(Object key) {
+    public static ImmutableGeneratedCacheKey of(Object key) {
         return key == null ? ofNull() : new SingletonGeneratedCacheKey(key);
     }
 
-    static ImmutableGeneratedCacheKey of(Object... keys) {
+    public static ImmutableGeneratedCacheKey of(Object... keys) {
         if (keys.length == 0) {
             return empty();
         }
@@ -29,13 +32,13 @@ public interface ImmutableGeneratedCacheKey extends GeneratedCacheKey {
         return new ArrayGeneratedCacheKey(keys);
     }
 
-    Object getKey(int index);
+    public abstract Object getKey(int index);
 
-    int size();
+    public abstract int size();
 
-    List<Object> getKeys();
+    public abstract List<Object> getKeys();
 
-    final class EmptyGeneratedCacheKey implements ImmutableGeneratedCacheKey {
+    private static final class EmptyGeneratedCacheKey extends ImmutableGeneratedCacheKey {
         private static final EmptyGeneratedCacheKey INSTANCE = new EmptyGeneratedCacheKey();
 
         private EmptyGeneratedCacheKey() {
@@ -76,7 +79,7 @@ public interface ImmutableGeneratedCacheKey extends GeneratedCacheKey {
         }
     }
 
-    final class SingletonGeneratedCacheKey implements ImmutableGeneratedCacheKey {
+    private static final class SingletonGeneratedCacheKey extends ImmutableGeneratedCacheKey {
         private static final SingletonGeneratedCacheKey NULL = new SingletonGeneratedCacheKey(null);
         private final Object key;
 
@@ -122,7 +125,7 @@ public interface ImmutableGeneratedCacheKey extends GeneratedCacheKey {
         }
     }
 
-    final class ArrayGeneratedCacheKey implements ImmutableGeneratedCacheKey {
+    private static final class ArrayGeneratedCacheKey extends ImmutableGeneratedCacheKey {
         private final Object[] keys;
 
         private ArrayGeneratedCacheKey(Object[] keys) {

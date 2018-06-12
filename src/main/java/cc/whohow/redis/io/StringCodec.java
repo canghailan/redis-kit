@@ -4,8 +4,15 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
+/**
+ * 字符串编码器
+ */
 public class StringCodec extends AbstractAdaptiveCodec<String> {
-    private static final ByteBuffer NULL = ByteBuffer.wrap(new byte[]{0});
+    /**
+     * NULL字符串占位符
+     */
+    private static final byte NULL_PLACEHOLDER = 127;
+    private static final ByteBuffer NULL = ByteBuffer.wrap(new byte[]{NULL_PLACEHOLDER});
     private final Charset charset;
 
     public StringCodec() {
@@ -17,12 +24,12 @@ public class StringCodec extends AbstractAdaptiveCodec<String> {
     }
 
     private static boolean isNull(ByteBuffer buffer) {
-        return (buffer == null) || (buffer.remaining() == 1 && buffer.get(0) == 0);
+        return (buffer == null) || (buffer.remaining() == 1 && buffer.get(0) == NULL_PLACEHOLDER);
     }
 
     @Override
     public ByteBuffer encodeToByteBuffer(String value) {
-        return value == null ? NULL.duplicate() : charset.encode(value);
+        return (value == null) ? NULL.duplicate() : charset.encode(value);
     }
 
     @Override

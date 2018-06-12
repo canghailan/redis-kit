@@ -27,12 +27,4 @@ public class ValueLoaderAdapter<K, V> implements Function<K, V> {
         }
         throw new IllegalStateException();
     }
-
-    @Override
-    public String toString() {
-        return "ValueLoaderAdapter{" +
-                "key=" + key +
-                ", valueLoader=" + valueLoader +
-                '}';
-    }
 }

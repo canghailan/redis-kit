@@ -15,6 +15,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * 基于RedisCacheable注解的缓存配置
+ */
 public class AnnotationRedisCacheConfiguration implements RedisCacheConfiguration {
     private final CacheMethodDetails<? extends Annotation> cacheMethodDetails;
     private final Method method;
@@ -26,6 +29,21 @@ public class AnnotationRedisCacheConfiguration implements RedisCacheConfiguratio
         this.redisCacheable = method.getAnnotation(RedisCacheable.class);
     }
 
+    @Override
+    public String getName() {
+        return cacheMethodDetails.getCacheName();
+    }
+
+    public String[] getKeyTypeCanonicalName() {
+        return Arrays.stream(getGenericKeyType())
+                .map(TypeFactory.defaultInstance()::constructType)
+                .map(JavaType::toCanonical)
+                .toArray(String[]::new);
+    }
+
+    /**
+     * 缓存Key类型
+     */
     public Type[] getGenericKeyType() {
         List<Type> result = new ArrayList<>(method.getParameterCount());
         Type[] parameterTypes = method.getGenericParameterTypes();
@@ -46,24 +64,15 @@ public class AnnotationRedisCacheConfiguration implements RedisCacheConfiguratio
         }
     }
 
-    @Override
-    public String getName() {
-        return cacheMethodDetails.getCacheName();
-    }
-
-    public String[] getKeyTypeCanonicalName() {
-        return Arrays.stream(getGenericKeyType())
-                .map(TypeFactory.defaultInstance()::constructType)
-                .map(JavaType::toCanonical)
-                .toArray(String[]::new);
-    }
-
-    public Type getGenericValueType() {
-        return method.getGenericReturnType();
-    }
-
     public String getValueTypeCanonicalName() {
         return TypeFactory.defaultInstance().constructType(getGenericValueType()).toCanonical();
+    }
+
+    /**
+     * 缓存值类型
+     */
+    public Type getGenericValueType() {
+        return method.getGenericReturnType();
     }
 
     @Override
@@ -122,8 +131,8 @@ public class AnnotationRedisCacheConfiguration implements RedisCacheConfiguratio
     }
 
     @Override
-    public List<String> getExtraConfigurations() {
-        return Arrays.asList(redisCacheable.extra());
+    public List<String> getExConfigurations() {
+        return Arrays.asList(redisCacheable.ex());
     }
 
     @Override

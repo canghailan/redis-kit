@@ -1,11 +1,10 @@
 package cc.whohow.redis.util;
 
+import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.Codec;
-import cc.whohow.redis.lettuce.Lettuce;
 import io.lettuce.core.api.sync.RedisCommands;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
@@ -29,7 +28,7 @@ public class RedisMap<K, V> implements ConcurrentMap<K, V> {
         this.keyCodec = keyCodec;
         this.valueCodec = valueCodec;
         this.id = id;
-        this.encodedId = StandardCharsets.UTF_8.encode(id);
+        this.encodedId = ByteBuffers.fromUtf8(id);
     }
 
     public ByteBuffer encodeKey(K key) {
@@ -139,7 +138,7 @@ public class RedisMap<K, V> implements ConcurrentMap<K, V> {
     @SuppressWarnings("unchecked")
     public V getOrDefault(Object key, V defaultValue) {
         ByteBuffer encodedValue = redis.get(encodeKey((K) key));
-        return Lettuce.isNil(encodedValue) ? defaultValue : decodeValue(encodedValue);
+        return ByteBuffers.isEmpty(encodedValue) ? defaultValue : decodeValue(encodedValue);
     }
 
     /**

@@ -1,8 +1,9 @@
 package cc.whohow.redis.jcache;
 
+import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.Codec;
 import cc.whohow.redis.io.JacksonCodec;
-import cc.whohow.redis.jcache.codec.ImmutableGeneratedCacheKeyCodec;
+import cc.whohow.redis.jcache.codec.ImmutableGeneratedCacheKeyCodecBuilder;
 import cc.whohow.redis.jcache.codec.RedisCacheKeyCodec;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import cc.whohow.redis.lettuce.ByteBufferCodec;
@@ -29,11 +30,17 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Redis缓存管理器
+ */
 @SuppressWarnings("unchecked")
 public class RedisCacheManager implements
         CacheManager,
         RedisConnectionStateListener,
         RedisPubSubListener<ByteBuffer, ByteBuffer> {
+    /**
+     * Redis URI
+     */
     protected final URI uri;
     protected final RedisClient redisClient;
     protected final StatefulRedisConnection<ByteBuffer, ByteBuffer> redisConnection;
@@ -51,13 +58,10 @@ public class RedisCacheManager implements
         this.redisPubSubConnection.addListener(this);
 
         this.keyspace = "__keyspace@" + uri.getDatabase() + "__:";
-        this.encodedKeyspace = StandardCharsets.UTF_8.encode(keyspace);
-        this.redisPubSubConnection.async().psubscribe(getKeyspaceChannel());
+        this.encodedKeyspace = ByteBuffers.fromUtf8(keyspace);
+        this.redisPubSubConnection.sync().subscribe(ByteBuffers.fromUtf8("RedisCacheManager"));
+        this.redisPubSubConnection.sync().psubscribe(ByteBuffers.fromUtf8(keyspace + "*"));
         RedisCachingProvider.getInstance().addCacheManager(this);
-    }
-
-    private ByteBuffer getKeyspaceChannel() {
-        return StandardCharsets.UTF_8.encode(keyspace + "*");
     }
 
     @Override
@@ -107,7 +111,7 @@ public class RedisCacheManager implements
 
     private <K, V> Codec<?> newKeyCodec(RedisCacheConfiguration<K, V> configuration) {
         if (configuration.getKeyCodec().isEmpty()) {
-            return new ImmutableGeneratedCacheKeyCodec(configuration.getKeyTypeCanonicalName());
+            return new ImmutableGeneratedCacheKeyCodecBuilder().build(configuration.getKeyTypeCanonicalName());
         }
         throw new AssertionError("Not Implemented");
     }
@@ -233,7 +237,9 @@ public class RedisCacheManager implements
 
     @Override
     public void message(ByteBuffer channel, ByteBuffer message) {
-        if (isKeyNotification(channel)) {
+        if (isCacheManagerNotification(channel)) {
+            onCacheManagerNotification(StandardCharsets.UTF_8.decode(message).toString());
+        } else if (isKeyNotification(channel)) {
             onKeyNotification(channel, message);
         }
     }
@@ -261,16 +267,20 @@ public class RedisCacheManager implements
     public void punsubscribed(ByteBuffer pattern, long count) {
     }
 
-    private boolean isKeyNotification(ByteBuffer channel) {
-        if (channel.remaining() < encodedKeyspace.remaining()) {
-            return false;
-        }
-        for (int i = encodedKeyspace.remaining() - 1; i >= 0; i--) {
-            if (channel.get(i) != encodedKeyspace.get(i)) {
-                return false;
+    private boolean isCacheManagerNotification(ByteBuffer channel) {
+        return true;
+    }
+
+    private void onCacheManagerNotification(String message) {
+        if ("sync".equalsIgnoreCase(message)) {
+            for (Cache<?, ?> cache : caches.values()) {
+                cache.onRedisSynchronization();
             }
         }
-        return true;
+    }
+
+    private boolean isKeyNotification(ByteBuffer channel) {
+        return ByteBuffers.startsWith(channel, encodedKeyspace);
     }
 
     private ByteBuffer getKeyFromKeyNotificationChannel(ByteBuffer channel) {

@@ -30,12 +30,15 @@ public abstract class AbstractAdaptiveCodec<T> extends AbstractCodec<T> {
      * 获取新缓冲区大小
      */
     protected int getBufferSize() {
+        // 初始值
         if (maxBufferSize == 0) {
             return 128;
         }
+        // 小型缓冲区
         if (maxBufferSize < 256) {
             return maxBufferSize;
         }
+        // 波动较大缓冲区
         if (maxBufferSize > avgBufferSize * 2) {
             return (int) avgBufferSize;
         }
@@ -43,30 +46,26 @@ public abstract class AbstractAdaptiveCodec<T> extends AbstractCodec<T> {
     }
 
     private synchronized void recordEncode(ByteBuffer byteBuffer) {
-        record(byteBuffer);
-    }
-
-    private synchronized void recordDecode(ByteBuffer byteBuffer) {
-//        record(byteBuffer);
-    }
-
-    private synchronized void record(ByteBuffer byteBuffer) {
         if (byteBuffer == null) {
             return;
         }
-        int size = byteBuffer.remaining();
+        int bufferSize = byteBuffer.remaining();
 
+        // 记录最大、最小值，计算平均值
         count++;
-        if (minBufferSize > size) {
-            minBufferSize = size;
+        if (minBufferSize > bufferSize) {
+            minBufferSize = bufferSize;
         }
-        if (maxBufferSize < size) {
-            maxBufferSize = size;
+        if (maxBufferSize < bufferSize) {
+            maxBufferSize = bufferSize;
         }
-        //   (avgBufferSize *  n +       size           ) / (n + 1)
-        // = (avgBufferSize * (n + 1) + (size - avgBufferSize)) / (n + 1)
-        // =  avgBufferSize +           (size - avgBufferSize ) / (n + 1)
-        avgBufferSize = avgBufferSize + (size - avgBufferSize) / count;
+        //   (avgBufferSize *  n +       bufferSize                 ) / (n + 1)
+        // = (avgBufferSize * (n + 1) + (bufferSize - avgBufferSize)) / (n + 1)
+        // =  avgBufferSize +           (bufferSize - avgBufferSize ) / (n + 1)
+        avgBufferSize += (bufferSize - avgBufferSize) / count;
+    }
+
+    private synchronized void recordDecode(ByteBuffer byteBuffer) {
     }
 
     @Override

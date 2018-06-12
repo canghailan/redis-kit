@@ -11,7 +11,6 @@ import javax.cache.integration.CompletionListener;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
-import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -19,7 +18,7 @@ import java.util.Set;
 import java.util.function.Function;
 
 /**
- * 进程内缓存
+ * 内存缓存，基于caffeine实现
  */
 public class InProcessCache<K, V> implements Cache<K, V> {
     protected final RedisCacheManager cacheManager;
@@ -202,18 +201,6 @@ public class InProcessCache<K, V> implements Cache<K, V> {
         return cache.asMap().entrySet().stream()
                 .map(e -> (Entry<K, V>) new ImmutableCacheEntry<>(e.getKey(), e.getValue()))
                 .iterator();
-    }
-
-    @Override
-    public void onRedisConnected() {
-    }
-
-    @Override
-    public void onRedisDisconnected() {
-    }
-
-    @Override
-    public void onKeyspaceNotification(ByteBuffer key, ByteBuffer message) {
     }
 
     @Override

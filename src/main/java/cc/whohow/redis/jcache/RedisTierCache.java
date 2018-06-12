@@ -245,6 +245,11 @@ public class RedisTierCache<K, V> implements Cache<K, V> {
     }
 
     @Override
+    public void onRedisSynchronization() {
+        inProcessCache.clear();
+    }
+
+    @Override
     public void onKeyspaceNotification(ByteBuffer key, ByteBuffer message) {
         inProcessCache.remove(redisCache.getCodec().decodeKey(key));
     }

@@ -2,6 +2,9 @@ package cc.whohow.redis.jcache;
 
 import java.util.Objects;
 
+/**
+ * 缓存键值对（不可变）
+ */
 public class ImmutableCacheEntry<K, V> implements Cache.Entry<K, V> {
     private final K key;
     private final V value;

@@ -3,6 +3,9 @@ package cc.whohow.redis.jcache;
 import javax.cache.Cache;
 import javax.cache.processor.MutableEntry;
 
+/**
+ * 缓存键值对
+ */
 public class MutableCacheEntry<K, V> implements MutableEntry<K, V> {
     protected final Cache<K, V> cache;
     protected final K key;

@@ -7,7 +7,7 @@ import io.lettuce.core.SetArgs;
 import java.util.Map;
 
 /**
- * 支持过期时间缓存
+ * Redis缓存，支持过期时间
  */
 public class RedisExpireCache<K, V> extends RedisCache<K, V> {
     protected final long ttl;

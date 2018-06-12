@@ -1,10 +1,10 @@
 package cc.whohow.redis.util;
 
+import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.PrimitiveCodec;
 import io.lettuce.core.api.sync.RedisCommands;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 
 public class RedisAtomicLong extends Number {
     protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
@@ -14,7 +14,7 @@ public class RedisAtomicLong extends Number {
     public RedisAtomicLong(RedisCommands<ByteBuffer, ByteBuffer> redis, String id) {
         this.redis = redis;
         this.id = id;
-        this.encodedId = StandardCharsets.UTF_8.encode(id);
+        this.encodedId = ByteBuffers.fromUtf8(id);
     }
 
     public ByteBuffer encodeLong(Long value) {

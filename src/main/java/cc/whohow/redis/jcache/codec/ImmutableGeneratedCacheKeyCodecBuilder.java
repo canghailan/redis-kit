@@ -2,7 +2,6 @@ package cc.whohow.redis.jcache.codec;
 
 import cc.whohow.redis.io.*;
 import cc.whohow.redis.jcache.ImmutableGeneratedCacheKey;
-import cc.whohow.redis.lettuce.Lettuce;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -14,53 +13,38 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Objects;
 
-public class ImmutableGeneratedCacheKeyCodec implements Codec<ImmutableGeneratedCacheKey> {
+/**
+ * ImmutableGeneratedCacheKey编码器默认实现，简单类型特殊处理，复杂类型基于json
+ */
+public class ImmutableGeneratedCacheKeyCodecBuilder {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    protected Codec<ImmutableGeneratedCacheKey> delegate;
-
-    public ImmutableGeneratedCacheKeyCodec(String... cacheKeyTypeCanonicalNames) {
+    public Codec<ImmutableGeneratedCacheKey> build(String... cacheKeyTypeCanonicalNames) {
         Objects.requireNonNull(cacheKeyTypeCanonicalNames);
-        if (cacheKeyTypeCanonicalNames.length == 1) {
-            switch (cacheKeyTypeCanonicalNames[0]) {
-                case "java.lang.String": {
-                    delegate = new SingletonKeyCodec(new StringCodec());
-                }
-                case "java.lang.Integer": {
-                    delegate = SingletonKeyCodec.INTEGER_KEY_CODEC;
-                }
-                case "java.lang.Long": {
-                    delegate = SingletonKeyCodec.LONG_KEY_CODEC;
-                }
-                default: {
-                    delegate = new SingletonKeyCodec(new JacksonCodec(OBJECT_MAPPER, cacheKeyTypeCanonicalNames[0]));
+        switch (cacheKeyTypeCanonicalNames.length) {
+            case 1: {
+                switch (cacheKeyTypeCanonicalNames[0]) {
+                    case "java.lang.String": {
+                        return new SingletonKeyCodec(new StringCodec());
+                    }
+                    case "java.lang.Integer": {
+                        return SingletonKeyCodec.INTEGER_KEY_CODEC;
+                    }
+                    case "java.lang.Long": {
+                        return SingletonKeyCodec.LONG_KEY_CODEC;
+                    }
+                    default: {
+                        return new SingletonKeyCodec(new JacksonCodec(OBJECT_MAPPER, cacheKeyTypeCanonicalNames[0]));
+                    }
                 }
             }
-        } else if (cacheKeyTypeCanonicalNames.length == 0) {
-            delegate = NoKeyCodec.INSTANCE;
-        } else {
-            delegate = new ArrayKeyCodec(cacheKeyTypeCanonicalNames);
+            case 0: {
+                return NoKeyCodec.INSTANCE;
+            }
+            default: {
+                return new ArrayKeyCodec(cacheKeyTypeCanonicalNames);
+            }
         }
-    }
-
-    @Override
-    public ByteBuffer encode(ImmutableGeneratedCacheKey value) {
-        return delegate.encode(value);
-    }
-
-    @Override
-    public ImmutableGeneratedCacheKey decode(ByteBuffer buffer) {
-        return delegate.decode(buffer);
-    }
-
-    @Override
-    public void encode(ImmutableGeneratedCacheKey value, OutputStream stream) throws IOException {
-        delegate.encode(value, stream);
-    }
-
-    @Override
-    public ImmutableGeneratedCacheKey decode(InputStream stream) throws IOException {
-        return delegate.decode(stream);
     }
 
     private static class NoKeyCodec implements Codec<ImmutableGeneratedCacheKey> {
@@ -68,7 +52,7 @@ public class ImmutableGeneratedCacheKeyCodec implements Codec<ImmutableGenerated
 
         @Override
         public ByteBuffer encode(ImmutableGeneratedCacheKey value) {
-            return Lettuce.nil();
+            return ByteBuffers.empty();
         }
 
         @Override

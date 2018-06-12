@@ -4,6 +4,9 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.function.Function;
 
+/**
+ * 原始类型编码器
+ */
 public class PrimitiveCodec<T> extends AbstractCodec<T> {
     public static final PrimitiveCodec<Boolean> BOOLEAN = new PrimitiveCodec<>(Boolean::parseBoolean, 5);
     public static final PrimitiveCodec<Byte> BYTE = new PrimitiveCodec<>(Byte::parseByte, 4);
@@ -12,8 +15,6 @@ public class PrimitiveCodec<T> extends AbstractCodec<T> {
     public static final PrimitiveCodec<Long> LONG = new PrimitiveCodec<>(Long::parseLong, 20);
     public static final PrimitiveCodec<Float> FLOAT = new PrimitiveCodec<>(Float::parseFloat, 32);
     public static final PrimitiveCodec<Double> DOUBLE = new PrimitiveCodec<>(Double::parseDouble, 32);
-
-    private static final ByteBuffer NULL = ByteBuffer.allocate(0);
 
     private final int bufferSize;
     private final Function<String, T> parse;
@@ -27,10 +28,6 @@ public class PrimitiveCodec<T> extends AbstractCodec<T> {
         this.bufferSize = bufferSize;
     }
 
-    private static boolean isNull(ByteBuffer buffer) {
-        return (buffer == null) || (buffer.remaining() == 0);
-    }
-
     @Override
     protected int getBufferSize() {
         return bufferSize;
@@ -38,11 +35,11 @@ public class PrimitiveCodec<T> extends AbstractCodec<T> {
 
     @Override
     public ByteBuffer encode(T value) {
-        return (value == null) ? NULL : StandardCharsets.US_ASCII.encode(value.toString());
+        return (value == null) ? ByteBuffers.empty() : StandardCharsets.US_ASCII.encode(value.toString());
     }
 
     @Override
     public T decode(ByteBuffer buffer) {
-        return isNull(buffer) ? null : parse.apply(StandardCharsets.US_ASCII.decode(buffer).toString());
+        return ByteBuffers.isEmpty(buffer) ? null : parse.apply(StandardCharsets.US_ASCII.decode(buffer).toString());
     }
 }

@@ -1,10 +1,12 @@
 package cc.whohow.redis;
 
+import cc.whohow.redis.io.Codec;
 import cc.whohow.redis.jcache.ImmutableGeneratedCacheKey;
-import cc.whohow.redis.jcache.codec.ImmutableGeneratedCacheKeyCodec;
+import cc.whohow.redis.jcache.codec.ImmutableGeneratedCacheKeyCodecBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.sun.org.apache.bcel.internal.classfile.Code;
 import org.junit.Test;
 
 import java.math.BigDecimal;
@@ -34,7 +36,7 @@ public class TestCodec {
 
     @Test
     public void testImmutableGeneratedCacheKeyCodec() throws Exception {
-        ImmutableGeneratedCacheKeyCodec codec = new ImmutableGeneratedCacheKeyCodec(
+        Codec<ImmutableGeneratedCacheKey> codec = new ImmutableGeneratedCacheKeyCodecBuilder().build(
                 String.class.getCanonicalName(),
                 Integer.class.getCanonicalName(),
                 Integer.class.getCanonicalName(),

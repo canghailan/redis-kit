@@ -1,5 +1,6 @@
 package cc.whohow.redis.util;
 
+import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.Codec;
 import cc.whohow.redis.lettuce.Lettuce;
 import io.lettuce.core.Range;
@@ -7,7 +8,6 @@ import io.lettuce.core.ScoredValue;
 import io.lettuce.core.api.sync.RedisCommands;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
@@ -26,7 +26,7 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number> {
         this.redis = redis;
         this.codec = codec;
         this.id = id;
-        this.encodedId = StandardCharsets.UTF_8.encode(id);
+        this.encodedId = ByteBuffers.fromUtf8(id);
     }
 
     public ByteBuffer encode(E value) {

@@ -1,12 +1,12 @@
 package cc.whohow.redis.util;
 
+import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.Codec;
 import io.lettuce.core.KeyValue;
 import io.lettuce.core.api.sync.RedisCommands;
 
 import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.TimeUnit;
@@ -24,7 +24,7 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
         this.redis = redis;
         this.codec = codec;
         this.id = id;
-        this.encodedId = StandardCharsets.UTF_8.encode(id);
+        this.encodedId = ByteBuffers.fromUtf8(id);
     }
 
     public ByteBuffer encode(E value) {

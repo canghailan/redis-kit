@@ -59,10 +59,12 @@ public class ByteBufferInputStream extends InputStream implements ReadableByteCh
 
     @Override
     public int read(ByteBuffer dst) {
-        if(byteBuffer.hasRemaining()) {
+        if (byteBuffer.hasRemaining()) {
             int n = dst.remaining();
             if (n < byteBuffer.remaining()) {
-                dst.put(byteBuffer.duplicate().limit(byteBuffer.position() + n));
+                ByteBuffer src = byteBuffer.duplicate();
+                src.limit(src.position() + n);
+                dst.put(src);
                 byteBuffer.position(byteBuffer.position() + n);
             } else {
                 n = byteBuffer.remaining();

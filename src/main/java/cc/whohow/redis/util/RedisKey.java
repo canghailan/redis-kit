@@ -1,5 +1,6 @@
 package cc.whohow.redis.util;
 
+import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.Codec;
 import cc.whohow.redis.io.StringCodec;
 import cc.whohow.redis.lettuce.Lettuce;
@@ -50,7 +51,7 @@ public class RedisKey<V> implements ConcurrentMap<String, V> {
 
     @Override
     public boolean isEmpty() {
-        return !Lettuce.isNil(redis.randomkey());
+        return !ByteBuffers.isEmpty(redis.randomkey());
     }
 
     @Override
@@ -127,7 +128,7 @@ public class RedisKey<V> implements ConcurrentMap<String, V> {
     @Override
     public V getOrDefault(Object key, V defaultValue) {
         ByteBuffer encodedValue = redis.get(encodeKey((String) key));
-        return Lettuce.isNil(encodedValue) ? defaultValue : decodeValue(encodedValue);
+        return ByteBuffers.isEmpty(encodedValue) ? defaultValue : decodeValue(encodedValue);
     }
 
     /**

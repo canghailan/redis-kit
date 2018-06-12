@@ -103,6 +103,12 @@ public class Java9InputStream extends InputStream {
         return bytes;
     }
 
+    public ByteBuffer readNBytes(int length) throws IOException {
+        byte[] buffer = new byte[length];
+        int n = readNBytes(buffer, 0, length);
+        return ByteBuffer.wrap(buffer, 0, n);
+    }
+
     public long transferTo(OutputStream out) throws IOException {
         return transferTo(out, 8 * 1024);
     }

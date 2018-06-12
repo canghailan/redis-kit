@@ -1,25 +1,41 @@
 package cc.whohow.redis.jcache.codec;
 
 import cc.whohow.redis.io.AbstractAdaptiveCodec;
+import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.Codec;
+import cc.whohow.redis.io.Java9InputStream;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 
+/**
+ * Redis缓存key编码器，处理cacheName前缀
+ */
 public class RedisCacheKeyCodec<K> extends AbstractAdaptiveCodec<K> {
+    /**
+     * 缓存名
+     */
     private final String cacheName;
+    /**
+     * 分隔符
+     */
     private final String separator;
-    private final Codec<K> keyCodec;
+    /**
+     * RedisKey前缀（已编码）
+     */
     private final ByteBuffer keyPrefix;
+    /**
+     * 缓存Key编码器
+     */
+    private final Codec<K> keyCodec;
 
     public RedisCacheKeyCodec(String cacheName, String separator, Codec<K> keyCodec) {
         this.cacheName = cacheName;
         this.separator = separator;
+        this.keyPrefix = ByteBuffers.fromUtf8(cacheName + separator);
         this.keyCodec = keyCodec;
-        this.keyPrefix = StandardCharsets.UTF_8.encode(cacheName + separator);
     }
 
     public String getCacheName() {
@@ -36,20 +52,14 @@ public class RedisCacheKeyCodec<K> extends AbstractAdaptiveCodec<K> {
 
     @Override
     public K decodeByteBuffer(ByteBuffer buffer) {
-        if (buffer == null || buffer.remaining() == 0) {
+        if (buffer == null) {
             return null;
         }
-        ByteBuffer keyPrefix = this.keyPrefix.duplicate();
-        while (keyPrefix.hasRemaining()) {
-            if (buffer.hasRemaining()) {
-                if (buffer.get() != keyPrefix.get()) {
-                    throw new IllegalStateException();
-                }
-            } else {
-                throw new IllegalStateException();
-            }
+        if (ByteBuffers.startsWith(buffer, keyPrefix)) {
+            buffer.position(buffer.position() + keyPrefix.remaining());
+            return keyCodec.decode(buffer);
         }
-        return keyCodec.decode(buffer);
+        throw new IllegalArgumentException();
     }
 
     @Override
@@ -60,21 +70,10 @@ public class RedisCacheKeyCodec<K> extends AbstractAdaptiveCodec<K> {
 
     @Override
     public K decodeStream(InputStream stream) throws IOException {
-        ByteBuffer keyPrefix = this.keyPrefix.duplicate();
-        byte[] buffer = new byte[keyPrefix.remaining()];
-        int offset = 0;
-        while (keyPrefix.hasRemaining()) {
-            int n = stream.read(buffer, offset, buffer.length - offset);
-            if (n < 0) {
-                throw new IllegalStateException();
-            } else if (n > 0) {
-                for (int i = 0; i < n; i++) {
-                    if (buffer[offset++] != keyPrefix.get()) {
-                        throw new IllegalStateException();
-                    }
-                }
-            }
+        ByteBuffer buffer = new Java9InputStream(stream).readNBytes(keyPrefix.remaining());
+        if (ByteBuffers.contentEquals(buffer, keyPrefix)) {
+            return keyCodec.decode(stream);
         }
-        return keyCodec.decode(stream);
+        throw new IllegalArgumentException();
     }
 }

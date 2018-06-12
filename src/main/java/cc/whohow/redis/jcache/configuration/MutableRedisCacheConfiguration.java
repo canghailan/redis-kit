@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * 缓存配置项
+ */
 public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfiguration<K, V> {
     protected String name;
     protected Class<K> keyType;
@@ -25,7 +28,7 @@ public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfigura
     protected long inProcessCacheExpiryForUpdate = -1;
     protected TimeUnit inProcessCacheExpiryForUpdateTimeUnit = TimeUnit.SECONDS;
 
-    private List<String> extraConfigurations = new ArrayList<>();
+    private List<String> exConfigurations = new ArrayList<>();
 
     public MutableRedisCacheConfiguration() {
     }
@@ -47,7 +50,7 @@ public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfigura
         this.inProcessCacheMaxEntry = that.getInProcessCacheMaxEntry();
         this.inProcessCacheExpiryForUpdate = that.getInProcessCacheExpiryForUpdate();
         this.inProcessCacheExpiryForUpdateTimeUnit = that.getInProcessCacheExpiryForUpdateTimeUnit();
-        this.extraConfigurations = that.getExtraConfigurations();
+        this.exConfigurations = that.getExConfigurations();
     }
 
     @Override
@@ -195,11 +198,11 @@ public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfigura
     }
 
     @Override
-    public List<String> getExtraConfigurations() {
-        return extraConfigurations;
+    public List<String> getExConfigurations() {
+        return exConfigurations;
     }
 
-    public void setExtraConfigurations(List<String> extraConfigurations) {
-        this.extraConfigurations = extraConfigurations;
+    public void setExConfigurations(List<String> exConfigurations) {
+        this.exConfigurations = exConfigurations;
     }
 }

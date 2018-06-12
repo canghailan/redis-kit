@@ -9,19 +9,26 @@ import javax.cache.annotation.GeneratedCacheKey;
 import java.lang.annotation.Annotation;
 import java.util.Arrays;
 
+/**
+ * CacheKeyGenerator默认实现
+ */
 public class RedisCacheKeyGenerator implements CacheKeyGenerator {
     @Override
     public GeneratedCacheKey generateCacheKey(CacheKeyInvocationContext<? extends Annotation> cacheKeyInvocationContext) {
         CacheInvocationParameter[] keyParameters = cacheKeyInvocationContext.getKeyParameters();
-        if (keyParameters.length == 1) {
-            return ImmutableGeneratedCacheKey.of(keyParameters[0].getValue());
-        } else if (keyParameters.length == 0) {
-            return ImmutableGeneratedCacheKey.empty();
-        } else {
-            return ImmutableGeneratedCacheKey.of(
-                    Arrays.stream(cacheKeyInvocationContext.getKeyParameters())
-                            .map(CacheInvocationParameter::getValue)
-                            .toArray());
+        switch (keyParameters.length) {
+            case 1: {
+                return ImmutableGeneratedCacheKey.of(keyParameters[0].getValue());
+            }
+            case 0: {
+                return ImmutableGeneratedCacheKey.empty();
+            }
+            default: {
+                return ImmutableGeneratedCacheKey.of(
+                        Arrays.stream(cacheKeyInvocationContext.getKeyParameters())
+                                .map(CacheInvocationParameter::getValue)
+                                .toArray());
+            }
         }
     }
 }
