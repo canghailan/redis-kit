@@ -1,20 +1,26 @@
 package cc.whohow.redis;
 
 import cc.whohow.redis.io.Codec;
+import cc.whohow.redis.io.PrimitiveCodec;
+import cc.whohow.redis.io.StringCodec;
 import cc.whohow.redis.jcache.ImmutableGeneratedCacheKey;
 import cc.whohow.redis.jcache.codec.ImmutableGeneratedCacheKeyCodecBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.type.TypeFactory;
-import com.sun.org.apache.bcel.internal.classfile.Code;
 import org.junit.Test;
 
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.Random;
 
 public class TestCodec {
+    private static void log(ByteBuffer byteBuffer) {
+        System.out.println(StandardCharsets.UTF_8.decode(byteBuffer.duplicate()).toString());
+    }
+
     @Test
     public void testTypeCanonicalName() {
         System.out.println(String.class.getCanonicalName());
@@ -35,6 +41,60 @@ public class TestCodec {
     }
 
     @Test
+    public void testPrimitiveCodec() {
+        Random random = new Random();
+
+        ByteBuffer b1 = PrimitiveCodec.BOOLEAN.encode(random.nextBoolean());
+        log(b1);
+        System.out.println(PrimitiveCodec.BOOLEAN.decode(b1.duplicate()));
+
+        ByteBuffer b2 = PrimitiveCodec.BYTE.encode((byte) random.nextInt(Byte.MAX_VALUE));
+        log(b2);
+        System.out.println(PrimitiveCodec.BYTE.decode(b2.duplicate()));
+
+        ByteBuffer b3 = PrimitiveCodec.SHORT.encode((short) random.nextInt(Short.MAX_VALUE));
+        log(b3);
+        System.out.println(PrimitiveCodec.SHORT.decode(b3.duplicate()));
+
+        ByteBuffer b4 = PrimitiveCodec.INTEGER.encode(random.nextInt());
+        log(b4);
+        System.out.println(PrimitiveCodec.INTEGER.decode(b4.duplicate()));
+
+        ByteBuffer b5 = PrimitiveCodec.LONG.encode(random.nextLong());
+        log(b5);
+        System.out.println(PrimitiveCodec.LONG.decode(b5.duplicate()));
+
+        ByteBuffer b6 = PrimitiveCodec.FLOAT.encode(random.nextFloat());
+        log(b6);
+        System.out.println(PrimitiveCodec.FLOAT.decode(b6.duplicate()));
+
+        ByteBuffer b7 = PrimitiveCodec.DOUBLE.encode(random.nextDouble());
+        log(b7);
+        System.out.println(PrimitiveCodec.DOUBLE.decode(b7.duplicate()));
+
+        ByteBuffer b8 = PrimitiveCodec.INTEGER.encode(null);
+        log(b8);
+        System.out.println(PrimitiveCodec.INTEGER.decode(b8.duplicate()));
+    }
+
+    @Test
+    public void testStringCodec() {
+        StringCodec stringCodec = new StringCodec();
+
+        ByteBuffer b1 = stringCodec.encode("abc中文");
+        log(b1);
+        System.out.println(stringCodec.decode(b1.duplicate()));
+
+        ByteBuffer b2 = stringCodec.encode("");
+        log(b2);
+        System.out.println(stringCodec.decode(b2.duplicate()));
+
+        ByteBuffer b3 = stringCodec.encode(null);
+        log(b3);
+        System.out.println(stringCodec.decode(b3.duplicate()));
+    }
+
+    @Test
     public void testImmutableGeneratedCacheKeyCodec() throws Exception {
         Codec<ImmutableGeneratedCacheKey> codec = new ImmutableGeneratedCacheKeyCodecBuilder().build(
                 String.class.getCanonicalName(),
@@ -48,7 +108,9 @@ public class TestCodec {
         ByteBuffer encoded = codec.encode(ImmutableGeneratedCacheKey.of(objectArray));
 
         System.out.println(StandardCharsets.UTF_8.decode(encoded.duplicate()));
-        System.out.println(codec.decode(encoded.duplicate()));
+        for (Object key : codec.decode(encoded.duplicate()).getKeys()) {
+            System.out.println(key.getClass());
+        }
     }
 
     @Test
