@@ -1,13 +1,13 @@
 package cc.whohow.redis;
 
-import cc.whohow.redis.io.Codec;
-import cc.whohow.redis.io.PrimitiveCodec;
-import cc.whohow.redis.io.StringCodec;
+import cc.whohow.redis.io.*;
 import cc.whohow.redis.jcache.ImmutableGeneratedCacheKey;
 import cc.whohow.redis.jcache.codec.ImmutableGeneratedCacheKeyCodecBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import org.apache.commons.compress.compressors.CompressorStreamFactory;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.math.BigDecimal;
@@ -15,6 +15,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 public class TestCodec {
     private static void log(ByteBuffer byteBuffer) {
@@ -95,6 +96,68 @@ public class TestCodec {
     }
 
     @Test
+    public void testLz4Codec() {
+        Random random = new Random();
+        String string = random.ints(100000).mapToObj(Integer::toString).collect(Collectors.joining());
+
+        Codec<String> stringCodec = new StringCodec();
+        Codec<String> lz4Codec = new Lz4Codec<>(stringCodec);
+
+        ByteBuffer b1 = stringCodec.encode(string);
+        ByteBuffer b2 = lz4Codec.encode(string);
+        String decoded = lz4Codec.decode(b2.duplicate());
+
+        System.out.println(b1.remaining());
+        System.out.println(b2.remaining());
+        System.out.println(b2.getInt(0));
+//        System.out.println(string);
+//        System.out.println(decoded);
+
+        Assert.assertEquals(string, decoded);
+    }
+
+    @Test
+    public void testGzipCodec() {
+        Random random = new Random();
+        String string = random.ints(100000).mapToObj(Integer::toString).collect(Collectors.joining());
+
+        Codec<String> stringCodec = new StringCodec();
+        Codec<String> lz4Codec = new GzipCodec<>(stringCodec);
+
+        ByteBuffer b1 = stringCodec.encode(string);
+        ByteBuffer b2 = lz4Codec.encode(string);
+        String decoded = lz4Codec.decode(b2.duplicate());
+
+        System.out.println(b1.remaining());
+        System.out.println(b2.remaining());
+//        System.out.println(string);
+//        System.out.println(decoded);
+
+        Assert.assertEquals(string, decoded);
+    }
+
+    @Test
+    public void testCompressCodec() throws Exception {
+        Random random = new Random();
+        String string = random.ints(100000).mapToObj(Integer::toString).collect(Collectors.joining());
+
+        Codec<String> stringCodec = new StringCodec();
+        Codec<String> compressCodec = new CompressCodec<>(CompressorStreamFactory.getGzip(), stringCodec);
+
+        ByteBuffer b1 = stringCodec.encode(string);
+        ByteBuffer b2 = compressCodec.encode(string);
+
+        String decoded = compressCodec.decode(b2.duplicate());
+
+        System.out.println(b1.remaining());
+        System.out.println(b2.remaining());
+//        System.out.println(string);
+//        System.out.println(decoded);
+
+        Assert.assertEquals(string, decoded);
+    }
+
+    @Test
     public void testImmutableGeneratedCacheKeyCodec() throws Exception {
         Codec<ImmutableGeneratedCacheKey> codec = new ImmutableGeneratedCacheKeyCodecBuilder().build(
                 String.class.getCanonicalName(),
@@ -123,7 +186,7 @@ public class TestCodec {
     }
 
     @Test
-    public void testCodec() throws Exception {
+    public void testTextLength() throws Exception {
         System.out.println(Double.MAX_VALUE);
         System.out.println(Double.MIN_VALUE);
         System.out.println(Double.MIN_NORMAL);
@@ -141,6 +204,6 @@ public class TestCodec {
 
     @Test
     public void testNullString() {
-        System.out.println("\0");
+        System.out.println("\127");
     }
 }

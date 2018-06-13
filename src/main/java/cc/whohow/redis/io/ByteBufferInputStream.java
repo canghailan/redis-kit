@@ -52,9 +52,12 @@ public class ByteBufferInputStream extends InputStream implements ReadableByteCh
         return true;
     }
 
+    /**
+     * @see java.io.ByteArrayInputStream#read()
+     */
     @Override
     public int read() {
-        return byteBuffer.hasRemaining() ? byteBuffer.get() : -1;
+        return byteBuffer.hasRemaining() ? byteBuffer.get() & 0xff: -1;
     }
 
     @Override
