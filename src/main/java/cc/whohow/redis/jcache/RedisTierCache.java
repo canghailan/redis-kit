@@ -245,7 +245,7 @@ public class RedisTierCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    public void onRedisSynchronization() {
+    public void onSynchronization() {
         inProcessCache.clear();
     }
 

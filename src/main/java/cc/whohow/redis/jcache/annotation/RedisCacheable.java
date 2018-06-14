@@ -25,9 +25,9 @@ public @interface RedisCacheable {
 
     String valueTypeCanonicalName() default "";
 
-    String keyCodec() default "";
+    String keyCodec() default "ImmutableGeneratedCacheKey";
 
-    String valueCodec() default "";
+    String valueCodec() default "Json";
 
     boolean redisCacheEnabled() default true;
 

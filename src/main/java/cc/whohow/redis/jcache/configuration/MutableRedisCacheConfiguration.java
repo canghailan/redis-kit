@@ -13,19 +13,19 @@ public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfigura
     protected Class<V> valueType;
     protected String[] keyTypeCanonicalName = {};
     protected String valueTypeCanonicalName = "";
-    protected String keyCodec = "";
-    protected String valueCodec = "";
+    protected String keyCodec = "ImmutableGeneratedCacheKey";
+    protected String valueCodec = "Json";
 
     protected boolean statisticsEnabled = true;
     protected boolean managementEnabled = false;
-    protected long expiryForUpdate = -1;
+    protected long expiryForUpdate = 7 * 24 * 60 * 60;
     protected TimeUnit expiryForUpdateTimeUnit = TimeUnit.SECONDS;
 
     protected boolean redisCacheEnabled = true;
 
     protected boolean inProcessCacheEnabled = true;
-    protected int inProcessCacheMaxEntry = -1;
-    protected long inProcessCacheExpiryForUpdate = -1;
+    protected int inProcessCacheMaxEntry = 1024;
+    protected long inProcessCacheExpiryForUpdate = 24 * 60 * 60;
     protected TimeUnit inProcessCacheExpiryForUpdateTimeUnit = TimeUnit.SECONDS;
 
     private List<String> exConfigurations = new ArrayList<>();

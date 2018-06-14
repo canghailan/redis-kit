@@ -9,12 +9,12 @@ public class ByteBufferCodec implements RedisCodec<ByteBuffer, ByteBuffer> {
 
     @Override
     public ByteBuffer decodeKey(ByteBuffer bytes) {
-        return bytes;
+        return copy(bytes);
     }
 
     @Override
     public ByteBuffer decodeValue(ByteBuffer bytes) {
-        return bytes;
+        return copy(bytes);
     }
 
     @Override
@@ -25,5 +25,12 @@ public class ByteBufferCodec implements RedisCodec<ByteBuffer, ByteBuffer> {
     @Override
     public ByteBuffer encodeValue(ByteBuffer value) {
         return value;
+    }
+
+    private ByteBuffer copy(ByteBuffer bytes) {
+        ByteBuffer byteBuffer = ByteBuffer.allocate(bytes.remaining());
+        byteBuffer.put(bytes);
+        byteBuffer.flip();
+        return byteBuffer;
     }
 }

@@ -40,7 +40,7 @@ public class ByteBuffers {
         if (byteBuffer.remaining() < prefix.remaining()) {
             return false;
         }
-        for (int i = byteBuffer.position(), j = prefix.position(); i < byteBuffer.limit(); i++, j++) {
+        for (int i = byteBuffer.position(), j = prefix.position(); j < prefix.limit(); i++, j++) {
             if (byteBuffer.get(i) != prefix.get(j)) {
                 return false;
             }

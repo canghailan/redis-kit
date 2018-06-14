@@ -47,7 +47,7 @@ public interface Cache<K, V> extends javax.cache.Cache<K, V> {
     /**
      * Redis数据同步
      */
-    default void onRedisSynchronization() {
+    default void onSynchronization() {
     }
 
     /**

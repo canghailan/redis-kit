@@ -1,6 +1,5 @@
 package cc.whohow.redis.jcache;
 
-import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import cc.whohow.redis.jcache.processor.EntryProcessorResultWrapper;
 import cc.whohow.redis.lettuce.Lettuce;
@@ -28,15 +27,15 @@ import java.util.stream.Collectors;
 public class RedisCache<K, V> implements Cache<K, V> {
     protected final RedisCacheManager cacheManager;
     protected final RedisCacheConfiguration<K, V> configuration;
-    protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
     protected final RedisCodec<K, V> codec;
+    protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
 
     public RedisCache(RedisCacheManager cacheManager, RedisCacheConfiguration<K, V> configuration) {
         Objects.requireNonNull(configuration.getName());
         this.cacheManager = cacheManager;
         this.configuration = configuration;
-        this.redis = cacheManager.getRedisCommands();
         this.codec = cacheManager.newRedisCacheCodec(configuration);
+        this.redis = cacheManager.getRedisCommands();
     }
 
     public RedisCodec<K, V> getCodec() {
@@ -51,7 +50,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
     @Override
     public CacheValue<V> getValue(K key, Function<V, ? extends CacheValue<V>> ofNullable) {
         ByteBuffer encodedValue = redis.get(codec.encodeKey(key));
-        if (ByteBuffers.isEmpty(encodedValue)) {
+        if (encodedValue == null) {
             return null;
         }
         return ofNullable.apply(codec.decodeValue(encodedValue));
