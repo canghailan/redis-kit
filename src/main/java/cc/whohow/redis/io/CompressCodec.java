@@ -9,9 +9,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 public class CompressCodec<T> extends AbstractAdaptiveCodec<T> {
-    private CompressorStreamFactory factory = CompressorStreamFactory.getSingleton();
     private final String name;
     private final Codec<T> codec;
+    private CompressorStreamFactory factory = CompressorStreamFactory.getSingleton();
 
     public CompressCodec(String name, Codec<T> codec) {
         this.name = name;

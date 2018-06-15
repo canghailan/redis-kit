@@ -2,7 +2,6 @@ package cc.whohow.redis.jcache.codec;
 
 import cc.whohow.redis.io.*;
 import cc.whohow.redis.jcache.ImmutableGeneratedCacheKey;
-import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -13,21 +12,14 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.function.Function;
 
 /**
  * ImmutableGeneratedCacheKey编码器默认实现，简单类型特殊处理，复杂类型基于json
  */
-public class ImmutableGeneratedCacheKeyCodecFactory
-        implements Function<RedisCacheConfiguration, Codec> {
+public abstract class ImmutableGeneratedCacheKeyCodec implements Codec<ImmutableGeneratedCacheKey> {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    @Override
-    public Codec apply(RedisCacheConfiguration configuration) {
-        return create(configuration.getKeyTypeCanonicalName());
-    }
-
-    public Codec<ImmutableGeneratedCacheKey> create(String... cacheKeyTypeCanonicalNames) {
+    public static Codec<ImmutableGeneratedCacheKey> create(String... cacheKeyTypeCanonicalNames) {
         Objects.requireNonNull(cacheKeyTypeCanonicalNames);
         switch (cacheKeyTypeCanonicalNames.length) {
             case 1: {

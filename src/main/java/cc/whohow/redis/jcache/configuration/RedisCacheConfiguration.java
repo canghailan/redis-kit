@@ -1,5 +1,7 @@
 package cc.whohow.redis.jcache.configuration;
 
+import cc.whohow.redis.jcache.codec.RedisCacheCodecFactory;
+
 import javax.cache.configuration.Configuration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -34,12 +36,7 @@ public interface RedisCacheConfiguration<K, V> extends Configuration<K, V> {
     /**
      * 缓存键编码器
      */
-    String getKeyCodec();
-
-    /**
-     * 缓存值编码器
-     */
-    String getValueCodec();
+    Class<? extends RedisCacheCodecFactory> getRedisCacheCodecFactory();
 
     /**
      * 是否启用缓存统计

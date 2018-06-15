@@ -57,7 +57,7 @@ public class ByteBufferInputStream extends InputStream implements ReadableByteCh
      */
     @Override
     public int read() {
-        return byteBuffer.hasRemaining() ? byteBuffer.get() & 0xff: -1;
+        return byteBuffer.hasRemaining() ? byteBuffer.get() & 0xff : -1;
     }
 
     @Override

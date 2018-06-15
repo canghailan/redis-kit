@@ -1,5 +1,8 @@
 package cc.whohow.redis.jcache.configuration;
 
+import cc.whohow.redis.jcache.codec.DefaultRedisCacheCodecFactory;
+import cc.whohow.redis.jcache.codec.RedisCacheCodecFactory;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -13,8 +16,7 @@ public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfigura
     protected Class<V> valueType;
     protected String[] keyTypeCanonicalName = {};
     protected String valueTypeCanonicalName = "";
-    protected String keyCodec = "ImmutableGeneratedCacheKey";
-    protected String valueCodec = "Json";
+    protected Class<? extends RedisCacheCodecFactory> redisCacheCodecFactory = DefaultRedisCacheCodecFactory.class;
 
     protected boolean statisticsEnabled = true;
     protected boolean managementEnabled = false;
@@ -39,8 +41,7 @@ public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfigura
         this.valueType = that.getValueType();
         this.keyTypeCanonicalName = that.getKeyTypeCanonicalName();
         this.valueTypeCanonicalName = that.getValueTypeCanonicalName();
-        this.keyCodec = that.getKeyCodec();
-        this.valueCodec = that.getValueCodec();
+        this.redisCacheCodecFactory = that.getRedisCacheCodecFactory();
         this.statisticsEnabled = that.isStatisticsEnabled();
         this.managementEnabled = that.isManagementEnabled();
         this.expiryForUpdate = that.getExpiryForUpdate();
@@ -99,21 +100,12 @@ public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfigura
     }
 
     @Override
-    public String getKeyCodec() {
-        return keyCodec;
+    public Class<? extends RedisCacheCodecFactory> getRedisCacheCodecFactory() {
+        return redisCacheCodecFactory;
     }
 
-    public void setKeyCodec(String keyCodec) {
-        this.keyCodec = keyCodec;
-    }
-
-    @Override
-    public String getValueCodec() {
-        return valueCodec;
-    }
-
-    public void setValueCodec(String valueCodec) {
-        this.valueCodec = valueCodec;
+    public void setRedisCacheCodecFactory(Class<? extends RedisCacheCodecFactory> redisCacheCodecFactory) {
+        this.redisCacheCodecFactory = redisCacheCodecFactory;
     }
 
     @Override

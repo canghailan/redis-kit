@@ -59,11 +59,11 @@ public class TestCache {
 
     @Test
     public void testGet() throws Exception {
-        Object data1 =  cache.get(ImmutableGeneratedCacheKey.of("a"));
+        Object data1 = cache.get(ImmutableGeneratedCacheKey.of("a"));
         System.out.println(data1);
         System.out.println(objectMapper.writeValueAsString(data1));
 
-        Object data2 =  cache.get(ImmutableGeneratedCacheKey.of("b"));
+        Object data2 = cache.get(ImmutableGeneratedCacheKey.of("b"));
         System.out.println(data2);
         System.out.println(objectMapper.writeValueAsString(data2));
 
@@ -79,7 +79,7 @@ public class TestCache {
 
     @Test
     public void testSetupKeyspaceNotification() {
-        cacheManager.setupKeyspaceNotification();
+        cacheManager.enableKeyspaceNotification();
     }
 
     @Test

@@ -1,6 +1,7 @@
 package cc.whohow.redis.jcache.configuration;
 
 import cc.whohow.redis.jcache.annotation.RedisCacheable;
+import cc.whohow.redis.jcache.codec.RedisCacheCodecFactory;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 
@@ -35,10 +36,13 @@ public class AnnotationRedisCacheConfiguration implements RedisCacheConfiguratio
     }
 
     public String[] getKeyTypeCanonicalName() {
-        return Arrays.stream(getGenericKeyType())
-                .map(TypeFactory.defaultInstance()::constructType)
-                .map(JavaType::toCanonical)
-                .toArray(String[]::new);
+        if (redisCacheable.keyTypeCanonicalName().length == 0) {
+            return Arrays.stream(getGenericKeyType())
+                    .map(TypeFactory.defaultInstance()::constructType)
+                    .map(JavaType::toCanonical)
+                    .toArray(String[]::new);
+        }
+        return redisCacheable.keyTypeCanonicalName();
     }
 
     /**
@@ -65,7 +69,10 @@ public class AnnotationRedisCacheConfiguration implements RedisCacheConfiguratio
     }
 
     public String getValueTypeCanonicalName() {
-        return TypeFactory.defaultInstance().constructType(getGenericValueType()).toCanonical();
+        if (redisCacheable.valueTypeCanonicalName().isEmpty()) {
+            return TypeFactory.defaultInstance().constructType(getGenericValueType()).toCanonical();
+        }
+        return redisCacheable.valueTypeCanonicalName();
     }
 
     /**
@@ -75,14 +82,8 @@ public class AnnotationRedisCacheConfiguration implements RedisCacheConfiguratio
         return method.getGenericReturnType();
     }
 
-    @Override
-    public String getKeyCodec() {
-        return redisCacheable.keyCodec();
-    }
-
-    @Override
-    public String getValueCodec() {
-        return redisCacheable.valueCodec();
+    public Class<? extends RedisCacheCodecFactory> getRedisCacheCodecFactory() {
+        return redisCacheable.redisCacheCodecFactory();
     }
 
     @Override

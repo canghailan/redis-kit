@@ -1,5 +1,6 @@
 package cc.whohow.redis.jcache;
 
+import cc.whohow.redis.io.KeyValueCodec;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import cc.whohow.redis.jcache.processor.EntryProcessorResultWrapper;
 import cc.whohow.redis.lettuce.Lettuce;
@@ -7,7 +8,6 @@ import io.lettuce.core.KeyScanCursor;
 import io.lettuce.core.ScanArgs;
 import io.lettuce.core.ScanCursor;
 import io.lettuce.core.api.sync.RedisCommands;
-import io.lettuce.core.codec.RedisCodec;
 
 import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 public class RedisCache<K, V> implements Cache<K, V> {
     protected final RedisCacheManager cacheManager;
     protected final RedisCacheConfiguration<K, V> configuration;
-    protected final RedisCodec<K, V> codec;
+    protected final KeyValueCodec<K, V> codec;
     protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
 
     public RedisCache(RedisCacheManager cacheManager, RedisCacheConfiguration<K, V> configuration) {
@@ -38,7 +38,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
         this.redis = cacheManager.getRedisCommands();
     }
 
-    public RedisCodec<K, V> getCodec() {
+    public KeyValueCodec<K, V> getCodec() {
         return codec;
     }
 
@@ -48,12 +48,8 @@ public class RedisCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    public CacheValue<V> getValue(K key, Function<V, ? extends CacheValue<V>> ofNullable) {
-        ByteBuffer encodedValue = redis.get(codec.encodeKey(key));
-        if (encodedValue == null) {
-            return null;
-        }
-        return ofNullable.apply(codec.decodeValue(encodedValue));
+    public <T> T getValue(K key, Function<V, T> mapper) {
+        return codec.decodeValue(redis.get(codec.encodeKey(key)), mapper);
     }
 
     @Override

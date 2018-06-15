@@ -1,11 +1,9 @@
 package cc.whohow.redis.jcache;
 
 import cc.whohow.redis.io.ByteBuffers;
-import cc.whohow.redis.io.Codec;
-import cc.whohow.redis.jcache.codec.*;
+import cc.whohow.redis.io.KeyValueCodec;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import cc.whohow.redis.lettuce.ByteBufferCodec;
-import cc.whohow.redis.lettuce.RedisCodecAdapter;
 import io.lettuce.core.RedisChannelHandler;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisConnectionStateListener;
@@ -24,10 +22,10 @@ import java.net.SocketAddress;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * Redis缓存管理器
@@ -43,7 +41,6 @@ public class RedisCacheManager implements
      * Redis URI
      */
     protected final Map<String, Cache> caches = new ConcurrentHashMap<>();
-    protected final Map<String, Function<RedisCacheConfiguration, Codec>> codecs = new ConcurrentHashMap<>(defaultCodecs());
     protected final URI uri;
     protected final RedisURI redisURI;
     protected final RedisClient redisClient;
@@ -51,7 +48,6 @@ public class RedisCacheManager implements
     protected final StatefulRedisPubSubConnection<ByteBuffer, ByteBuffer> redisPubSubConnection;
     protected final String keyspace;
     protected final ByteBuffer encodedKeyspace;
-    protected Map<String, String> redisConfig;
 
     public RedisCacheManager(RedisClient redisClient, RedisURI redisURI) {
         this.uri = redisURI.toURI();
@@ -66,18 +62,7 @@ public class RedisCacheManager implements
         this.encodedKeyspace = ByteBuffers.fromUtf8(keyspace);
         this.redisPubSubConnection.sync().subscribe(ByteBuffers.fromUtf8("RedisCacheManager"));
         this.redisPubSubConnection.sync().psubscribe(ByteBuffers.fromUtf8(keyspace + "*"));
-
-        this.redisConfig = redisConnection.sync().configGet("notify-keyspace-events");
         RedisCachingProvider.getInstance().addCacheManager(this);
-    }
-
-    private static Map<String, Function<RedisCacheConfiguration, Codec>> defaultCodecs() {
-        Map<String, Function<RedisCacheConfiguration, Codec>> defaultCodecs = new LinkedHashMap<>();
-        defaultCodecs.put("ImmutableGeneratedCacheKey", new ImmutableGeneratedCacheKeyCodecFactory());
-        defaultCodecs.put("Json", new JsonValueCodecFactory());
-        defaultCodecs.put("Lz4Json", new Lz4JsonValueCodecFactory());
-        defaultCodecs.put("GzipJson", new GzipJsonValueCodecFactory());
-        return defaultCodecs;
     }
 
     @Override
@@ -122,27 +107,12 @@ public class RedisCacheManager implements
         return redisClient.connect(codec, redisURI);
     }
 
-    public <K, V> RedisCodec<K, V> newRedisCacheCodec(RedisCacheConfiguration<K, V> configuration) {
-        String separator = configuration.getKeyTypeCanonicalName().length == 0 ? "" : ":";
-        Codec<K> keyCodec = (Codec<K>) newKeyCodec(configuration);
-        Codec<V> valueCodec = (Codec<V>) newValueCodec(configuration);
-        return new RedisCodecAdapter<>(new RedisCacheKeyCodec<>(configuration.getName(), separator, keyCodec), valueCodec);
-    }
-
-    private <K, V> Codec<?> newKeyCodec(RedisCacheConfiguration<K, V> configuration) {
-        Function<RedisCacheConfiguration, Codec> codecFactory = codecs.get(configuration.getKeyCodec());
-        if (codecFactory == null) {
-            throw new CacheException("Unsupported Codec: " + configuration.getKeyCodec());
+    public <K, V> KeyValueCodec<K, V> newRedisCacheCodec(RedisCacheConfiguration<K, V> configuration) {
+        try {
+            return configuration.getRedisCacheCodecFactory().newInstance().getCodec(configuration);
+        } catch (InstantiationException | IllegalAccessException e) {
+            throw new CacheException(e);
         }
-        return codecFactory.apply(configuration);
-    }
-
-    private <K, V> Codec<?> newValueCodec(RedisCacheConfiguration<K, V> configuration) {
-        Function<RedisCacheConfiguration, Codec> codecFactory = codecs.get(configuration.getValueCodec());
-        if (codecFactory == null) {
-            throw new CacheException("Unsupported Codec: " + configuration.getValueCodec());
-        }
-        return codecFactory.apply(configuration);
     }
 
     public <K, V> Cache<K, V> newCache(RedisCacheConfiguration<K, V> configuration) {
@@ -337,20 +307,20 @@ public class RedisCacheManager implements
         return redisConnection.sync();
     }
 
-    public void addCodec(String name, Function<RedisCacheConfiguration, Codec> codeFactory) {
-        codecs.put(name, codeFactory);
+    public String getConfig(String key, String defaultValue) {
+        return redisConnection.sync().configGet(key).getOrDefault(key, defaultValue);
     }
 
-    public void setupKeyspaceNotification() {
-        String value = redisConfig.getOrDefault("notify-keyspace-events", "");
+    public void enableKeyspaceNotification() {
+        String value = getConfig("notify-keyspace-events", "");
         if (value.contains("K") && value.contains("A")) {
             return;
         }
-        value += "KA";
-        value = Arrays.stream(value.split(""))
-                .distinct()
-                .sorted()
-                .collect(Collectors.joining());
+        if (value.contains("E")) {
+            value = "KEA";
+        } else {
+            value = "KA";
+        }
         redisConnection.sync().configSet("notify-keyspace-events", value);
     }
 

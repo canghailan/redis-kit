@@ -226,12 +226,12 @@ public class RedisTierCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    public CacheValue<V> getValue(K key, Function<V, ? extends CacheValue<V>> ofNullable) {
-        CacheValue<V> value = inProcessCache.getValue(key, ofNullable);
+    public <T> T getValue(K key, Function<V, T> mapper) {
+        T value = inProcessCache.getValue(key, mapper);
         if (value != null) {
             return value;
         }
-        return redisCache.getValue(key, ofNullable);
+        return redisCache.getValue(key, mapper);
     }
 
     @Override

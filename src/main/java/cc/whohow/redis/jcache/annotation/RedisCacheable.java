@@ -1,6 +1,9 @@
 package cc.whohow.redis.jcache.annotation;
 
 
+import cc.whohow.redis.jcache.codec.DefaultRedisCacheCodecFactory;
+import cc.whohow.redis.jcache.codec.RedisCacheCodecFactory;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -25,9 +28,7 @@ public @interface RedisCacheable {
 
     String valueTypeCanonicalName() default "";
 
-    String keyCodec() default "ImmutableGeneratedCacheKey";
-
-    String valueCodec() default "Json";
+    Class<? extends RedisCacheCodecFactory> redisCacheCodecFactory() default DefaultRedisCacheCodecFactory.class;
 
     boolean redisCacheEnabled() default true;
 

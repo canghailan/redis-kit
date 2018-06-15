@@ -10,7 +10,7 @@ public interface Cache<K, V> extends javax.cache.Cache<K, V> {
     /**
      * 读取缓存值
      */
-    CacheValue<V> getValue(K key, Function<V, ? extends CacheValue<V>> ofNullable);
+    <T> T getValue(K key, Function<V, T> ofNullable);
 
     /**
      * 读取缓存值

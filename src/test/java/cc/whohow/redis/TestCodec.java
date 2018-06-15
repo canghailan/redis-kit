@@ -2,7 +2,7 @@ package cc.whohow.redis;
 
 import cc.whohow.redis.io.*;
 import cc.whohow.redis.jcache.ImmutableGeneratedCacheKey;
-import cc.whohow.redis.jcache.codec.ImmutableGeneratedCacheKeyCodecFactory;
+import cc.whohow.redis.jcache.codec.ImmutableGeneratedCacheKeyCodec;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.type.TypeFactory;
@@ -159,7 +159,7 @@ public class TestCodec {
 
     @Test
     public void testImmutableGeneratedCacheKeyCodec() throws Exception {
-        Codec<ImmutableGeneratedCacheKey> codec = new ImmutableGeneratedCacheKeyCodecFactory().create(
+        Codec<ImmutableGeneratedCacheKey> codec = ImmutableGeneratedCacheKeyCodec.create(
                 String.class.getCanonicalName(),
                 Integer.class.getCanonicalName(),
                 Integer.class.getCanonicalName(),

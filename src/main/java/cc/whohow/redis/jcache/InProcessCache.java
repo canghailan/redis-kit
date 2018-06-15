@@ -204,9 +204,9 @@ public class InProcessCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    public CacheValue<V> getValue(K key, Function<V, ? extends CacheValue<V>> ofNullable) {
+    public <T> T getValue(K key, Function<V, T> mapper) {
         V value = cache.getIfPresent(key);
-        return value == null ? null : ofNullable.apply(value);
+        return value == null ? null : mapper.apply(value);
     }
 
     @Override
