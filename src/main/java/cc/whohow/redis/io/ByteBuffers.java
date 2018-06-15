@@ -1,6 +1,7 @@
 package cc.whohow.redis.io;
 
 import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
 
 public class ByteBuffers {
@@ -14,8 +15,8 @@ public class ByteBuffers {
         return byteBuffer == null || !byteBuffer.hasRemaining();
     }
 
-    public static ByteBuffer fromUtf8(String string) {
-        return StandardCharsets.UTF_8.encode(string);
+    public static ByteBuffer fromUtf8(CharSequence charSequence) {
+        return StandardCharsets.UTF_8.encode(CharBuffer.wrap(charSequence));
     }
 
     /**

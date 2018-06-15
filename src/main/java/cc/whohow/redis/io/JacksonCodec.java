@@ -8,6 +8,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+/**
+ * JSON编码器
+ */
 public class JacksonCodec<T> extends AbstractAdaptiveCodec<T> {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 

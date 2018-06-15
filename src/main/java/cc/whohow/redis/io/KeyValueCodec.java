@@ -3,6 +3,9 @@ package cc.whohow.redis.io;
 import java.nio.ByteBuffer;
 import java.util.function.Function;
 
+/**
+ * 键值对编码器
+ */
 public interface KeyValueCodec<K, V> {
     K decodeKey(ByteBuffer bytes);
 

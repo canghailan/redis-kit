@@ -6,6 +6,9 @@ import java.io.OutputStream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+/**
+ * GZIP压缩编码器
+ */
 public class GzipCodec<T> extends AbstractAdaptiveCodec<T> {
     private final Codec<T> codec;
 
