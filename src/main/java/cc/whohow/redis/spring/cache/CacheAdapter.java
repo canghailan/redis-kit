@@ -1,11 +1,14 @@
 package cc.whohow.redis.spring.cache;
 
 import cc.whohow.redis.jcache.Cache;
+import org.springframework.cache.support.SimpleValueWrapper;
 
 import java.util.concurrent.Callable;
 
 @SuppressWarnings("unchecked")
 public class CacheAdapter implements org.springframework.cache.Cache {
+    private static final ValueWrapper NULL = new SimpleValueWrapper(null);
+
     protected final Cache cache;
 
     public CacheAdapter(Cache cache) {
@@ -24,7 +27,11 @@ public class CacheAdapter implements org.springframework.cache.Cache {
 
     @Override
     public ValueWrapper get(Object key) {
-        return (ValueWrapperAdapter) cache.getValue(key, ValueWrapperAdapter::ofNullable);
+        return (ValueWrapper) cache.getValue(key, this::wrap);
+    }
+
+    private ValueWrapper wrap(Object value) {
+        return value == null ? NULL : new SimpleValueWrapper(value);
     }
 
     @Override

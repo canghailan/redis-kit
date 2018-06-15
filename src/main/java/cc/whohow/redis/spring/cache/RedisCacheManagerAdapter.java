@@ -1,7 +1,6 @@
 package cc.whohow.redis.spring.cache;
 
 import cc.whohow.redis.jcache.RedisCacheManager;
-import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import org.springframework.cache.Cache;
 
 import java.util.Collection;
@@ -23,14 +22,7 @@ public class RedisCacheManagerAdapter implements org.springframework.cache.Cache
     }
 
     private Cache newCacheAdapter(String name) {
-        cc.whohow.redis.jcache.Cache cache = redisCacheManager.getCache(name);
-        RedisCacheConfiguration configuration = (RedisCacheConfiguration)
-                cache.getConfiguration(RedisCacheConfiguration.class);
-        if (configuration.getExConfigurations().contains("TransactionAware")) {
-            return new TransactionAwareCacheAdapter(cache);
-        } else {
-            return new CacheAdapter(cache);
-        }
+        return new CacheAdapter(redisCacheManager.getCache(name));
     }
 
     @Override
