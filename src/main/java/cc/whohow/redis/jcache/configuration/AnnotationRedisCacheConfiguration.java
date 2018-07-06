@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.type.TypeFactory;
 
 import javax.cache.annotation.CacheKey;
 import javax.cache.annotation.CacheMethodDetails;
+import javax.cache.annotation.CacheResult;
 import javax.cache.annotation.GeneratedCacheKey;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
@@ -30,9 +31,22 @@ public class AnnotationRedisCacheConfiguration implements RedisCacheConfiguratio
         this.redisCacheable = method.getAnnotation(RedisCacheable.class);
     }
 
+    public AnnotationRedisCacheConfiguration(Method method) {
+        this.cacheMethodDetails = null;
+        this.method = method;
+        this.redisCacheable = method.getAnnotation(RedisCacheable.class);
+    }
+
     @Override
     public String getName() {
-        return cacheMethodDetails.getCacheName();
+        if (cacheMethodDetails != null) {
+            return cacheMethodDetails.getCacheName();
+        }
+        CacheResult cacheResult = method.getAnnotation(CacheResult.class);
+        if (cacheResult != null) {
+            return cacheResult.cacheName();
+        }
+        throw new IllegalStateException();
     }
 
     public String[] getKeyTypeCanonicalName() {

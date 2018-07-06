@@ -142,12 +142,14 @@ public class RedisMap<K, V> implements ConcurrentMap<K, V> {
     }
 
     /**
-     * @return null
+     * @return null/value
      */
     @Override
     public V putIfAbsent(K key, V value) {
-        redis.hsetnx(encodedId.duplicate(), encodeKey(key), encodeValue(value));
-        return null;
+        if (redis.hsetnx(encodedId.duplicate(), encodeKey(key), encodeValue(value))) {
+            return null;
+        }
+        return value;
     }
 
     /**

@@ -65,12 +65,14 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number> {
     }
 
     /**
-     * @return null
+     * @return null/value
      */
     @Override
     public Number put(E key, Number value) {
-        redis.zadd(encodedId.duplicate(), value.doubleValue(), encode(key));
-        return null;
+        if (redis.zadd(encodedId.duplicate(), value.doubleValue(), encode(key)) > 0) {
+            return null;
+        }
+        return value;
     }
 
     @Override

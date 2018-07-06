@@ -123,4 +123,12 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <distributionManagement>
+        <repository>
+            <id>yitong</id>
+            <name>yitong</name>
+            <url>http://nexus.dev.yitong.com/repository/maven-releases/</url>
+        </repository>
+    </distributionManagement>
 </project>

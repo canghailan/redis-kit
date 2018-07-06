@@ -6,10 +6,15 @@ import cc.whohow.redis.jcache.codec.ImmutableGeneratedCacheKeyCodec;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import org.apache.commons.compress.compressors.CompressorInputStream;
 import org.apache.commons.compress.compressors.CompressorStreamFactory;
+import org.apache.commons.compress.compressors.snappy.SnappyCompressorInputStream;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -205,5 +210,13 @@ public class TestCodec {
     @Test
     public void testNullString() {
         System.out.println("\127");
+    }
+
+    @Test
+    public void testSnappy() throws Exception {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new SnappyCompressorInputStream(new FileInputStream(
+                "")), StandardCharsets.UTF_8))) {
+            reader.lines().forEach(System.out::println);
+        }
     }
 }

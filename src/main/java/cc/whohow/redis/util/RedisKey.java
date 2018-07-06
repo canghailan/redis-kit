@@ -132,12 +132,14 @@ public class RedisKey<V> implements ConcurrentMap<String, V> {
     }
 
     /**
-     * @return null
+     * @return null/value
      */
     @Override
     public V putIfAbsent(String key, V value) {
-        redis.set(encodeKey(key), encodeValue(value), Lettuce.SET_NX);
-        return null;
+        if (Lettuce.ok(redis.set(encodeKey(key), encodeValue(value), Lettuce.SET_NX))) {
+            return null;
+        }
+        return value;
     }
 
     /**
@@ -157,12 +159,14 @@ public class RedisKey<V> implements ConcurrentMap<String, V> {
     }
 
     /**
-     * @return null
+     * @return null/value
      */
     @Override
     public V replace(String key, V value) {
-        redis.set(encodeKey(key), encodeValue(value), Lettuce.SET_XX);
-        return null;
+        if (Lettuce.ok(redis.set(encodeKey(key), encodeValue(value), Lettuce.SET_XX))) {
+            return null;
+        }
+        return value;
     }
 
     /**
