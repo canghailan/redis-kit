@@ -41,10 +41,6 @@ public class RedisLock implements Lock {
      * 锁秘钥，用于处理误解除非自己持有的锁
      */
     protected final String key = UUID.randomUUID().toString();
-    /**
-     * 线程ID，用于实现可重入锁
-     */
-    protected final String threadId = String.valueOf(Thread.currentThread().getId());
 
     public RedisLock(RedisCommands<ByteBuffer, ByteBuffer> redis, String id, Duration minLockTime, Duration maxLockTime) {
         if (minLockTime.compareTo(maxLockTime) > 0) {
@@ -118,9 +114,11 @@ public class RedisLock implements Lock {
         }
         String stateKey = state.get("key");
         if (!key.equals(stateKey)) {
+            // key不相同表示这不是自己加的锁
             throw new IllegalStateException(key + " <> " + stateKey);
         }
         long lockTime = Long.parseLong(state.get("lockTime"));
+        // 已锁定时间
         long lockedTime = System.currentTimeMillis() - lockTime;
         if (lockedTime < minLockTimeMillis) {
             // 小于最小锁定时间，调整过期时间
@@ -165,7 +163,9 @@ public class RedisLock implements Lock {
                 .append("minLockTime: ").append(minLockTimeMillis).append('\n')
                 .append("maxLockTime: ").append(maxLockTimeMillis).append('\n')
                 .append("key: ").append(key).append('\n')
-                .append("threadId: ").append(threadId).append('\n')
+                // 线程ID，用于实现可重入锁
+                .append("threadId: ").append(Thread.currentThread().getId()).append('\n')
+                // 锁定时间，用于处理解锁
                 .append("lockTime: ").append(System.currentTimeMillis()).append('\n');
     }
 
