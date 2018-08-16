@@ -32,11 +32,11 @@ public class RedisLock implements Lock {
     /**
      * 最小锁定时间，用于排除服务器时间误差，网络延时带来的影响，建议根据实际网络及服务器情况设置（大于网络延时及服务器时间差）
      */
-    protected final Duration minLockTime;
+    protected final long minLockTimeMillis;
     /**
      * 最大锁定时间，用于处理死锁，建议根据加锁任务最大耗时设置（大于最大耗时，小于任务间隔）
      */
-    protected final Duration maxLockTime;
+    protected final long maxLockTimeMillis;
     /**
      * 锁秘钥，用于处理误解除非自己持有的锁
      */
@@ -53,8 +53,8 @@ public class RedisLock implements Lock {
         this.redis = redis;
         this.id = id;
         this.encodedId = ByteBuffers.fromUtf8(id);
-        this.minLockTime = minLockTime;
-        this.maxLockTime = maxLockTime;
+        this.minLockTimeMillis = minLockTime.toMillis();
+        this.maxLockTimeMillis = maxLockTime.toMillis();
     }
 
     /**
@@ -87,7 +87,7 @@ public class RedisLock implements Lock {
      */
     @Override
     public boolean tryLock() {
-        SetArgs setArgs = SetArgs.Builder.nx().px(maxLockTime.toMillis());
+        SetArgs setArgs = SetArgs.Builder.nx().px(maxLockTimeMillis);
         CharSequence state = newState();
         return Lettuce.ok(redis.set(encodedId.duplicate(), ByteBuffers.fromUtf8(state), setArgs));
     }
@@ -122,11 +122,11 @@ public class RedisLock implements Lock {
         }
         long lockTime = Long.parseLong(state.get("lockTime"));
         long lockedTime = System.currentTimeMillis() - lockTime;
-        if (lockedTime < minLockTime.toMillis()) {
+        if (lockedTime < minLockTimeMillis) {
             // 小于最小锁定时间，调整过期时间
-            long ttl = minLockTime.toMillis() - lockedTime;
+            long ttl = minLockTimeMillis - lockedTime;
             redis.pexpire(encodedId.duplicate(), ttl);
-        } else if (lockedTime < maxLockTime.toMillis() - minLockTime.toMillis()) {
+        } else if (lockedTime < maxLockTimeMillis - minLockTimeMillis) {
             // 小于(最大锁定时间-最小锁定时间)，删除
             redis.del(encodedId.duplicate());
         }
@@ -153,8 +153,8 @@ public class RedisLock implements Lock {
      * 获取重试等待时间，默认指数退避，直到最大锁定时间的一半
      */
     protected long getRetryWaitingTime(int retryTimes) {
-        long time = (long) (minLockTime.toMillis() * Math.exp(retryTimes));
-        return Math.min(time, maxLockTime.toMillis() / 2);
+        long time = (long) (minLockTimeMillis * Math.exp(retryTimes));
+        return Math.min(time, maxLockTimeMillis / 2);
     }
 
     /**
@@ -162,8 +162,8 @@ public class RedisLock implements Lock {
      */
     protected CharSequence newState() {
         return new StringBuilder()
-                .append("minLockTime: ").append(minLockTime).append('\n')
-                .append("maxLockTime: ").append(maxLockTime).append('\n')
+                .append("minLockTime: ").append(minLockTimeMillis).append('\n')
+                .append("maxLockTime: ").append(maxLockTimeMillis).append('\n')
                 .append("key: ").append(key).append('\n')
                 .append("threadId: ").append(threadId).append('\n')
                 .append("lockTime: ").append(System.currentTimeMillis()).append('\n');
