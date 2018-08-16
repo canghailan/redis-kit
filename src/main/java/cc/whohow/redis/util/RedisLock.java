@@ -74,7 +74,7 @@ public class RedisLock implements Lock {
      */
     @Override
     public void lockInterruptibly() throws InterruptedException {
-        for(int retryTimes = 0; ; retryTimes++) {
+        for (int retryTimes = 0; ; retryTimes++) {
             if (tryLock()) {
                 return;
             }
@@ -98,7 +98,7 @@ public class RedisLock implements Lock {
     @Override
     public boolean tryLock(long time, TimeUnit unit) throws InterruptedException {
         long timeout = System.currentTimeMillis() + unit.toMillis(time);
-        for(int retryTimes = 0; System.currentTimeMillis() <= timeout ; retryTimes++) {
+        for (int retryTimes = 0; System.currentTimeMillis() <= timeout; retryTimes++) {
             if (tryLock()) {
                 return true;
             }
@@ -112,7 +112,7 @@ public class RedisLock implements Lock {
      */
     @Override
     public void unlock() {
-        Map<String, String> state = readState();
+        Map<String, String> state = getState();
         if (state == null) {
             throw new IllegalStateException("state == null");
         }
@@ -139,6 +139,17 @@ public class RedisLock implements Lock {
     }
 
     /**
+     * 读取Redis保存的锁状态
+     */
+    public Map<String, String> getState() {
+        ByteBuffer buffer = redis.get(encodedId.duplicate());
+        if (buffer == null) {
+            return null;
+        }
+        return parseState(StandardCharsets.UTF_8.decode(buffer));
+    }
+
+    /**
      * 获取重试等待时间，默认指数退避，直到最大锁定时间的一半
      */
     protected long getRetryWaitingTime(int retryTimes) {
@@ -156,17 +167,6 @@ public class RedisLock implements Lock {
                 .append("key: ").append(key).append('\n')
                 .append("threadId: ").append(threadId).append('\n')
                 .append("lockTime: ").append(System.currentTimeMillis()).append('\n');
-    }
-
-    /**
-     * 读取Redis保存的锁状态
-     */
-    protected Map<String, String> readState() {
-        ByteBuffer buffer = redis.get(encodedId.duplicate());
-        if (buffer == null) {
-            return null;
-        }
-        return parseState(StandardCharsets.UTF_8.decode(buffer));
     }
 
     /**
