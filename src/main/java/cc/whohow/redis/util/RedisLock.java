@@ -40,7 +40,7 @@ public class RedisLock implements Lock {
     /**
      * 锁秘钥，用于处理误解除非自己持有的锁
      */
-    protected final String key = UUID.randomUUID().toString();
+    protected final String key;
 
     public RedisLock(RedisCommands<ByteBuffer, ByteBuffer> redis, String id, Duration minLockTime, Duration maxLockTime) {
         if (minLockTime.compareTo(maxLockTime) > 0) {
@@ -51,6 +51,7 @@ public class RedisLock implements Lock {
         this.encodedId = ByteBuffers.fromUtf8(id);
         this.minLockTimeMillis = minLockTime.toMillis();
         this.maxLockTimeMillis = maxLockTime.toMillis();
+        this.key = newKey();
     }
 
     /**
@@ -156,6 +157,13 @@ public class RedisLock implements Lock {
     }
 
     /**
+     * 生成一个新的Key
+     */
+    protected String newKey() {
+        return UUID.randomUUID().toString();
+    }
+
+    /**
      * 生成最新锁状态，类YAML格式
      */
     protected CharSequence newState() {
@@ -177,5 +185,10 @@ public class RedisLock implements Lock {
                 .filter(line -> !line.isEmpty())
                 .map(line -> KEY_VALUE.split(line, 2))
                 .collect(Collectors.toMap(kv -> kv[0], kv -> kv[1]));
+    }
+
+    @Override
+    public String toString() {
+        return id + "/" + key;
     }
 }
