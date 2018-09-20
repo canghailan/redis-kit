@@ -106,7 +106,7 @@ public abstract class ImmutableGeneratedCacheKeyCodec implements Codec<Immutable
         private final JavaType[] types;
 
         private ArrayKeyCodec(String... canonicalName) {
-            super(new SummaryStatistics());
+            super(new BufferAllocationPredictor());
             this.types = Arrays.stream(canonicalName)
                     .map(OBJECT_MAPPER.getTypeFactory()::constructFromCanonical)
                     .toArray(JavaType[]::new);

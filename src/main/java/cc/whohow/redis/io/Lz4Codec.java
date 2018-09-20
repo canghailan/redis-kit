@@ -20,7 +20,7 @@ public class Lz4Codec<T> extends AbstractBufferCodec<T> {
     private final Codec<T> codec;
 
     public Lz4Codec(Codec<T> codec) {
-        super(new SummaryStatistics(1024, 8 * 1024));
+        super(new BufferAllocationPredictor(1024, 8 * 1024));
         this.codec = codec;
     }
 

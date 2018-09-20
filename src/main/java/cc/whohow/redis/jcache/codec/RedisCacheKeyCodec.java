@@ -29,7 +29,7 @@ public class RedisCacheKeyCodec<K> extends AbstractStreamCodec<K> {
     private final Codec<K> keyCodec;
 
     public RedisCacheKeyCodec(String cacheName, String separator, Codec<K> keyCodec) {
-        super(new SummaryStatistics());
+        super(new BufferAllocationPredictor());
         this.cacheName = cacheName;
         this.separator = separator;
         this.keyPrefix = ByteBuffers.fromUtf8(cacheName + separator);

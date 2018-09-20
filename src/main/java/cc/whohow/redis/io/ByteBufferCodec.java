@@ -4,7 +4,7 @@ import java.nio.ByteBuffer;
 
 public class ByteBufferCodec extends AbstractBufferCodec<ByteBuffer> {
     public ByteBufferCodec() {
-        super(new SummaryStatistics());
+        super(new BufferAllocationPredictor());
     }
 
     @Override

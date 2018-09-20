@@ -9,10 +9,10 @@ import java.nio.ByteBuffer;
  * 自适应缓冲区编码器
  */
 public abstract class AbstractBufferCodec<T> implements Codec<T> {
-    protected final SummaryStatistics stat;
+    protected final BufferAllocationPredictor predictor;
 
-    protected AbstractBufferCodec(SummaryStatistics stat) {
-        this.stat = stat;
+    protected AbstractBufferCodec(BufferAllocationPredictor predictor) {
+        this.predictor = predictor;
     }
 
     @Override
@@ -34,8 +34,8 @@ public abstract class AbstractBufferCodec<T> implements Codec<T> {
 
     @Override
     public T decode(InputStream stream) throws IOException {
-        ByteBuffer buffer = new Java9InputStream(stream).readAllBytes(stat.getTypical());
-        stat.accept(buffer.remaining());
+        ByteBuffer buffer = new Java9InputStream(stream).readAllBytes(predictor.getPredicted());
+        predictor.accept(buffer.remaining());
         return decode(buffer);
     }
 }

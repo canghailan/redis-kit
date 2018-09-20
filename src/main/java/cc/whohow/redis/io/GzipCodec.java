@@ -13,7 +13,7 @@ public class GzipCodec<T> extends AbstractStreamCodec<T> {
     private final Codec<T> codec;
 
     public GzipCodec(Codec<T> codec) {
-        super(new SummaryStatistics(1024, 8 * 1024));
+        super(new BufferAllocationPredictor(1024, 8 * 1024));
         this.codec = codec;
     }
 

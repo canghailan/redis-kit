@@ -5,7 +5,10 @@ import java.util.concurrent.atomic.LongAccumulator;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.IntConsumer;
 
-public class SummaryStatistics implements IntConsumer {
+/**
+ * 缓冲区分配预测器（基于统计）
+ */
+public class BufferAllocationPredictor implements IntConsumer {
     private final LongAdder count = new LongAdder();
     private final DoubleAdder sum = new DoubleAdder();
     private final LongAccumulator min = new LongAccumulator(Long::min, 0);
@@ -13,11 +16,11 @@ public class SummaryStatistics implements IntConsumer {
     private final int initial;
     private final int threshold;
 
-    public SummaryStatistics() {
+    public BufferAllocationPredictor() {
         this(128, 256);
     }
 
-    public SummaryStatistics(int initial, int threshold) {
+    public BufferAllocationPredictor(int initial, int threshold) {
         this.initial = initial;
         this.threshold = threshold;
     }
@@ -49,13 +52,11 @@ public class SummaryStatistics implements IntConsumer {
         return max.intValue();
     }
 
-    public int getTypical() {
+    public int getPredicted() {
         int max = getMax();
-        // 初始值
         if (max == 0) {
             return initial;
         }
-        // 小型缓冲区
         if (max < threshold) {
             return max;
         }
@@ -63,10 +64,9 @@ public class SummaryStatistics implements IntConsumer {
         long count = getCount();
         double sum = getSum();
         double avg = sum / count;
-        // 波动较大缓冲区
         if (max > avg * 2) {
             return (int) avg;
         }
-        return (int) (avg + max) / 2;
+        return (int) (avg + max) * 3 / 4;
     }
 }

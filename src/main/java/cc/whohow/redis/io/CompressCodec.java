@@ -14,7 +14,7 @@ public class CompressCodec<T> extends AbstractStreamCodec<T> {
     private CompressorStreamFactory factory = CompressorStreamFactory.getSingleton();
 
     public CompressCodec(String name, Codec<T> codec) {
-        super(new SummaryStatistics(1024, 8 * 1024));
+        super(new BufferAllocationPredictor(1024, 8 * 1024));
         this.name = name;
         this.codec = codec;
     }

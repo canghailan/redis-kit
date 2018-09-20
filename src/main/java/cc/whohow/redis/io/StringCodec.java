@@ -16,7 +16,7 @@ public class StringCodec implements Codec<String> {
     private static final byte NULL_PLACEHOLDER = 127;
     private static final ByteBuffer NULL = ByteBuffer.wrap(new byte[]{NULL_PLACEHOLDER});
     private final Charset charset;
-    private final SummaryStatistics stat = new SummaryStatistics(16, 256);
+    private final BufferAllocationPredictor predictor = new BufferAllocationPredictor(16, 256);
 
     public StringCodec() {
         this(StandardCharsets.UTF_8);
@@ -49,14 +49,14 @@ public class StringCodec implements Codec<String> {
 
     @Override
     public String decode(InputStream stream) throws IOException {
-        char[] buffer = new char[stat.getTypical()];
+        char[] buffer = new char[predictor.getPredicted()];
         Reader reader = new InputStreamReader(stream, charset);
         int offset = 0;
         int length = buffer.length;
         while (true) {
             int n = reader.read(buffer, offset, length);
             if (n < 0) {
-                stat.accept(offset);
+                predictor.accept(offset);
                 return new String(buffer, 0, offset);
             } else if (n > 0) {
                 offset += n;
