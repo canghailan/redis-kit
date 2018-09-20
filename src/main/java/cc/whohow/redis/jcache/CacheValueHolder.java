@@ -15,7 +15,7 @@ public class CacheValueHolder<K, V> implements Function<K, V> {
     @Override
     public V apply(K k) {
         cacheValue = cache.getValue(k, factory);
-        return cacheValue.get();
+        return cacheValue == null ? null : cacheValue.get();
     }
 
     public CacheValue<V> getValue() {
