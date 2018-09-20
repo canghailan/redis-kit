@@ -2,17 +2,18 @@ package cc.whohow.redis.io;
 
 import java.nio.ByteBuffer;
 
-public class ByteBufferCodec extends AbstractAdaptiveCodec<ByteBuffer> {
+public class ByteBufferCodec extends AbstractBufferCodec<ByteBuffer> {
     public ByteBufferCodec() {
+        super(new SummaryStatistics());
     }
 
     @Override
-    public ByteBuffer encodeToByteBuffer(ByteBuffer value) {
+    public ByteBuffer encode(ByteBuffer value) {
         return value;
     }
 
     @Override
-    public ByteBuffer decodeByteBuffer(ByteBuffer buffer) {
+    public ByteBuffer decode(ByteBuffer buffer) {
         return buffer;
     }
 }

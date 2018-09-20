@@ -11,7 +11,7 @@ import java.io.OutputStream;
 /**
  * JSON编码器
  */
-public class JacksonCodec<T> extends AbstractAdaptiveCodec<T> {
+public class JacksonCodec<T> extends AbstractStreamCodec<T> {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     protected final ObjectMapper objectMapper;
@@ -46,17 +46,18 @@ public class JacksonCodec<T> extends AbstractAdaptiveCodec<T> {
     }
 
     public JacksonCodec(ObjectMapper objectMapper, JavaType type) {
+        super(new SummaryStatistics(128, 512));
         this.objectMapper = objectMapper;
         this.type = type;
     }
 
     @Override
-    public void encodeToStream(T value, OutputStream stream) throws IOException {
+    public void encode(T value, OutputStream stream) throws IOException {
         objectMapper.writeValue(stream, value);
     }
 
     @Override
-    public T decodeStream(InputStream stream) throws IOException {
+    public T decode(InputStream stream) throws IOException {
         return objectMapper.readValue(stream, type);
     }
 }

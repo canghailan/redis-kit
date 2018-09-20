@@ -102,22 +102,23 @@ public abstract class ImmutableGeneratedCacheKeyCodec implements Codec<Immutable
         }
     }
 
-    private static class ArrayKeyCodec extends AbstractAdaptiveCodec<ImmutableGeneratedCacheKey> {
+    private static class ArrayKeyCodec extends AbstractStreamCodec<ImmutableGeneratedCacheKey> {
         private final JavaType[] types;
 
         private ArrayKeyCodec(String... canonicalName) {
+            super(new SummaryStatistics());
             this.types = Arrays.stream(canonicalName)
                     .map(OBJECT_MAPPER.getTypeFactory()::constructFromCanonical)
                     .toArray(JavaType[]::new);
         }
 
         @Override
-        public void encodeToStream(ImmutableGeneratedCacheKey value, OutputStream stream) throws IOException {
+        public void encode(ImmutableGeneratedCacheKey value, OutputStream stream) throws IOException {
             OBJECT_MAPPER.writeValue(stream, value.getKeys());
         }
 
         @Override
-        public ImmutableGeneratedCacheKey decodeStream(InputStream stream) throws IOException {
+        public ImmutableGeneratedCacheKey decode(InputStream stream) throws IOException {
             ArrayNode arrayNode = OBJECT_MAPPER.readValue(stream, ArrayNode.class);
             Object[] objectArray = new Object[arrayNode.size()];
             for (int i = 0; i < arrayNode.size(); i++) {

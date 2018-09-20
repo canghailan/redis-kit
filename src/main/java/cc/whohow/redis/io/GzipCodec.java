@@ -9,15 +9,16 @@ import java.util.zip.GZIPOutputStream;
 /**
  * GZIP压缩编码器
  */
-public class GzipCodec<T> extends AbstractAdaptiveCodec<T> {
+public class GzipCodec<T> extends AbstractStreamCodec<T> {
     private final Codec<T> codec;
 
     public GzipCodec(Codec<T> codec) {
+        super(new SummaryStatistics(1024, 8 * 1024));
         this.codec = codec;
     }
 
     @Override
-    protected void encodeToStream(T value, OutputStream stream) throws IOException {
+    public void encode(T value, OutputStream stream) throws IOException {
         GZIPOutputStream gzip = new GZIPOutputStream(stream);
         codec.encode(value, gzip);
         gzip.finish();
@@ -25,7 +26,7 @@ public class GzipCodec<T> extends AbstractAdaptiveCodec<T> {
     }
 
     @Override
-    protected T decodeStream(InputStream stream) throws IOException {
+    public T decode(InputStream stream) throws IOException {
         return codec.decode(new GZIPInputStream(stream));
     }
 }

@@ -15,6 +15,10 @@ public class ByteBufferOutputStream extends OutputStream implements WritableByte
         this.byteBuffer = ByteBuffer.allocate(size);
     }
 
+    public ByteBufferOutputStream(ByteBuffer byteBuffer) {
+        this.byteBuffer = byteBuffer;
+    }
+
     public ByteBuffer getByteBuffer() {
         return byteBuffer;
     }
