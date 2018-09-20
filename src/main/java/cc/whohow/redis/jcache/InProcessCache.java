@@ -204,14 +204,19 @@ public class InProcessCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    public <T> T getValue(K key, Function<V, T> mapper) {
-        V value = cache.getIfPresent(key);
-        return value == null ? null : mapper.apply(value);
+    public V get(K key, Function<? super K, ? extends V> loader) {
+        return cache.get(key, loader);
     }
 
     @Override
-    public V get(K key, Function<? super K, ? extends V> cacheLoader) {
-        return cache.get(key, cacheLoader);
+    public CacheValue<V> getValue(K key) {
+        return getValue(key, ImmutableCacheValue::new);
+    }
+
+    @Override
+    public CacheValue<V> getValue(K key, Function<V, ? extends CacheValue<V>> factory) {
+        V value = cache.getIfPresent(key);
+        return value == null ? null : factory.apply(value);
     }
 
     @Override

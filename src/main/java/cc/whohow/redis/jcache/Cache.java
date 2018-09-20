@@ -8,29 +8,19 @@ import java.util.function.Function;
  */
 public interface Cache<K, V> extends javax.cache.Cache<K, V> {
     /**
-     * 读取缓存值
-     */
-    <T> T getValue(K key, Function<V, T> ofNullable);
-
-    /**
-     * 读取缓存值
-     */
-    default CacheValue<V> getValue(K key) {
-        return getValue(key, ImmutableCacheValue::ofNullable);
-    }
-
-    /**
      * 读取/加载缓存值
      */
-    default V get(K key, Function<? super K, ? extends V> cacheLoader) {
-        CacheValue<V> cacheValue = getValue(key);
-        if (cacheValue != null) {
-            return cacheValue.get();
-        }
-        V value = cacheLoader.apply(key);
-        put(key, value);
-        return value;
-    }
+    V get(K key, Function<? super K, ? extends V> loader);
+
+    /**
+     * 读取缓存值，未命中返回null
+     */
+    CacheValue<V> getValue(K key);
+
+    /**
+     * 读取缓存值，未命中返回null
+     */
+    CacheValue<V> getValue(K key, Function<V, ? extends CacheValue<V>> factory);
 
     /**
      * Redis连接成功回调

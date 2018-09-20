@@ -1,13 +1,11 @@
 package cc.whohow.redis.jcache.codec;
 
 import cc.whohow.redis.io.Codec;
-import cc.whohow.redis.jcache.CacheValue;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.util.function.Function;
 
 public class RedisCacheValueCodec<V> implements Codec<V> {
     private final Codec<V> valueCodec;
@@ -24,13 +22,6 @@ public class RedisCacheValueCodec<V> implements Codec<V> {
     @Override
     public V decode(ByteBuffer buffer) {
         return valueCodec.decode(buffer);
-    }
-
-    public CacheValue<V> decodeCacheValue(ByteBuffer buffer, Function<V, ? extends CacheValue<V>> ofNullable) {
-        if (buffer == null) {
-            return null;
-        }
-        return ofNullable.apply(valueCodec.decode(buffer));
     }
 
     @Override

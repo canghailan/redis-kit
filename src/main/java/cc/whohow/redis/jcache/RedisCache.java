@@ -48,11 +48,6 @@ public class RedisCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    public <T> T getValue(K key, Function<V, T> mapper) {
-        return codec.decodeValue(redis.get(codec.encodeKey(key)), mapper);
-    }
-
-    @Override
     public Map<K, V> getAll(Set<? extends K> keys) {
         ByteBuffer[] encodedKeys = keys.stream()
                 .map(key -> (K) key)
@@ -224,5 +219,24 @@ public class RedisCache<K, V> implements Cache<K, V> {
     @Override
     public String toString() {
         return getName();
+    }
+
+    @Override
+    public V get(K key, Function<? super K, ? extends V> loader) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public CacheValue<V> getValue(K key, Function<V, ? extends CacheValue<V>> factory) {
+        ByteBuffer encodedValue = redis.get(codec.encodeKey(key));
+        if (encodedValue == null) {
+            return null;
+        }
+        return factory.apply(codec.decodeValue(encodedValue));
+    }
+
+    @Override
+    public CacheValue<V> getValue(K key) {
+        return getValue(key, ImmutableCacheValue::new);
     }
 }

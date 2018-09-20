@@ -1,6 +1,9 @@
 package cc.whohow.redis.jcache;
 
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
@@ -19,17 +22,33 @@ import java.util.function.Function;
  * 两级缓存，仅支持 Read Through 模式
  */
 public class RedisTierCache<K, V> implements Cache<K, V> {
+    private static final Logger log = LogManager.getLogger();
+
     protected final RedisCacheManager cacheManager;
     protected final RedisCacheConfiguration<K, V> configuration;
     protected final RedisCache<K, V> redisCache;
-    protected final InProcessCache<K, V> inProcessCache;
+    protected final com.github.benmanes.caffeine.cache.Cache<K, V> inProcessCache;
 
+    @SuppressWarnings("unchecked")
     public RedisTierCache(RedisCacheManager cacheManager,
                           RedisCacheConfiguration<K, V> configuration) {
         this.cacheManager = cacheManager;
         this.configuration = configuration;
         this.redisCache = cacheManager.newRedisCache(configuration);
-        this.inProcessCache = cacheManager.newInProcessCache(configuration);
+        Caffeine caffeine = Caffeine.newBuilder();
+        if (configuration.getInProcessCacheMaxEntry() > 0) {
+            caffeine.maximumSize(configuration.getInProcessCacheMaxEntry());
+        }
+        if (configuration.getInProcessCacheExpiryForUpdate() > 0) {
+            caffeine.expireAfterWrite(
+                    configuration.getInProcessCacheExpiryForUpdate(),
+                    configuration.getInProcessCacheExpiryForUpdateTimeUnit());
+        } else if (configuration.getExpiryForUpdate() > 0) {
+            caffeine.expireAfterWrite(
+                    configuration.getExpiryForUpdate(),
+                    configuration.getExpiryForUpdateTimeUnit());
+        }
+        this.inProcessCache = caffeine.build();
     }
 
     @Override
@@ -39,7 +58,7 @@ public class RedisTierCache<K, V> implements Cache<K, V> {
 
     @Override
     public Map<K, V> getAll(Set<? extends K> keys) {
-        Map<K, V> keyValues = inProcessCache.getAll(keys);
+        Map<K, V> keyValues = inProcessCache.getAllPresent(keys);
         if (keyValues.size() == keys.size()) {
             return keyValues;
         }
@@ -54,32 +73,32 @@ public class RedisTierCache<K, V> implements Cache<K, V> {
     @Override
     public void loadAll(Set<? extends K> keys, boolean replaceExistingValues, CompletionListener completionListener) {
         redisCache.loadAll(keys, replaceExistingValues, completionListener);
-        inProcessCache.removeAll(keys);
+        inProcessCache.invalidateAll(keys);
     }
 
     @Override
     public void put(K key, V value) {
         redisCache.put(key, value);
-        inProcessCache.remove(key);
+        inProcessCache.invalidate(key);
     }
 
     @Override
     public V getAndPut(K key, V value) {
         V oldValue = redisCache.getAndPut(key, value);
-        inProcessCache.remove(key);
+        inProcessCache.invalidate(key);
         return oldValue;
     }
 
     @Override
     public void putAll(Map<? extends K, ? extends V> map) {
         redisCache.putAll(map);
-        inProcessCache.removeAll(map.keySet());
+        inProcessCache.invalidateAll(map.keySet());
     }
 
     @Override
     public boolean putIfAbsent(K key, V value) {
         if (redisCache.putIfAbsent(key, value)) {
-            inProcessCache.remove(key);
+            inProcessCache.invalidate(key);
             return true;
         }
         return false;
@@ -88,7 +107,7 @@ public class RedisTierCache<K, V> implements Cache<K, V> {
     @Override
     public boolean remove(K key) {
         if (redisCache.remove(key)) {
-            inProcessCache.remove(key);
+            inProcessCache.invalidate(key);
             return true;
         }
         return false;
@@ -97,7 +116,7 @@ public class RedisTierCache<K, V> implements Cache<K, V> {
     @Override
     public boolean remove(K key, V oldValue) {
         if (redisCache.remove(key, oldValue)) {
-            inProcessCache.remove(key);
+            inProcessCache.invalidate(key);
             return true;
         }
         return false;
@@ -106,14 +125,14 @@ public class RedisTierCache<K, V> implements Cache<K, V> {
     @Override
     public V getAndRemove(K key) {
         V value = redisCache.getAndRemove(key);
-        inProcessCache.remove(key);
+        inProcessCache.invalidate(key);
         return value;
     }
 
     @Override
     public boolean replace(K key, V oldValue, V newValue) {
         if (redisCache.replace(key, oldValue, newValue)) {
-            inProcessCache.remove(key);
+            inProcessCache.invalidate(key);
             return true;
         }
         return false;
@@ -122,7 +141,7 @@ public class RedisTierCache<K, V> implements Cache<K, V> {
     @Override
     public boolean replace(K key, V value) {
         if (redisCache.replace(key, value)) {
-            inProcessCache.remove(key);
+            inProcessCache.invalidate(key);
             return true;
         }
         return false;
@@ -131,26 +150,26 @@ public class RedisTierCache<K, V> implements Cache<K, V> {
     @Override
     public V getAndReplace(K key, V value) {
         V oldValue = redisCache.getAndReplace(key, value);
-        inProcessCache.remove(key);
+        inProcessCache.invalidate(key);
         return oldValue;
     }
 
     @Override
     public void removeAll(Set<? extends K> keys) {
         redisCache.removeAll(keys);
-        inProcessCache.removeAll(keys);
+        inProcessCache.invalidateAll(keys);
     }
 
     @Override
     public void removeAll() {
         redisCache.removeAll();
-        inProcessCache.removeAll();
+        inProcessCache.invalidateAll();
     }
 
     @Override
     public void clear() {
         redisCache.clear();
-        inProcessCache.clear();
+        inProcessCache.invalidateAll();
     }
 
     @Override
@@ -164,14 +183,14 @@ public class RedisTierCache<K, V> implements Cache<K, V> {
     @Override
     public <T> T invoke(K key, EntryProcessor<K, V, T> entryProcessor, Object... arguments) throws EntryProcessorException {
         T result = redisCache.invoke(key, entryProcessor, arguments);
-        inProcessCache.remove(key);
+        inProcessCache.invalidate(key);
         return result;
     }
 
     @Override
     public <T> Map<K, EntryProcessorResult<T>> invokeAll(Set<? extends K> keys, EntryProcessor<K, V, T> entryProcessor, Object... arguments) {
         Map<K, EntryProcessorResult<T>> result = redisCache.invokeAll(keys, entryProcessor, arguments);
-        inProcessCache.removeAll(keys);
+        inProcessCache.invalidateAll(keys);
         return result;
     }
 
@@ -190,7 +209,7 @@ public class RedisTierCache<K, V> implements Cache<K, V> {
         try {
             redisCache.close();
         } finally {
-            inProcessCache.close();
+            inProcessCache.cleanUp();
         }
     }
 
@@ -202,12 +221,12 @@ public class RedisTierCache<K, V> implements Cache<K, V> {
     @Override
     public <T> T unwrap(Class<T> clazz) {
         if (clazz.isInstance(redisCache)) {
-            return clazz.cast(redisCache);
+            return redisCache.unwrap(clazz);
         }
         if (clazz.isInstance(inProcessCache)) {
             return clazz.cast(inProcessCache);
         }
-        return inProcessCache.unwrap(clazz);
+        throw new IllegalArgumentException();
     }
 
     @Override
@@ -226,37 +245,48 @@ public class RedisTierCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    public <T> T getValue(K key, Function<V, T> mapper) {
-        T value = inProcessCache.getValue(key, mapper);
-        if (value != null) {
-            return value;
-        }
-        return redisCache.getValue(key, mapper);
-    }
-
-    @Override
     public void onRedisConnected() {
-        inProcessCache.clear();
+        inProcessCache.invalidateAll();
+        log.debug("onRedisConnected invalidateAll");
     }
 
     @Override
     public void onRedisDisconnected() {
-        inProcessCache.clear();
+        inProcessCache.invalidateAll();
+        log.debug("onRedisDisconnected invalidateAll");
     }
 
     @Override
     public void onSynchronization() {
-        inProcessCache.clear();
+        inProcessCache.invalidateAll();
+        log.debug("onSynchronization invalidateAll");
     }
 
     @Override
     public void onKeyspaceNotification(ByteBuffer key, ByteBuffer message) {
-        inProcessCache.remove(redisCache.getCodec().decodeKey(key));
+        K k = redisCache.getCodec().decodeKey(key);
+        inProcessCache.invalidate(k);
+        log.debug("onKeyspaceNotification invalidate {}", k);
     }
 
     @Override
-    public V get(K key, Function<? super K, ? extends V> cacheLoader) {
-        return inProcessCache.get(key, (k) -> redisCache.get(k, cacheLoader));
+    public V get(K key, Function<? super K, ? extends V> loader) {
+        return inProcessCache.get(key, new CacheValueLoader<>(redisCache, loader));
+    }
+
+    @Override
+    public CacheValue<V> getValue(K key) {
+        return getValue(key, ImmutableCacheValue::new);
+    }
+
+    @Override
+    public CacheValue<V> getValue(K key, Function<V, ? extends CacheValue<V>> factory) {
+        CacheValueHolder<K, V> cacheValueHolder = new CacheValueHolder<>(redisCache, factory);
+        V value = inProcessCache.get(key, cacheValueHolder);
+        if (cacheValueHolder.getValue() != null) {
+            return cacheValueHolder.getValue();
+        }
+        return value == null ? null : factory.apply(value);
     }
 
     @Override
