@@ -1,5 +1,6 @@
 package cc.whohow.redis.lettuce;
 
+import cc.whohow.redis.io.ByteBuffers;
 import io.lettuce.core.codec.RedisCodec;
 
 import java.nio.ByteBuffer;
@@ -9,12 +10,12 @@ public class ByteBufferCodec implements RedisCodec<ByteBuffer, ByteBuffer> {
 
     @Override
     public ByteBuffer decodeKey(ByteBuffer bytes) {
-        return copy(bytes);
+        return ByteBuffers.copy(bytes);
     }
 
     @Override
     public ByteBuffer decodeValue(ByteBuffer bytes) {
-        return copy(bytes);
+        return ByteBuffers.copy(bytes);
     }
 
     @Override
@@ -25,12 +26,5 @@ public class ByteBufferCodec implements RedisCodec<ByteBuffer, ByteBuffer> {
     @Override
     public ByteBuffer encodeValue(ByteBuffer value) {
         return value;
-    }
-
-    private ByteBuffer copy(ByteBuffer bytes) {
-        ByteBuffer byteBuffer = ByteBuffer.allocate(bytes.remaining());
-        byteBuffer.put(bytes);
-        byteBuffer.flip();
-        return byteBuffer;
     }
 }

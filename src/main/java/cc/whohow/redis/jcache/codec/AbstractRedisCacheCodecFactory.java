@@ -1,14 +1,14 @@
 package cc.whohow.redis.jcache.codec;
 
 import cc.whohow.redis.io.Codec;
-import cc.whohow.redis.io.KeyValueCodec;
-import cc.whohow.redis.io.KeyValueCodecFacade;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
+import cc.whohow.redis.lettuce.RedisCodecAdapter;
+import io.lettuce.core.codec.RedisCodec;
 
 public abstract class AbstractRedisCacheCodecFactory implements RedisCacheCodecFactory {
     @Override
-    public <K, V> KeyValueCodec<K, V> getCodec(RedisCacheConfiguration<K, V> configuration) {
-        return new KeyValueCodecFacade<>(
+    public <K, V> RedisCodec<K, V> getCodec(RedisCacheConfiguration<K, V> configuration) {
+        return new RedisCodecAdapter<>(
                 new RedisCacheKeyCodec<>(configuration.getName(), getSeparator(configuration), newKeyCodec(configuration)),
                 new RedisCacheValueCodec<>(newValueCodec(configuration)));
     }

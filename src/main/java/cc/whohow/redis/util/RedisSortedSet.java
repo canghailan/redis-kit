@@ -3,6 +3,8 @@ package cc.whohow.redis.util;
 import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.Codec;
 import cc.whohow.redis.lettuce.Lettuce;
+import cc.whohow.redis.lettuce.RedisCommandsAdapter;
+import cc.whohow.redis.lettuce.RedisValueCodecAdapter;
 import io.lettuce.core.Range;
 import io.lettuce.core.ScoredValue;
 import io.lettuce.core.api.sync.RedisCommands;
@@ -17,29 +19,21 @@ import java.util.concurrent.ConcurrentMap;
  * 有序集合，按指定值排序
  */
 public class RedisSortedSet<E> implements ConcurrentMap<E, Number> {
-    protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
-    protected final Codec<E> codec;
-    protected final String id;
-    protected final ByteBuffer encodedId;
+    protected final RedisCommands<ByteBuffer, E> redis;
+    protected final ByteBuffer key;
 
-    public RedisSortedSet(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, String id) {
+    public RedisSortedSet(RedisCommands<ByteBuffer, E> redis, ByteBuffer key) {
         this.redis = redis;
-        this.codec = codec;
-        this.id = id;
-        this.encodedId = ByteBuffers.fromUtf8(id);
+        this.key = key;
     }
 
-    public ByteBuffer encode(E value) {
-        return codec.encode(value);
-    }
-
-    public E decode(ByteBuffer buffer) {
-        return codec.decode(buffer);
+    public RedisSortedSet(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, String key) {
+        this(new RedisCommandsAdapter<>(redis, new RedisValueCodecAdapter<>(codec)), ByteBuffers.fromUtf8(key));
     }
 
     @Override
     public int size() {
-        return redis.zcard(encodedId.duplicate()).intValue();
+        return redis.zcard(key.duplicate()).intValue();
     }
 
     @Override
@@ -55,13 +49,13 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number> {
     @Override
     public boolean containsValue(Object value) {
         Number number = (Number) value;
-        return redis.zcount(encodedId.duplicate(), Range.create(number, number)) > 0;
+        return redis.zcount(key.duplicate(), Range.create(number, number)) > 0;
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public Number get(Object key) {
-        return redis.zscore(encodedId.duplicate(), encode((E) key));
+        return redis.zscore(this.key.duplicate(), (E) key);
     }
 
     /**
@@ -69,7 +63,7 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number> {
      */
     @Override
     public Number put(E key, Number value) {
-        if (redis.zadd(encodedId.duplicate(), value.doubleValue(), encode(key)) > 0) {
+        if (redis.zadd(this.key.duplicate(), value.doubleValue(), key) > 0) {
             return null;
         }
         return value;
@@ -78,7 +72,7 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number> {
     @Override
     @SuppressWarnings("unchecked")
     public Number remove(Object key) {
-        redis.zrem(encodedId.duplicate(), encode((E) key));
+        redis.zrem(this.key.duplicate(), (E) key);
         return null;
     }
 
@@ -88,12 +82,12 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number> {
         ScoredValue[] encodedScoredValues = m.entrySet().stream()
                 .map(e -> ScoredValue.fromNullable(e.getValue().doubleValue(), e.getKey()))
                 .toArray(ScoredValue[]::new);
-        redis.zadd(encodedId.duplicate(), encodedScoredValues);
+        redis.zadd(key.duplicate(), encodedScoredValues);
     }
 
     @Override
     public void clear() {
-        redis.del(encodedId.duplicate());
+        redis.del(key.duplicate());
     }
 
     /**
@@ -128,7 +122,7 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number> {
 
     @Override
     public Number putIfAbsent(E key, Number value) {
-        redis.zadd(encodedId.duplicate(), Lettuce.Z_ADD_NX, value.doubleValue(), encode(key));
+        redis.zadd(this.key.duplicate(), Lettuce.Z_ADD_NX, value.doubleValue(), key);
         return null;
     }
 
@@ -150,12 +144,7 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number> {
 
     @Override
     public Number replace(E key, Number value) {
-        redis.zadd(encodedId.duplicate(), Lettuce.Z_ADD_XX, value.doubleValue(), encode(key));
+        redis.zadd(this.key.duplicate(), Lettuce.Z_ADD_XX, value.doubleValue(), key);
         return null;
-    }
-
-    @Override
-    public String toString() {
-        return id;
     }
 }

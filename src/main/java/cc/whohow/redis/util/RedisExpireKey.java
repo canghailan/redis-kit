@@ -8,7 +8,6 @@ import io.lettuce.core.api.sync.RedisCommands;
 import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * 键集合
@@ -18,6 +17,14 @@ public class RedisExpireKey<V> extends RedisKey<V> {
     protected final SetArgs px;
     protected final SetArgs pxNx;
     protected final SetArgs pxXx;
+
+    public RedisExpireKey(RedisCommands<String, V> redis, Duration ttl) {
+        super(redis);
+        this.ttl = ttl.toMillis();
+        this.px = SetArgs.Builder.px(this.ttl);
+        this.pxNx = SetArgs.Builder.px(this.ttl).nx();
+        this.pxXx = SetArgs.Builder.px(this.ttl).xx();
+    }
 
     public RedisExpireKey(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<V> codec, Duration ttl) {
         super(redis, codec);
@@ -37,16 +44,15 @@ public class RedisExpireKey<V> extends RedisKey<V> {
     }
 
     public void set(String key, V value) {
-        redis.set(encodeKey(key), encodeValue(value), px);
+        redis.set(key, value, px);
     }
 
+    /**
+     * @throws UnsupportedOperationException UnsupportedOperation
+     */
     @Override
     public void putAll(Map<? extends String, ? extends V> m) {
-        Map<ByteBuffer, ByteBuffer> encodedKeyValues = m.entrySet().stream()
-                .collect(Collectors.toMap(
-                        e -> encodeKey(e.getKey()),
-                        e -> encodeValue(e.getValue())));
-        redis.mset(encodedKeyValues);
+        throw new UnsupportedOperationException();
     }
 
     /**
@@ -54,7 +60,7 @@ public class RedisExpireKey<V> extends RedisKey<V> {
      */
     @Override
     public V putIfAbsent(String key, V value) {
-        if (Lettuce.ok(redis.set(encodeKey(key), encodeValue(value), pxNx))) {
+        if (Lettuce.ok(redis.set(key, value, pxNx))) {
             return null;
         }
         return value;
@@ -65,7 +71,7 @@ public class RedisExpireKey<V> extends RedisKey<V> {
      */
     @Override
     public V replace(String key, V value) {
-        if (Lettuce.ok(redis.set(encodeKey(key), encodeValue(value), pxXx))) {
+        if (Lettuce.ok(redis.set(key, value, pxXx))) {
             return null;
         }
         return value;

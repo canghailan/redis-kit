@@ -3,6 +3,7 @@ package cc.whohow.redis.io;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.PrimitiveIterator;
@@ -19,6 +20,7 @@ public class PrimitiveCodec<T> implements Codec<T> {
     public static final PrimitiveCodec<Long> LONG = new PrimitiveCodec<>(Long::parseLong, 20);
     public static final PrimitiveCodec<Float> FLOAT = new PrimitiveCodec<>(Float::parseFloat, 32);
     public static final PrimitiveCodec<Double> DOUBLE = new PrimitiveCodec<>(Double::parseDouble, 32);
+    public static final PrimitiveCodec<Number> NUMBER = new PrimitiveCodec<>(BigDecimal::new, 32);
 
     private final int bufferSize;
     private final Function<String, T> parse;
@@ -39,7 +41,11 @@ public class PrimitiveCodec<T> implements Codec<T> {
 
     @Override
     public T decode(ByteBuffer buffer) {
-        return ByteBuffers.isEmpty(buffer) ? null : parse.apply(StandardCharsets.US_ASCII.decode(buffer).toString());
+        return decode(buffer, null);
+    }
+
+    public T decode(ByteBuffer buffer, T defaultValue) {
+        return ByteBuffers.isEmpty(buffer) ? defaultValue : parse.apply(StandardCharsets.US_ASCII.decode(buffer).toString());
     }
 
     @Override
@@ -55,6 +61,10 @@ public class PrimitiveCodec<T> implements Codec<T> {
 
     @Override
     public T decode(InputStream stream) throws IOException {
-        return decode(new Java9InputStream(stream).readAllBytes(bufferSize));
+        return decode(stream, null);
+    }
+
+    public T decode(InputStream stream, T defaultValue) throws IOException {
+        return decode(new Java9InputStream(stream).readAllBytes(bufferSize), defaultValue);
     }
 }

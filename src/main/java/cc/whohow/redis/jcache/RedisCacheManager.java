@@ -1,7 +1,6 @@
 package cc.whohow.redis.jcache;
 
 import cc.whohow.redis.io.ByteBuffers;
-import cc.whohow.redis.io.KeyValueCodec;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import cc.whohow.redis.lettuce.ByteBufferCodec;
 import io.lettuce.core.RedisChannelHandler;
@@ -103,11 +102,7 @@ public class RedisCacheManager implements
         return cache;
     }
 
-    public <K, V> StatefulRedisConnection<K, V> newRedisConnection(RedisCodec<K, V> codec) {
-        return redisClient.connect(codec, redisURI);
-    }
-
-    public <K, V> KeyValueCodec<K, V> newRedisCacheCodec(RedisCacheConfiguration<K, V> configuration) {
+    public <K, V> RedisCodec<K, V> newRedisCacheCodec(RedisCacheConfiguration<K, V> configuration) {
         try {
             return configuration.getRedisCacheCodecFactory().newInstance().getCodec(configuration);
         } catch (InstantiationException | IllegalAccessException e) {

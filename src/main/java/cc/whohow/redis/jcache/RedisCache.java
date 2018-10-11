@@ -1,6 +1,5 @@
 package cc.whohow.redis.jcache;
 
-import cc.whohow.redis.io.KeyValueCodec;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import cc.whohow.redis.jcache.processor.EntryProcessorResultWrapper;
 import cc.whohow.redis.lettuce.Lettuce;
@@ -8,6 +7,7 @@ import io.lettuce.core.KeyScanCursor;
 import io.lettuce.core.ScanArgs;
 import io.lettuce.core.ScanCursor;
 import io.lettuce.core.api.sync.RedisCommands;
+import io.lettuce.core.codec.RedisCodec;
 
 import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 public class RedisCache<K, V> implements Cache<K, V> {
     protected final RedisCacheManager cacheManager;
     protected final RedisCacheConfiguration<K, V> configuration;
-    protected final KeyValueCodec<K, V> codec;
+    protected final RedisCodec<K, V> codec;
     protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
 
     public RedisCache(RedisCacheManager cacheManager, RedisCacheConfiguration<K, V> configuration) {
@@ -38,7 +38,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
         this.redis = cacheManager.getRedisCommands();
     }
 
-    public KeyValueCodec<K, V> getCodec() {
+    public RedisCodec<K, V> getCodec() {
         return codec;
     }
 

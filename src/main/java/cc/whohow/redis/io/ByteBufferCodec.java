@@ -3,8 +3,8 @@ package cc.whohow.redis.io;
 import java.nio.ByteBuffer;
 
 public class ByteBufferCodec extends AbstractBufferCodec<ByteBuffer> {
-    public ByteBufferCodec() {
-        super(new BufferAllocationPredictor());
+    protected ByteBufferCodec(BufferAllocationPredictor predictor) {
+        super(predictor);
     }
 
     @Override

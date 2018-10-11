@@ -2,27 +2,36 @@ package cc.whohow.redis.util;
 
 import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.PrimitiveCodec;
+import cc.whohow.redis.lettuce.RedisCommandsAdapter;
+import cc.whohow.redis.lettuce.RedisValueCodecAdapter;
 import io.lettuce.core.api.sync.RedisCommands;
 
 import java.nio.ByteBuffer;
 
+/**
+ * Reids计数器
+ */
 public class RedisAtomicLong extends Number {
-    protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
-    protected final String id;
-    protected final ByteBuffer encodedId;
+    protected final RedisCommands<ByteBuffer, Long> redis;
+    protected final ByteBuffer key;
 
-    public RedisAtomicLong(RedisCommands<ByteBuffer, ByteBuffer> redis, String id) {
+    public RedisAtomicLong(RedisCommands<ByteBuffer, Long> redis, ByteBuffer key) {
+        this(redis, key, 0);
+    }
+
+    public RedisAtomicLong(RedisCommands<ByteBuffer, Long> redis, ByteBuffer key, long initialValue) {
         this.redis = redis;
-        this.id = id;
-        this.encodedId = ByteBuffers.fromUtf8(id);
+        this.key = key;
+
+        redis.setnx(key.duplicate(), initialValue);
     }
 
-    public ByteBuffer encodeLong(Long value) {
-        return PrimitiveCodec.LONG.encode(value);
+    public RedisAtomicLong(RedisCommands<ByteBuffer, ByteBuffer> redis, String key) {
+        this(new RedisCommandsAdapter<>(redis, new RedisValueCodecAdapter<>(PrimitiveCodec.LONG)), ByteBuffers.fromUtf8(key));
     }
 
-    public Long decodeLong(ByteBuffer buffer) {
-        return PrimitiveCodec.LONG.decode(buffer);
+    public RedisAtomicLong(RedisCommands<ByteBuffer, ByteBuffer> redis, String key, long initialValue) {
+        this(new RedisCommandsAdapter<>(redis, new RedisValueCodecAdapter<>(PrimitiveCodec.LONG)), ByteBuffers.fromUtf8(key), initialValue);
     }
 
     public long get() {
@@ -30,11 +39,11 @@ public class RedisAtomicLong extends Number {
     }
 
     public void set(long newValue) {
-        redis.set(encodedId.duplicate(), encodeLong(newValue));
+        redis.set(key.duplicate(), newValue);
     }
 
     public long getAndSet(long newValue) {
-        return decodeLong(redis.getset(encodedId.duplicate(), encodeLong(newValue)));
+        return redis.getset(key.duplicate(), newValue);
     }
 
     public long getAndIncrement() {
@@ -50,15 +59,15 @@ public class RedisAtomicLong extends Number {
     }
 
     public long incrementAndGet() {
-        return redis.incr(encodedId.duplicate());
+        return redis.incr(key.duplicate());
     }
 
     public long decrementAndGet() {
-        return redis.decr(encodedId.duplicate());
+        return redis.decr(key.duplicate());
     }
 
     public long addAndGet(long delta) {
-        return redis.incrby(encodedId.duplicate(), delta);
+        return redis.incrby(key.duplicate(), delta);
     }
 
     @Override
@@ -68,7 +77,7 @@ public class RedisAtomicLong extends Number {
 
     @Override
     public long longValue() {
-        return decodeLong(redis.get(encodedId.duplicate()));
+        return redis.get(key.duplicate());
     }
 
     @Override
@@ -79,10 +88,5 @@ public class RedisAtomicLong extends Number {
     @Override
     public double doubleValue() {
         return (double) longValue();
-    }
-
-    @Override
-    public String toString() {
-        return id;
     }
 }

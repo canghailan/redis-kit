@@ -3,6 +3,7 @@ package cc.whohow.redis.io;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 public class ByteBuffers {
     private static final ByteBuffer EMPTY = ByteBuffer.allocate(0);
@@ -17,6 +18,31 @@ public class ByteBuffers {
 
     public static ByteBuffer fromUtf8(CharSequence charSequence) {
         return StandardCharsets.UTF_8.encode(CharBuffer.wrap(charSequence));
+    }
+    public static String toUtf8String(ByteBuffer byteBuffer) {
+        return byteBuffer == null ? null : StandardCharsets.UTF_8.decode(byteBuffer).toString();
+    }
+
+    public static ByteBuffer copy(ByteBuffer bytes) {
+        ByteBuffer byteBuffer = ByteBuffer.allocate(bytes.remaining());
+        byteBuffer.put(bytes.duplicate());
+        byteBuffer.flip();
+        return byteBuffer;
+    }
+
+    public static ByteBuffer concat(ByteBuffer... buffers) {
+        int capacity = Arrays.stream(buffers).mapToInt(ByteBuffer::remaining).sum();
+        ByteBuffer byteBuffer = ByteBuffer.allocate(capacity);
+        for (ByteBuffer buffer : buffers) {
+            byteBuffer.put(buffer.duplicate());
+        }
+        byteBuffer.flip();
+        return byteBuffer;
+    }
+
+    public static ByteBuffer slice(ByteBuffer byteBuffer, int start) {
+        byteBuffer.position(byteBuffer.position() + start);
+        return byteBuffer;
     }
 
     /**
