@@ -1,7 +1,6 @@
 package cc.whohow.redis;
 
 import cc.whohow.redis.io.PrimitiveCodec;
-import cc.whohow.redis.lettuce.ByteBufferCodec;
 import cc.whohow.redis.lettuce.RedisValueCodecAdapter;
 import cc.whohow.redis.util.RedisClock;
 import io.lettuce.core.RedisClient;

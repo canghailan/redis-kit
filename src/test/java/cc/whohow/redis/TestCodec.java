@@ -6,7 +6,6 @@ import cc.whohow.redis.jcache.codec.ImmutableGeneratedCacheKeyCodec;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.type.TypeFactory;
-import org.apache.commons.compress.compressors.CompressorInputStream;
 import org.apache.commons.compress.compressors.CompressorStreamFactory;
 import org.apache.commons.compress.compressors.snappy.SnappyCompressorInputStream;
 import org.junit.Assert;

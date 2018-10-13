@@ -26,23 +26,6 @@ public class RedisScript {
         this.script = script;
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public String getSha1() {
-        return sha1;
-    }
-
-    public String getScript() {
-        return script;
-    }
-
-    @Override
-    public String toString() {
-        return script;
-    }
-
     private static String load(String name) {
         try (Java9InputStream stream = new Java9InputStream(Thread.currentThread().getContextClassLoader()
                 .getResourceAsStream(name + ".lua"))) {
@@ -66,5 +49,22 @@ public class RedisScript {
         } catch (NoSuchAlgorithmException e) {
             throw new UnsupportedOperationException(e);
         }
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getSha1() {
+        return sha1;
+    }
+
+    public String getScript() {
+        return script;
+    }
+
+    @Override
+    public String toString() {
+        return script;
     }
 }

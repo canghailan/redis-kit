@@ -19,8 +19,9 @@ public class ByteBuffers {
     public static ByteBuffer fromUtf8(CharSequence charSequence) {
         return StandardCharsets.UTF_8.encode(CharBuffer.wrap(charSequence));
     }
+
     public static String toUtf8String(ByteBuffer byteBuffer) {
-        return byteBuffer == null ? null : StandardCharsets.UTF_8.decode(byteBuffer).toString();
+        return byteBuffer == null ? null : StandardCharsets.UTF_8.decode(byteBuffer.duplicate()).toString();
     }
 
     public static ByteBuffer copy(ByteBuffer bytes) {
@@ -41,6 +42,7 @@ public class ByteBuffers {
     }
 
     public static ByteBuffer slice(ByteBuffer byteBuffer, int start) {
+        byteBuffer = byteBuffer.duplicate();
         byteBuffer.position(byteBuffer.position() + start);
         return byteBuffer;
     }
