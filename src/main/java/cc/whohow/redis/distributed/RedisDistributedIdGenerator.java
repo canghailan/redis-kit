@@ -50,7 +50,7 @@ public class RedisDistributedIdGenerator implements LongSupplier {
     }
 
     protected long generate(long timestamp, long shardId, long sequence) {
-        return snowflakeEpoch(timestamp, shardId, sequence);
+        return snowflake2000(timestamp, shardId, sequence);
     }
 
     @Override
