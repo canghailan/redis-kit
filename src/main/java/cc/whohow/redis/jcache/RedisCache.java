@@ -49,6 +49,9 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public Map<K, V> getAll(Set<? extends K> keys) {
+        if (keys.isEmpty()) {
+            return Collections.emptyMap();
+        }
         ByteBuffer[] encodedKeys = keys.stream()
                 .map(key -> (K) key)
                 .map(codec::encodeKey)
@@ -81,6 +84,9 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public void putAll(Map<? extends K, ? extends V> map) {
+        if (map.isEmpty()) {
+            return;
+        }
         Map<ByteBuffer, ByteBuffer> encodedKeyValues = map.entrySet().stream()
                 .collect(Collectors.toMap(
                         e -> codec.encodeKey(e.getKey()),
@@ -125,6 +131,9 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public void removeAll(Set<? extends K> keys) {
+        if (keys.isEmpty()) {
+            return;
+        }
         ByteBuffer[] encodedKeys = keys.stream()
                 .map(key -> (K) key)
                 .map(codec::encodeKey)
@@ -138,7 +147,9 @@ public class RedisCache<K, V> implements Cache<K, V> {
         ScanCursor scanCursor = ScanCursor.INITIAL;
         while (!scanCursor.isFinished()) {
             KeyScanCursor<ByteBuffer> keyScanCursor = redis.scan(scanArgs);
-            redis.del(keyScanCursor.getKeys().toArray(new ByteBuffer[0]));
+            if (!keyScanCursor.getKeys().isEmpty()) {
+                redis.del(keyScanCursor.getKeys().toArray(new ByteBuffer[0]));
+            }
             scanCursor = keyScanCursor;
         }
     }
