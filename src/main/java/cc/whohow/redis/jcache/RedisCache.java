@@ -146,7 +146,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
         ScanArgs scanArgs = ScanArgs.Builder.matches(getName() + ":*").limit(100);
         ScanCursor scanCursor = ScanCursor.INITIAL;
         while (!scanCursor.isFinished()) {
-            KeyScanCursor<ByteBuffer> keyScanCursor = redis.scan(scanArgs);
+            KeyScanCursor<ByteBuffer> keyScanCursor = redis.scan(scanCursor, scanArgs);
             if (!keyScanCursor.getKeys().isEmpty()) {
                 redis.del(keyScanCursor.getKeys().toArray(new ByteBuffer[0]));
             }
