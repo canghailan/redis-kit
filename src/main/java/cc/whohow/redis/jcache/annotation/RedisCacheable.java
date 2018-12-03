@@ -36,7 +36,7 @@ public @interface RedisCacheable {
 
     int inProcessCacheMaxEntry() default 1024;
 
-    long inProcessCacheExpiryForUpdate() default 24 * 60 * 60;
+    long inProcessCacheExpiryForUpdate() default 5 * 60;
 
     TimeUnit inProcessCacheExpiryForUpdateTimeUnit() default TimeUnit.SECONDS;
 
