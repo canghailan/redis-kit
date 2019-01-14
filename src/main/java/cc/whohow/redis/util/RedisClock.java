@@ -1,7 +1,13 @@
 package cc.whohow.redis.util;
 
+import cc.whohow.redis.io.ByteBufferCodec;
+import cc.whohow.redis.io.PrimitiveCodec;
+import cc.whohow.redis.lettuce.RedisCodecAdapter;
+import cc.whohow.redis.lettuce.RedisCommandsAdapter;
+import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
 
+import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -22,6 +28,12 @@ public class RedisClock extends Clock {
     public RedisClock(RedisCommands<?, Long> redis, ZoneId zone) {
         this.redis = redis;
         this.zone = zone;
+    }
+
+    public static RedisClock create(StatefulRedisConnection<ByteBuffer, ByteBuffer> connection) {
+        return new RedisClock(new RedisCommandsAdapter<>(
+                connection.sync(),
+                new RedisCodecAdapter<>(new ByteBufferCodec(), PrimitiveCodec.LONG)));
     }
 
     @Override

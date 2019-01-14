@@ -1,7 +1,7 @@
 package cc.whohow.redis;
 
 import cc.whohow.redis.distributed.RedisDistributed;
-import cc.whohow.redis.distributed.RedisDistributedIdGenerator;
+import cc.whohow.redis.distributed.RedisSnowflakeIdGenerator;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import org.junit.AfterClass;
@@ -34,7 +34,8 @@ public class TestDistributed {
 
     @Test
     public void test() throws Exception {
-        try (RedisDistributed distributed = new RedisDistributed(redisClient, redisURI, 256)) {
+        try (RedisDistributed distributed = new RedisDistributed(redisClient, redisURI)) {
+            distributed.gc();
             distributed.run();
             System.out.println(distributed.getId());
             System.out.println(distributed.getNodeIdSet());
@@ -45,12 +46,12 @@ public class TestDistributed {
 
     @Test
     public void testIdGenerator() {
-        try (RedisDistributed distributed = new RedisDistributed(redisClient, redisURI, 256)) {
-            distributed.run();
+        try (RedisDistributed distributed = new RedisDistributed(redisClient, redisURI)) {
             distributed.gc();
+            distributed.run();
             System.out.println(distributed.getId());
 
-            RedisDistributedIdGenerator idGenerator = new RedisDistributedIdGenerator(distributed);
+            RedisSnowflakeIdGenerator idGenerator = new RedisSnowflakeIdGenerator(distributed);
             long timestamp = System.currentTimeMillis();
             for (int i = 0; i < 100; i++) {
                 System.out.println(idGenerator.getAsLong());

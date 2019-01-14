@@ -4,6 +4,7 @@ import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.PrimitiveCodec;
 import cc.whohow.redis.lettuce.ByteBufferCodec;
 import cc.whohow.redis.lettuce.Lettuce;
+import cc.whohow.redis.util.RedisClock;
 import io.lettuce.core.*;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
@@ -11,6 +12,7 @@ import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
 import java.io.Closeable;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.time.Clock;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -25,23 +27,25 @@ public class RedisDistributed implements
         Runnable,
         Closeable,
         RedisConnectionStateListener {
-    protected static final ByteBuffer KEY = ByteBuffers.fromUtf8("RedisDistributed");
-    protected static final ByteBuffer KEY_PREFIX = ByteBuffers.fromUtf8("RedisDistributed:");
-    protected static final ByteBuffer KEY_PATTERN = ByteBuffers.fromUtf8("RedisDistributed:*");
-    protected static final long MAX_DELAY = TimeUnit.MINUTES.toMicros(3L);
+    protected static final ByteBuffer KEY = ByteBuffers.fromUtf8("_rd_");
+    protected static final ByteBuffer KEY_PREFIX = ByteBuffers.fromUtf8("_rd_:");
+    protected static final ByteBuffer KEY_PATTERN = ByteBuffers.fromUtf8("_rd_:*");
+    protected static final int MAX_ID = 65535;
+    protected static final long MAX_DELAY_MS = TimeUnit.MINUTES.toMillis(3L);
     protected final RedisClient redisClient;
     protected final RedisURI redisURI;
     protected final StatefulRedisConnection<ByteBuffer, ByteBuffer> redisConnection;
     protected final StatefulRedisPubSubConnection<ByteBuffer, ByteBuffer> redisPubSubConnection;
-    protected final long size;
+    protected final RedisClock clock;
     protected volatile CompletableFuture<Long> id;
 
-    public RedisDistributed(RedisClient redisClient, RedisURI redisURI, long size) {
+    public RedisDistributed(RedisClient redisClient, RedisURI redisURI) {
         this.redisClient = redisClient;
         this.redisURI = redisURI;
-        this.size = size;
         this.redisConnection = redisClient.connect(ByteBufferCodec.INSTANCE, redisURI);
         this.redisPubSubConnection = redisClient.connectPubSub(ByteBufferCodec.INSTANCE, redisURI);
+        this.clock = RedisClock.create(redisConnection);
+        this.id = new CompletableFuture<>();
     }
 
     public StatefulRedisConnection<ByteBuffer, ByteBuffer> getRedisConnection() {
@@ -53,13 +57,10 @@ public class RedisDistributed implements
     }
 
     /**
-     * Redis服务器时间（Micros）
+     * 分布式时钟
      */
-    public long time() {
-        List<ByteBuffer> time = redisConnection.sync().time();
-        long seconds = PrimitiveCodec.LONG.decode(time.get(0));
-        long microseconds = PrimitiveCodec.LONG.decode(time.get(1));
-        return TimeUnit.SECONDS.toMicros(seconds) + microseconds;
+    public Clock clock() {
+        return clock;
     }
 
     /**
@@ -67,13 +68,6 @@ public class RedisDistributed implements
      */
     public long getId() {
         return id.join();
-    }
-
-    /**
-     * 异步获取当前节点ID
-     */
-    public CompletableFuture<Long> getIdAsync() {
-        return id;
     }
 
     /**
@@ -110,36 +104,12 @@ public class RedisDistributed implements
     }
 
     /**
-     * 启动
-     */
-    @Override
-    @SuppressWarnings("unchecked")
-    public synchronized void run() {
-        resetId();
-        while (true) {
-            long time = time();
-            long newId = nextId();
-            if (redisConnection.sync().zadd(
-                    KEY.duplicate(),
-                    Lettuce.Z_ADD_NX,
-                    ScoredValue.fromNullable(time, encodeId(newId))) > 0) {
-                redisPubSubConnection.sync().subscribe(getNodeKey(newId));
-                id.complete(newId);
-                break;
-            }
-        }
-    }
-
-    /**
      * 关闭
      */
     @Override
     public void close() {
         try {
-            if (id != null) {
-                id.cancel(true);
-                id = null;
-            }
+            id = new CompletableFuture<>();
         } finally {
             close(redisConnection);
             close(redisPubSubConnection);
@@ -150,9 +120,9 @@ public class RedisDistributed implements
      * 回收垃圾数据
      */
     public long gc() {
-        long time = time();
+        long time = clock.millis();
         Set<Long> garbage = redisConnection.sync()
-                .zrangebyscore(KEY.duplicate(), Range.create(0L, time - MAX_DELAY))
+                .zrangebyscore(KEY.duplicate(), Range.create(0L, time - MAX_DELAY_MS))
                 .stream()
                 .map(this::decodeId)
                 .collect(Collectors.toSet());
@@ -171,26 +141,16 @@ public class RedisDistributed implements
 
     @Override
     public void onRedisDisconnected(RedisChannelHandler<?, ?> connection) {
-        resetId();
+        this.id = new CompletableFuture<>();
     }
 
     @Override
     public void onRedisExceptionCaught(RedisChannelHandler<?, ?> connection, Throwable cause) {
     }
 
-    /**
-     * 重置ID
-     */
-    protected synchronized void resetId() {
-        if (id != null) {
-            id.cancel(true);
-        }
-        id = new CompletableFuture<>();
-    }
-
     protected long nextId() {
         List<Long> idSet = getRegisteredNodeIdList();
-        for (long i = 0; i < size; i++) {
+        for (long i = 0; i < MAX_ID; i++) {
             if (!idSet.contains(i)) {
                 return i;
             }
@@ -219,6 +179,25 @@ public class RedisDistributed implements
                 closeable.close();
             }
         } catch (Exception ignore) {
+        }
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public void run() {
+        while (!id.isDone()) {
+            long time = clock.millis();
+            long newId = nextId();
+            if (redisConnection.sync().zadd(
+                    KEY.duplicate(),
+                    Lettuce.Z_ADD_NX,
+                    ScoredValue.just(time, encodeId(newId))) > 0) {
+                redisPubSubConnection.sync().subscribe(getNodeKey(newId));
+                if (!id.isDone()) {
+                    id.complete(newId);
+                }
+                break;
+            }
         }
     }
 }
