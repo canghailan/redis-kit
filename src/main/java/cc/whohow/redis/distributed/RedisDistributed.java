@@ -7,15 +7,14 @@ import cc.whohow.redis.lettuce.Lettuce;
 import cc.whohow.redis.util.RedisClock;
 import io.lettuce.core.*;
 import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.api.sync.RedisCommands;
 import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
 
 import java.io.Closeable;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.time.Clock;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -112,7 +111,7 @@ public class RedisDistributed implements
             id = new CompletableFuture<>();
         } finally {
             close(redisConnection);
-            close(redisPubSubConnection);
+            close(redisConnection);
         }
     }
 
@@ -186,19 +185,37 @@ public class RedisDistributed implements
     @SuppressWarnings("unchecked")
     public void run() {
         while (!id.isDone()) {
-            long time = clock.millis();
-            long newId = nextId();
-            if (redisConnection.sync().zadd(
-                    KEY.duplicate(),
-                    Lettuce.Z_ADD_NX,
-                    ScoredValue.just(time, encodeId(newId))) > 0) {
-                redisPubSubConnection.sync().subscribe(getNodeKey(newId));
-                if (!id.isDone()) {
-                    redisPubSubConnection.sync().clientSetname(ByteBuffers.fromUtf8("rd" + newId));
-                    id.complete(newId);
+            try {
+                long time = clock.millis();
+                long newId = nextId();
+                if (redisConnection.sync().zadd(
+                        KEY.duplicate(),
+                        Lettuce.Z_ADD_NX,
+                        ScoredValue.just(time, encodeId(newId))) > 0) {
+                    redisPubSubConnection.sync().subscribe(getNodeKey(newId));
+                    if (!id.isDone()) {
+                        id.complete(newId);
+                        onIdComplete();
+                    }
+                    break;
                 }
-                break;
+            } catch (Throwable ignore) {
             }
         }
+    }
+
+    protected void onIdComplete() {
+        ByteBuffer nodeKey = getNodeKey(getId());
+        Map<ByteBuffer, ByteBuffer> systemInfo = new SystemInfo().get().entrySet().stream()
+                .collect(Collectors.toMap(
+                        e -> ByteBuffers.fromUtf8(e.getKey()),
+                        e -> ByteBuffers.fromUtf8(e.getValue())));
+
+        RedisCommands<ByteBuffer, ByteBuffer> redis = redisConnection.sync();
+        redis.multi();
+        redis.clientSetname(nodeKey.duplicate());
+        redis.del(nodeKey.duplicate());
+        redis.hmset(nodeKey.duplicate(), systemInfo);
+        redis.exec();
     }
 }
