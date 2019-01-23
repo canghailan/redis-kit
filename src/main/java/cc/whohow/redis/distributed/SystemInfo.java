@@ -54,7 +54,7 @@ public class SystemInfo implements Supplier<Map<String, String>> {
     protected boolean isUsefulInetAddress(InetAddress inetAddress) {
         return !inetAddress.isLoopbackAddress() &&
                 !inetAddress.isLinkLocalAddress() &&
-                !inetAddress.isLoopbackAddress() &&
+                !inetAddress.isAnyLocalAddress() &&
                 !inetAddress.isMulticastAddress();
     }
 }
