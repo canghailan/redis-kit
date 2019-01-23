@@ -198,13 +198,13 @@ public class RedisDistributed implements
                     redisPubSubConnection.sync().subscribe(getNodeKey(newId));
                     if (!id.isDone()) {
                         id.complete(newId);
-                        onIdComplete();
                     }
                     break;
                 }
             } catch (Throwable ignore) {
             }
         }
+        id.thenRun(this::onIdComplete);
     }
 
     protected void onIdComplete() {
