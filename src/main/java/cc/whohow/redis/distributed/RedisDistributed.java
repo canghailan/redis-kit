@@ -194,6 +194,7 @@ public class RedisDistributed implements
                     ScoredValue.just(time, encodeId(newId))) > 0) {
                 redisPubSubConnection.sync().subscribe(getNodeKey(newId));
                 if (!id.isDone()) {
+                    redisPubSubConnection.sync().clientSetname(ByteBuffers.fromUtf8("rd" + newId));
                     id.complete(newId);
                 }
                 break;

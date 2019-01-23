@@ -17,6 +17,7 @@ import java.util.concurrent.locks.LockSupport;
 
 /**
  * Redis简易锁，需根据场景设计好参数，否则会导致异常情况（锁提前失效等）
+ * https://redis.io/topics/distlock
  */
 public class RedisLock implements Lock {
     protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
