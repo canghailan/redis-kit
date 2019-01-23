@@ -1,9 +1,6 @@
 package cc.whohow.redis.distributed;
 
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.LockSupport;
-import java.util.function.LongSupplier;
-import java.util.function.Supplier;
 
 /**
  * Snowflake算法，使用Redis提供时间及Worker ID

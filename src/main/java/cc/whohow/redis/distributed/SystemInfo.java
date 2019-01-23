@@ -30,7 +30,7 @@ public class SystemInfo implements Supplier<Map<String, String>> {
     protected Map<String, String> getNetwork() {
         try {
             StringBuilder info = new StringBuilder();
-            for (NetworkInterface networkInterface : Collections.list(NetworkInterface.getNetworkInterfaces()))  {
+            for (NetworkInterface networkInterface : Collections.list(NetworkInterface.getNetworkInterfaces())) {
                 List<InetAddress> inetAddresses = Collections.list(networkInterface.getInetAddresses()).stream()
                         .filter(this::isUsefulInetAddress)
                         .collect(Collectors.toList());
