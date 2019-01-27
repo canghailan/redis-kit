@@ -152,9 +152,11 @@ public class RedisDistributed implements
                 long t;
                 long i;
                 if (id.isDone()) {
+                    // 如果已注册，心跳保活
                     t = time;
                     i = id.join();
                 } else {
+                    // 如果未注册，加入集群
                     t = clock.millis();
                     i = nextId();
                 }
@@ -167,13 +169,16 @@ public class RedisDistributed implements
                         encode(timeout.toMillis()));
                 if (ok) {
                     if (!id.isDone()) {
+                        // 加入集群，更新ID
                         time = t;
                         id.complete(i);
-                        id.thenRunAsync(this::onChange, executor);
+                        // 异步更新节点信息
+                        id.thenRunAsync(this::onNodeChange, executor);
                     }
                     break;
                 } else {
                     if (id.isDone()) {
+                        // 更新失败，重置节点
                         id = new CompletableFuture<>();
                     }
                 }
@@ -192,7 +197,7 @@ public class RedisDistributed implements
         throw new IllegalStateException();
     }
 
-    protected void onChange() {
+    protected void onNodeChange() {
         set(new SystemInfo().get());
     }
 
