@@ -7,7 +7,10 @@ import java.lang.annotation.*;
 @Documented
 public @interface RedisScheduled {
     String key();
+
     String min() default "PT1M";
+
     String max();
+
     int retry() default 0;
 }

@@ -51,11 +51,17 @@ public class TestLock {
 
     @Test
     public void testLock() throws Exception {
-        RedisLock lock = new RedisLock(redis, "lock:test", Duration.ofMinutes(1), Duration.ofMinutes(30));
+        RedisLock lock1 = new RedisLock(redis, "lock:test", Duration.ofMinutes(1), Duration.ofMinutes(30));
+        RedisLock lock2 = new RedisLock(redis, "lock:test", Duration.ofMinutes(1), Duration.ofMinutes(30));
         for (int i = 0; i < 10; i++) {
-            executor.submit(new Task1(lock));
+            executor.submit(new Task1(lock1));
         }
-        executor.submit(new Task2(lock));
+        for (int i = 0; i < 10; i++) {
+            executor.submit(new Task1(lock2));
+        }
+        executor.submit(new Task2(lock1));
+        executor.submit(new Task2(lock1));
+        executor.submit(new Task2(lock1));
         executor.awaitTermination(10, TimeUnit.MINUTES);
     }
 

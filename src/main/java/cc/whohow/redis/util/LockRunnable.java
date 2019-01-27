@@ -1,4 +1,4 @@
-package cc.whohow.redis.spring.scheduling;
+package cc.whohow.redis.util;
 
 import java.util.concurrent.locks.Lock;
 

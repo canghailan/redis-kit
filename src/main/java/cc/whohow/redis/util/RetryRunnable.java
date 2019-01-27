@@ -1,4 +1,4 @@
-package cc.whohow.redis.spring.scheduling;
+package cc.whohow.redis.util;
 
 public class RetryRunnable implements Runnable {
     private final Runnable runnable;

@@ -36,6 +36,8 @@ public class RedisCacheManager implements
         CacheManager,
         RedisConnectionStateListener,
         RedisPubSubListener<ByteBuffer, ByteBuffer> {
+    protected static final ByteBuffer KEY = ByteBuffers.fromUtf8("_cache_");
+
     /**
      * Redis URI
      */
@@ -59,7 +61,7 @@ public class RedisCacheManager implements
 
         this.keyspace = "__keyspace@" + redisURI.getDatabase() + "__:";
         this.encodedKeyspace = ByteBuffers.fromUtf8(keyspace);
-        this.redisPubSubConnection.sync().subscribe(ByteBuffers.fromUtf8("RedisCacheManager"));
+        this.redisPubSubConnection.sync().subscribe(KEY.duplicate());
         this.redisPubSubConnection.sync().psubscribe(ByteBuffers.fromUtf8(keyspace + "*"));
         RedisCachingProvider.getInstance().addCacheManager(this);
     }
@@ -255,7 +257,7 @@ public class RedisCacheManager implements
     }
 
     private boolean isCacheManagerNotification(ByteBuffer channel) {
-        return true;
+        return ByteBuffers.contentEquals(channel, KEY);
     }
 
     private void onCacheManagerNotification(String message) {
@@ -302,12 +304,10 @@ public class RedisCacheManager implements
         return redisConnection.sync();
     }
 
-    public String getConfig(String key, String defaultValue) {
-        return redisConnection.sync().configGet(key).getOrDefault(key, defaultValue);
-    }
-
     public void enableKeyspaceNotification() {
-        String value = getConfig("notify-keyspace-events", "");
+        RedisCommands<ByteBuffer, ByteBuffer> redis = redisConnection.sync();
+        String value = redis.configGet("notify-keyspace-events")
+                .getOrDefault("notify-keyspace-events", "");
         if (value.contains("K") && value.contains("A")) {
             return;
         }
@@ -316,7 +316,7 @@ public class RedisCacheManager implements
         } else {
             value = "KA";
         }
-        redisConnection.sync().configSet("notify-keyspace-events", value);
+        redis.configSet("notify-keyspace-events", value);
     }
 
     @Override

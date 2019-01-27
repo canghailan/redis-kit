@@ -4,6 +4,7 @@ import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.PrimitiveCodec;
 import cc.whohow.redis.lettuce.ByteBufferCodec;
 import cc.whohow.redis.lettuce.Lettuce;
+import cc.whohow.redis.script.RedisScriptCommands;
 import cc.whohow.redis.util.RedisClock;
 import io.lettuce.core.*;
 import io.lettuce.core.api.StatefulRedisConnection;
@@ -14,12 +15,9 @@ import java.io.Closeable;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.time.Clock;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 /**
@@ -31,14 +29,17 @@ public class RedisDistributed implements
         RedisConnectionStateListener {
     protected static final ByteBuffer KEY = ByteBuffers.fromUtf8("_rd_");
     protected static final ByteBuffer KEY_PREFIX = ByteBuffers.fromUtf8("_rd_:");
-    protected static final ByteBuffer KEY_PATTERN = ByteBuffers.fromUtf8("_rd_:*");
-    protected static final int MAX_ID = 65535;
-    protected static final long MAX_DELAY_MS = TimeUnit.MINUTES.toMillis(3L);
+    protected static final ByteBuffer GC_LOCK = ByteBuffers.fromUtf8("_rd_gc_");
+    protected final ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+    protected final int maxId = 65535;
+    protected final Duration timeout = Duration.ofSeconds(30);
     protected final RedisClient redisClient;
     protected final RedisURI redisURI;
     protected final StatefulRedisConnection<ByteBuffer, ByteBuffer> redisConnection;
     protected final StatefulRedisPubSubConnection<ByteBuffer, ByteBuffer> redisPubSubConnection;
     protected final RedisClock clock;
+    protected final ByteBuffer random;
+    protected volatile long time;
     protected volatile CompletableFuture<Long> id;
 
     public RedisDistributed(RedisClient redisClient, RedisURI redisURI) {
@@ -47,7 +48,10 @@ public class RedisDistributed implements
         this.redisConnection = redisClient.connect(ByteBufferCodec.INSTANCE, redisURI);
         this.redisPubSubConnection = redisClient.connectPubSub(ByteBufferCodec.INSTANCE, redisURI);
         this.clock = RedisClock.create(redisConnection);
+        this.random = ByteBuffers.fromUtf8(UUID.randomUUID().toString());
         this.id = new CompletableFuture<>();
+        this.executor.scheduleAtFixedRate(this, 0, timeout.toMillis() / 3, TimeUnit.MILLISECONDS);
+        this.executor.scheduleWithFixedDelay(this::gc, 0, timeout.toMillis() / 2, TimeUnit.MILLISECONDS);
     }
 
     public StatefulRedisConnection<ByteBuffer, ByteBuffer> getRedisConnection() {
@@ -75,21 +79,9 @@ public class RedisDistributed implements
     /**
      * 获取在线节点集合
      */
-    public Set<Long> getNodeIdSet() {
-        return redisConnection.sync()
-                .pubsubChannels(KEY_PATTERN.duplicate()).stream()
-                .map(self -> ByteBuffers.slice(self, KEY_PREFIX.remaining()))
-                .map(this::decodeId)
-                .collect(Collectors.toCollection(TreeSet::new));
-    }
-
-    /**
-     * 获取已注册节点集合
-     */
-    public List<Long> getRegisteredNodeIdList() {
-        return redisConnection.sync()
-                .zrange(KEY.duplicate(), 0, -1).stream()
-                .map(this::decodeId)
+    public Collection<Long> getNodeIdSet() {
+        return redisConnection.sync().zrange(KEY.duplicate(), 0, -1).stream()
+                .map(this::decodeLong)
                 .collect(Collectors.toList());
     }
 
@@ -97,12 +89,20 @@ public class RedisDistributed implements
      * 获取领导者ID
      */
     public Long getLeaderId() {
-        List<Long> registeredIdList = getRegisteredNodeIdList();
-        Set<Long> idSet = getNodeIdSet();
-        return registeredIdList.stream()
-                .filter(idSet::contains)
+        return redisConnection.sync().zrange(KEY.duplicate(), 0, 0).stream()
                 .findFirst()
+                .map(this::decodeLong)
                 .orElse(null);
+    }
+
+    /**
+     * 获取领导者ID
+     */
+    public boolean isLeader() {
+        if (id.isDone()) {
+            return Objects.equals(getId(), getLeaderId());
+        }
+        return false;
     }
 
     /**
@@ -111,29 +111,17 @@ public class RedisDistributed implements
     @Override
     public void close() {
         try {
-            id = new CompletableFuture<>();
+            synchronized (this) {
+                if (id.isDone()) {
+                    id = new CompletableFuture<>();
+                }
+                id.cancel(true);
+            }
         } finally {
             close(redisConnection);
-            close(redisConnection);
+            close(redisPubSubConnection);
+            close(executor);
         }
-    }
-
-    /**
-     * 回收垃圾数据
-     */
-    public long gc() {
-        long time = clock.millis();
-        Set<Long> garbage = redisConnection.sync()
-                .zrangebyscore(KEY.duplicate(), Range.create(0L, time - MAX_DELAY_MS))
-                .stream()
-                .map(this::decodeId)
-                .collect(Collectors.toSet());
-        garbage.removeAll(getNodeIdSet());
-        if (garbage.isEmpty()) {
-            return 0;
-        }
-        return redisConnection.sync()
-                .zrem(KEY.duplicate(), garbage.stream().map(this::encodeId).toArray(ByteBuffer[]::new));
     }
 
     @Override
@@ -143,16 +131,60 @@ public class RedisDistributed implements
 
     @Override
     public void onRedisDisconnected(RedisChannelHandler<?, ?> connection) {
-        this.id = new CompletableFuture<>();
+        synchronized (this) {
+            if (id.isDone()) {
+                id = new CompletableFuture<>();
+            }
+            id.cancel(true);
+        }
     }
 
     @Override
     public void onRedisExceptionCaught(RedisChannelHandler<?, ?> connection, Throwable cause) {
     }
 
+    @Override
+    @SuppressWarnings("unchecked")
+    public synchronized void run() {
+        RedisScriptCommands redisScript = new RedisScriptCommands(redisConnection.sync());
+        while (true) {
+            try {
+                long t;
+                long i;
+                if (id.isDone()) {
+                    t = time;
+                    i = id.join();
+                } else {
+                    t = clock.millis();
+                    i = nextId();
+                }
+                ByteBuffer nodeKey = getNodeKey(i);
+                boolean ok = redisScript.eval("rd", ScriptOutputType.BOOLEAN,
+                        new ByteBuffer[]{KEY.duplicate(), nodeKey.duplicate()},
+                        encode(i),
+                        random.duplicate(),
+                        encode(t),
+                        encode(timeout.toMillis()));
+                if (ok) {
+                    if (!id.isDone()) {
+                        time = t;
+                        id.complete(i);
+                        id.thenRunAsync(this::onChange, executor);
+                    }
+                    break;
+                } else {
+                    if (id.isDone()) {
+                        id = new CompletableFuture<>();
+                    }
+                }
+            } catch (Throwable ignore) {
+            }
+        }
+    }
+
     protected long nextId() {
-        List<Long> idSet = getRegisteredNodeIdList();
-        for (long i = 0; i < MAX_ID; i++) {
+        Collection<Long> idSet = getNodeIdSet();
+        for (long i = 0; i < maxId; i++) {
             if (!idSet.contains(i)) {
                 return i;
             }
@@ -160,19 +192,69 @@ public class RedisDistributed implements
         throw new IllegalStateException();
     }
 
+    protected void onChange() {
+        set(new SystemInfo().get());
+    }
+
+    public void set(Map<String, String> data) {
+        ByteBuffer nodeKey = getNodeKey(getId());
+        Map<ByteBuffer, ByteBuffer> encoded = data.entrySet().stream()
+                .collect(Collectors.toMap(
+                        e -> encode(e.getKey()),
+                        e -> encode(e.getValue())));
+
+        RedisCommands<ByteBuffer, ByteBuffer> redis = redisConnection.sync();
+        redis.hmset(nodeKey.duplicate(), encoded);
+        redis.pexpire(nodeKey.duplicate(), timeout.toMillis());
+    }
+
+    /**
+     * 回收垃圾数据
+     */
+    public void gc() {
+        RedisCommands<ByteBuffer, ByteBuffer> redis = redisConnection.sync();
+        if (!Lettuce.ok(redis.set(GC_LOCK.duplicate(), random.duplicate(),
+                new SetArgs().px(timeout.toMillis() / 2).nx()))) {
+            return;
+        }
+
+        Collection<Long> idSet = getNodeIdSet();
+        if (idSet.isEmpty()) {
+            return;
+        }
+        List<ByteBuffer> keys = new ArrayList<>(idSet.size() + 1);
+        List<ByteBuffer> argv = new ArrayList<>(idSet.size());
+        for (Long id : idSet) {
+            keys.add(getNodeKey(id));
+            argv.add(encode(id));
+        }
+        keys.add(KEY.duplicate());
+
+        new RedisScriptCommands(redis).eval("rd-gc", ScriptOutputType.VALUE,
+                keys.toArray(new ByteBuffer[0]), argv.toArray(new ByteBuffer[0]));
+    }
+
     /**
      * 获取节点Redis Key
      */
     public ByteBuffer getNodeKey(Long id) {
-        return ByteBuffers.concat(KEY_PREFIX.duplicate(), encodeId(id));
+        return getNodeKey(encode(id));
     }
 
-    private ByteBuffer encodeId(Long id) {
-        return PrimitiveCodec.LONG.encode(id);
+    private ByteBuffer getNodeKey(ByteBuffer id) {
+        return ByteBuffers.concat(KEY_PREFIX, id);
     }
 
-    private Long decodeId(ByteBuffer byteBuffer) {
-        return PrimitiveCodec.LONG.decode(byteBuffer);
+    private Long decodeLong(ByteBuffer byteBuffer) {
+        return PrimitiveCodec.LONG.decode(byteBuffer.duplicate());
+    }
+
+    protected ByteBuffer encode(CharSequence text) {
+        return ByteBuffers.fromUtf8(text);
+    }
+
+    protected ByteBuffer encode(long number) {
+        return PrimitiveCodec.LONG.encode(number);
     }
 
     private void close(AutoCloseable closeable) {
@@ -184,41 +266,13 @@ public class RedisDistributed implements
         }
     }
 
-    @Override
-    @SuppressWarnings("unchecked")
-    public void run() {
-        while (!id.isDone()) {
-            try {
-                long time = clock.millis();
-                long newId = nextId();
-                if (redisConnection.sync().zadd(
-                        KEY.duplicate(),
-                        Lettuce.Z_ADD_NX,
-                        ScoredValue.just(time, encodeId(newId))) > 0) {
-                    redisPubSubConnection.sync().subscribe(getNodeKey(newId));
-                    if (!id.isDone()) {
-                        id.complete(newId);
-                    }
-                    break;
-                }
-            } catch (Throwable ignore) {
+    private void close(ExecutorService executor) {
+        try {
+            if (executor != null) {
+                executor.shutdown();
+                executor.awaitTermination(3, TimeUnit.SECONDS);
             }
+        } catch (Exception ignore) {
         }
-        id.thenRun(this::onIdComplete);
-    }
-
-    protected void onIdComplete() {
-        ByteBuffer nodeKey = getNodeKey(getId());
-        Map<ByteBuffer, ByteBuffer> systemInfo = new SystemInfo().get().entrySet().stream()
-                .collect(Collectors.toMap(
-                        e -> ByteBuffers.fromUtf8(e.getKey()),
-                        e -> ByteBuffers.fromUtf8(e.getValue())));
-
-        RedisCommands<ByteBuffer, ByteBuffer> redis = redisConnection.sync();
-        redis.multi();
-        redis.clientSetname(nodeKey.duplicate());
-        redis.del(nodeKey.duplicate());
-        redis.hmset(nodeKey.duplicate(), systemInfo);
-        redis.exec();
     }
 }

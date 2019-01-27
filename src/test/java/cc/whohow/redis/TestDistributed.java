@@ -11,6 +11,7 @@ import org.junit.Test;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 public class TestDistributed {
     private static RedisClient redisClient = RedisClient.create();
@@ -40,7 +41,8 @@ public class TestDistributed {
             System.out.println(distributed.getId());
             System.out.println(distributed.getNodeIdSet());
             System.out.println(distributed.getLeaderId());
-            System.out.println(distributed.gc());
+
+            Thread.sleep(TimeUnit.MINUTES.toMillis(5));
         }
     }
 

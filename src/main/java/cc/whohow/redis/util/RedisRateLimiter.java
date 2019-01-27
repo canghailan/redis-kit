@@ -1,15 +1,12 @@
 package cc.whohow.redis.util;
 
 import cc.whohow.redis.io.ByteBuffers;
-import cc.whohow.redis.io.PrimitiveCodec;
 import cc.whohow.redis.script.RedisScriptCommands;
-import io.lettuce.core.ScriptOutputType;
 import io.lettuce.core.api.sync.RedisCommands;
 
 import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.LockSupport;
 
 /**
  * Redis限流器
@@ -45,7 +42,7 @@ public class RedisRateLimiter {
         if (tryAcquire(permits)) {
             return 0;
         }
-        return redis.ttl(key.duplicate());
+        throw new UnsupportedOperationException();
     }
 
     public boolean tryAcquire() {
@@ -56,11 +53,7 @@ public class RedisRateLimiter {
         if (permits <= 0) {
             throw new IllegalArgumentException();
         }
-        Number value = redisScriptCommands.eval("pincrbyex", ScriptOutputType.INTEGER,
-                new ByteBuffer[]{key.duplicate()},
-                PrimitiveCodec.LONG.encode(perMilliseconds),
-                PrimitiveCodec.INTEGER.encode(permits));
-        return value.longValue() <= maxPermits;
+        throw new UnsupportedOperationException();
     }
 
     public boolean tryAcquire(long timeout, TimeUnit unit) {
@@ -68,24 +61,6 @@ public class RedisRateLimiter {
     }
 
     public boolean tryAcquire(int permits, long timeout, TimeUnit unit) {
-        long timestamp = System.currentTimeMillis();
-        if (tryAcquire(permits)) {
-            return true;
-        }
-        long wait = unit.toMillis(timeout);
-        while (System.currentTimeMillis() - timestamp < wait) {
-            long ttl = redis.pttl(key.duplicate());
-            if (ttl > wait) {
-                return false;
-            }
-            LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(ttl));
-            if (Thread.interrupted()) {
-                throw new IllegalStateException(new InterruptedException());
-            }
-            if (tryAcquire(permits)) {
-                return true;
-            }
-        }
-        return false;
+        throw new UnsupportedOperationException();
     }
 }
