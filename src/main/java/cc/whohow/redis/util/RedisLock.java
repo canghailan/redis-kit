@@ -1,10 +1,10 @@
 package cc.whohow.redis.util;
 
 import cc.whohow.redis.io.ByteBuffers;
-import cc.whohow.redis.io.PrimitiveCodec;
 import cc.whohow.redis.lettuce.Lettuce;
 import cc.whohow.redis.script.RedisScriptCommands;
 import io.lettuce.core.ScriptOutputType;
+import io.lettuce.core.SetArgs;
 import io.lettuce.core.api.sync.RedisCommands;
 
 import java.nio.ByteBuffer;
@@ -14,18 +14,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.LockSupport;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Redis简易锁，需根据场景设计好参数，否则会导致异常情况（锁提前失效等）
  * https://redis.io/topics/distlock
  */
 public class RedisLock implements Lock {
-    protected static final ByteBuffer PX = ByteBuffers.fromUtf8("PX");
     protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
     protected final RedisScriptCommands redisScriptCommands;
 
-    protected final ReentrantLock lock = new ReentrantLock();
     /**
      * 锁ID
      */
@@ -41,21 +38,21 @@ public class RedisLock implements Lock {
     /**
      * 锁秘钥，用于处理误解除非自己持有的锁
      */
-    protected final ByteBuffer random;
+    protected final ByteBuffer token;
 
     public RedisLock(RedisCommands<ByteBuffer, ByteBuffer> redis, String key, Duration maxLockTime) {
         this(redis, key, Duration.ZERO, maxLockTime);
     }
 
-    public RedisLock(RedisCommands<ByteBuffer, ByteBuffer> redis, String key, Duration maxLockTime, String random) {
-        this(redis, key, Duration.ZERO, maxLockTime, random);
+    public RedisLock(RedisCommands<ByteBuffer, ByteBuffer> redis, String key, Duration maxLockTime, String token) {
+        this(redis, key, Duration.ZERO, maxLockTime, token);
     }
 
     public RedisLock(RedisCommands<ByteBuffer, ByteBuffer> redis, String key, Duration minLockTime, Duration maxLockTime) {
         this(redis, key, minLockTime, maxLockTime, UUID.randomUUID().toString());
     }
 
-    public RedisLock(RedisCommands<ByteBuffer, ByteBuffer> redis, String key, Duration minLockTime, Duration maxLockTime, String random) {
+    public RedisLock(RedisCommands<ByteBuffer, ByteBuffer> redis, String key, Duration minLockTime, Duration maxLockTime, String token) {
         if (minLockTime.compareTo(maxLockTime) > 0) {
             throw new IllegalArgumentException();
         }
@@ -64,7 +61,7 @@ public class RedisLock implements Lock {
         this.key = ByteBuffers.fromUtf8(key);
         this.minLockTimeMillis = minLockTime.toMillis();
         this.maxLockTimeMillis = maxLockTime.toMillis();
-        this.random = ByteBuffers.fromUtf8(random);
+        this.token = ByteBuffers.fromUtf8(token);
     }
 
     /**
@@ -100,28 +97,8 @@ public class RedisLock implements Lock {
      */
     @Override
     public boolean tryLock() {
-        // 1. 获取本地锁
-        if (lock.tryLock()) {
-            try {
-                // 2. cas锁定redis
-                String reply = redisScriptCommands.eval("cas", ScriptOutputType.STATUS,
-                        new ByteBuffer[]{key.duplicate()},
-                        random.duplicate(),
-                        random.duplicate(),
-                        PX.duplicate(),
-                        PrimitiveCodec.LONG.encode(maxLockTimeMillis));
-                if (Lettuce.ok(reply)) {
-                    // 3. redis锁定成功，本地重入，保证unlock后仍持有锁
-                    lock.tryLock();
-                    return true;
-                } else {
-                    return false;
-                }
-            } finally {
-                lock.unlock();
-            }
-        }
-        return false;
+        SetArgs setArgs = SetArgs.Builder.nx().px(maxLockTimeMillis);
+        return Lettuce.ok(redis.set(key.duplicate(), token.duplicate(), setArgs));
     }
 
     /**
@@ -145,35 +122,16 @@ public class RedisLock implements Lock {
     /**
      * 解锁
      *
-     * @throws IllegalStateException unexpected random value
+     * @throws IllegalStateException unexpected token
      */
     @Override
     public void unlock() {
-        // 1. 本地解锁
-        lock.unlock();
-        if (lock.isLocked()) {
-            // 2. 本地仍锁定，重入状态，redis不解锁
-            return;
+        long n = redisScriptCommands.eval("cad", ScriptOutputType.INTEGER,
+                new ByteBuffer[]{key.duplicate()},
+                token.duplicate());
+        if (n == 0) {
+            throw new IllegalStateException();
         }
-        if (lock.tryLock()) {
-            // 3. 加锁，防止并发修改
-            try {
-                // 4. redis解锁
-                long n = redisScriptCommands.eval("cad", ScriptOutputType.INTEGER,
-                        new ByteBuffer[]{key.duplicate()},
-                        random.duplicate());
-                if (n == 0) {
-                    // 5. redis解锁失败
-                    throw new IllegalStateException();
-                }
-            } finally {
-                // 6. 本地解除所有锁定
-                while (lock.isLocked()) {
-                    lock.unlock();
-                }
-            }
-        }
-        // 并发重新锁定
     }
 
     @Override

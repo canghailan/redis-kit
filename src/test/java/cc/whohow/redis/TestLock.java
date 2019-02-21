@@ -76,17 +76,17 @@ public class TestLock {
         public void run() {
             Thread thread = Thread.currentThread();
             if (lock.tryLock()) {
-                System.out.println(lock + " get lock @" + thread.getName());
+                System.out.println(thread.getName() + "\t get lock " + lock);
                 try {
                     Thread.sleep(5000L);
                 } catch (Throwable e) {
                     e.printStackTrace();
                 } finally {
                     lock.unlock();
-                    System.out.println(lock + " unlock @" + thread.getName());
+                    System.out.println(thread.getName() + "\t unlock " + lock);
                 }
             } else {
-                System.out.println(lock + " get lock failed @" + thread.getName());
+                System.out.println(thread.getName() + "\t get lock failed " + lock);
             }
         }
     }
@@ -101,16 +101,16 @@ public class TestLock {
         @Override
         public void run() {
             Thread thread = Thread.currentThread();
-            System.out.println(lock + " wait lock @" + thread.getName());
+            System.out.println(thread.getName() + "\t wait lock " + lock);
             lock.lock();
-            System.out.println(lock + " get lock @" + thread.getName());
+            System.out.println(thread.getName() + "\t get lock " + lock);
             try {
                 Thread.sleep(5000L);
             } catch (Throwable e) {
                 e.printStackTrace();
             } finally {
                 lock.unlock();
-                System.out.println(lock + " unlock @" + thread.getName());
+                System.out.println(thread.getName() + "\t unlock " + lock);
             }
         }
     }

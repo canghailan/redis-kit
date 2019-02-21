@@ -11,8 +11,8 @@ import java.util.function.IntConsumer;
 public class BufferAllocationPredictor implements IntConsumer {
     private final LongAdder count = new LongAdder();
     private final DoubleAdder sum = new DoubleAdder();
-    private final LongAccumulator min = new LongAccumulator(Long::min, 0);
-    private final LongAccumulator max = new LongAccumulator(Long::max, 0);
+    private final LongAccumulator min = new LongAccumulator(Long::min, Long.MAX_VALUE);
+    private final LongAccumulator max = new LongAccumulator(Long::max, Long.MIN_VALUE);
     private final int initial;
     private final int threshold;
 
@@ -32,7 +32,7 @@ public class BufferAllocationPredictor implements IntConsumer {
         }
         count.increment();
         sum.add(value);
-        min.accumulate(-value);
+        min.accumulate(value);
         max.accumulate(value);
     }
 
@@ -45,11 +45,13 @@ public class BufferAllocationPredictor implements IntConsumer {
     }
 
     public int getMin() {
-        return -min.intValue();
+        int value = min.intValue();
+        return value == Integer.MAX_VALUE ? 0 : value;
     }
 
     public int getMax() {
-        return max.intValue();
+        int value = max.intValue();
+        return value == Integer.MIN_VALUE ? 0 : value;
     }
 
     public int getPredicted() {
