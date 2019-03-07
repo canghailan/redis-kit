@@ -14,6 +14,8 @@ if not value or value == ARGV[1] then
         return redis.call('set', KEYS[1], ARGV[2], ARGV[3], ARGV[4])
     elseif n == 5 then
         return redis.call('set', KEYS[1], ARGV[2], ARGV[3], ARGV[4], ARGV[5])
+    else
+        return false
     end
 end
 return false
