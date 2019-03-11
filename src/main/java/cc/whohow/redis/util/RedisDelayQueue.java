@@ -50,8 +50,8 @@ public class RedisDelayQueue<E> implements BlockingQueue<DelayedValue<E>> {
         return clock;
     }
 
-    public long getPollInterval() {
-        return this.pollInterval.get();
+    public Duration getPollInterval() {
+        return Duration.ofMillis(this.pollInterval.get());
     }
 
     public void setPollInterval(Duration pollInterval) {
@@ -80,12 +80,24 @@ public class RedisDelayQueue<E> implements BlockingQueue<DelayedValue<E>> {
 
     @Override
     public int drainTo(Collection<? super DelayedValue<E>> c) {
-        return 0;
+        return drainTo(c, Integer.MAX_VALUE);
     }
 
     @Override
     public int drainTo(Collection<? super DelayedValue<E>> c, int maxElements) {
-        return 0;
+        long time = clock.millis();
+        List<ByteBuffer> result = redisScriptCommands.eval("zremrangebyscore", ScriptOutputType.MULTI,
+                new ByteBuffer[]{key.duplicate()},
+                ZERO.duplicate(),
+                PrimitiveCodec.LONG.encode(time),
+                WITHSCORES.duplicate(),
+                LIMIT.duplicate(),
+                ZERO.duplicate(),
+                PrimitiveCodec.INTEGER.encode(maxElements));
+        for (int i = 0; i < result.size(); i+=2) {
+            c.add(new TimestampedValue<>(codec.decode(result.get(i)), PrimitiveCodec.LONG.decode(result.get(i + 1))));
+        }
+        return result.size() / 2;
     }
 
     /**
