@@ -12,18 +12,22 @@ import io.lettuce.core.api.sync.RedisCommands;
 
 import java.nio.ByteBuffer;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Reids延迟队列
  */
-public class RedisDelayQueue<E> implements Queue<DelayedValue<E>> {
+public class RedisDelayQueue<E> implements BlockingQueue<DelayedValue<E>> {
     private static final ByteBuffer ZERO = PrimitiveCodec.INTEGER.encode(0);
     private static final ByteBuffer ONE = PrimitiveCodec.INTEGER.encode(1);
     private static final ByteBuffer WITHSCORES = ByteBuffers.fromUtf8("WITHSCORES");
     private static final ByteBuffer LIMIT = ByteBuffers.fromUtf8("LIMIT");
 
+    protected final AtomicLong pollInterval = new AtomicLong(1000);
     protected final RedisCommands<ByteBuffer, E> redis;
     protected final RedisScriptCommands redisScriptCommands;
     protected final ByteBuffer key;
@@ -42,6 +46,22 @@ public class RedisDelayQueue<E> implements Queue<DelayedValue<E>> {
         this(redis, codec, key, RedisClock.create(redis.getStatefulConnection()));
     }
 
+    public Clock getClock() {
+        return clock;
+    }
+
+    public long getPollInterval() {
+        return this.pollInterval.get();
+    }
+
+    public void setPollInterval(Duration pollInterval) {
+        this.pollInterval.set(pollInterval.toMillis());
+    }
+
+    public void setPollInterval(long pollInterval, TimeUnit unit) {
+        this.pollInterval.set(unit.toMillis(pollInterval));
+    }
+
     @Override
     public int size() {
         return redis.zcard(key.duplicate()).intValue();
@@ -56,6 +76,16 @@ public class RedisDelayQueue<E> implements Queue<DelayedValue<E>> {
     @SuppressWarnings("unchecked")
     public boolean contains(Object o) {
         return redis.zscore(this.key.duplicate(), (E) key) != null;
+    }
+
+    @Override
+    public int drainTo(Collection<? super DelayedValue<E>> c) {
+        return 0;
+    }
+
+    @Override
+    public int drainTo(Collection<? super DelayedValue<E>> c, int maxElements) {
+        return 0;
     }
 
     /**
@@ -138,6 +168,45 @@ public class RedisDelayQueue<E> implements Queue<DelayedValue<E>> {
     }
 
     @Override
+    public void put(DelayedValue<E> delayedValue) throws InterruptedException {
+        add(delayedValue);
+    }
+
+    @Override
+    public boolean offer(DelayedValue<E> delayedValue, long timeout, TimeUnit unit) throws InterruptedException {
+        return offer(delayedValue);
+    }
+
+    @Override
+    public DelayedValue<E> take() throws InterruptedException {
+        while (true) {
+            DelayedValue<E> value = poll();
+            if (value != null) {
+                return value;
+            }
+            Thread.sleep(pollInterval.get());
+        }
+    }
+
+    @Override
+    public DelayedValue<E> poll(long timeout, TimeUnit unit) throws InterruptedException {
+        long t = System.currentTimeMillis() + unit.toMillis(timeout);
+        while (System.currentTimeMillis() < t){
+            DelayedValue<E> value = poll();
+            if (value != null) {
+                return value;
+            }
+            Thread.sleep(pollInterval.get());
+        }
+        return null;
+    }
+
+    @Override
+    public int remainingCapacity() {
+        return Integer.MAX_VALUE;
+    }
+
+    @Override
     public DelayedValue<E> remove() {
         DelayedValue<E> e = poll();
         if (e == null) {
@@ -157,6 +226,9 @@ public class RedisDelayQueue<E> implements Queue<DelayedValue<E>> {
                 LIMIT.duplicate(),
                 ZERO.duplicate(),
                 ONE.duplicate());
+        if (result.size() < 2) {
+            return null;
+        }
         return new TimestampedValue<>(codec.decode(result.get(0)), PrimitiveCodec.LONG.decode(result.get(1)));
     }
 
