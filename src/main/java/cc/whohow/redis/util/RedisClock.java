@@ -1,10 +1,6 @@
 package cc.whohow.redis.util;
 
-import cc.whohow.redis.io.ByteBufferCodec;
 import cc.whohow.redis.io.PrimitiveCodec;
-import cc.whohow.redis.lettuce.RedisCodecAdapter;
-import cc.whohow.redis.lettuce.RedisCommandsAdapter;
-import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
 
 import java.nio.ByteBuffer;
@@ -18,22 +14,16 @@ import java.util.concurrent.TimeUnit;
  * Redis时钟
  */
 public class RedisClock extends Clock {
-    protected final RedisCommands<?, Long> redis;
+    protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
     protected final ZoneId zone;
 
-    public RedisClock(RedisCommands<?, Long> redis) {
+    public RedisClock(RedisCommands<ByteBuffer, ByteBuffer> redis) {
         this(redis, ZoneId.systemDefault());
     }
 
-    public RedisClock(RedisCommands<?, Long> redis, ZoneId zone) {
+    public RedisClock(RedisCommands<ByteBuffer, ByteBuffer> redis, ZoneId zone) {
         this.redis = redis;
         this.zone = zone;
-    }
-
-    public static RedisClock create(StatefulRedisConnection<ByteBuffer, ByteBuffer> connection) {
-        return new RedisClock(new RedisCommandsAdapter<>(
-                connection.sync(),
-                new RedisCodecAdapter<>(new ByteBufferCodec(), PrimitiveCodec.LONG)));
     }
 
     @Override
@@ -48,13 +38,17 @@ public class RedisClock extends Clock {
 
     @Override
     public Instant instant() {
-        List<Long> time = redis.time();
-        return Instant.ofEpochSecond(time.get(0), TimeUnit.MICROSECONDS.toNanos(time.get(1)));
+        List<ByteBuffer> time = redis.time();
+        long s = PrimitiveCodec.LONG.decode(time.get(0));
+        long ss = PrimitiveCodec.LONG.decode(time.get(1));
+        return Instant.ofEpochSecond(s, TimeUnit.MICROSECONDS.toNanos(ss));
     }
 
     @Override
     public long millis() {
-        List<Long> time = redis.time();
-        return TimeUnit.SECONDS.toMillis(time.get(0)) + TimeUnit.MICROSECONDS.toMillis(time.get(1));
+        List<ByteBuffer> time = redis.time();
+        long s = PrimitiveCodec.LONG.decode(time.get(0));
+        long ss = PrimitiveCodec.LONG.decode(time.get(1));
+        return TimeUnit.SECONDS.toMillis(s) + TimeUnit.MICROSECONDS.toMillis(ss);
     }
 }

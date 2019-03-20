@@ -2,8 +2,6 @@ package cc.whohow.redis.util;
 
 import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.Codec;
-import cc.whohow.redis.lettuce.RedisCommandsAdapter;
-import cc.whohow.redis.lettuce.RedisValueCodecAdapter;
 import io.lettuce.core.api.sync.RedisCommands;
 
 import java.nio.ByteBuffer;
@@ -13,16 +11,26 @@ import java.util.*;
  * 集合、缓冲队列
  */
 public class RedisSet<E> implements Set<E>, Queue<E> {
-    protected final RedisCommands<ByteBuffer, E> redis;
+    protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
+    protected final Codec<E> codec;
     protected final ByteBuffer key;
 
-    public RedisSet(RedisCommands<ByteBuffer, E> redis, ByteBuffer key) {
+    public RedisSet(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, String key) {
+        this(redis, codec, ByteBuffers.fromUtf8(key));
+    }
+
+    public RedisSet(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, ByteBuffer key) {
         this.redis = redis;
+        this.codec = codec;
         this.key = key;
     }
 
-    public RedisSet(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, String key) {
-        this(new RedisCommandsAdapter<>(redis, new RedisValueCodecAdapter<>(codec)), ByteBuffers.fromUtf8(key));
+    protected ByteBuffer encode(E value) {
+        return codec.encode(value);
+    }
+
+    protected E decode(ByteBuffer byteBuffer) {
+        return codec.decode(byteBuffer);
     }
 
     @Override
@@ -38,7 +46,7 @@ public class RedisSet<E> implements Set<E>, Queue<E> {
     @Override
     @SuppressWarnings("unchecked")
     public boolean contains(Object o) {
-        return redis.sismember(key.duplicate(), (E) o);
+        return redis.sismember(key.duplicate(), encode((E) o));
     }
 
     /**
@@ -62,13 +70,13 @@ public class RedisSet<E> implements Set<E>, Queue<E> {
 
     @Override
     public boolean add(E e) {
-        return redis.sadd(key.duplicate(), e) > 0;
+        return redis.sadd(key.duplicate(), encode(e)) > 0;
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public boolean remove(Object o) {
-        return redis.srem(key.duplicate(), (E) o) > 0;
+        return redis.srem(key.duplicate(), encode((E) o)) > 0;
     }
 
     /**
@@ -82,7 +90,7 @@ public class RedisSet<E> implements Set<E>, Queue<E> {
     @Override
     @SuppressWarnings("unchecked")
     public boolean addAll(Collection<? extends E> c) {
-        return redis.sadd(key.duplicate(), (E[]) c.toArray()) > 0;
+        return redis.sadd(key.duplicate(), c.stream().map(this::encode).toArray(ByteBuffer[]::new)) > 0;
     }
 
     /**
@@ -96,7 +104,7 @@ public class RedisSet<E> implements Set<E>, Queue<E> {
     @Override
     @SuppressWarnings("unchecked")
     public boolean removeAll(Collection<?> c) {
-        return redis.srem(key.duplicate(), (E[]) c.toArray()) > 0;
+        return redis.srem(key.duplicate(), c.stream().map(o -> encode((E) o)).toArray(ByteBuffer[]::new)) > 0;
     }
 
     @Override
@@ -116,7 +124,7 @@ public class RedisSet<E> implements Set<E>, Queue<E> {
 
     @Override
     public E poll() {
-        return redis.spop(key.duplicate());
+        return decode(redis.spop(key.duplicate()));
     }
 
     @Override
@@ -126,7 +134,7 @@ public class RedisSet<E> implements Set<E>, Queue<E> {
 
     @Override
     public E peek() {
-        return redis.srandmember(key.duplicate());
+        return decode(redis.srandmember(key.duplicate()));
     }
 
     protected E checkElement(E e) {

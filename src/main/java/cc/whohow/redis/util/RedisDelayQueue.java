@@ -13,7 +13,10 @@ import io.lettuce.core.api.sync.RedisCommands;
 import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.*;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -43,7 +46,7 @@ public class RedisDelayQueue<E> implements BlockingQueue<DelayedValue<E>> {
     }
 
     public RedisDelayQueue(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, String key) {
-        this(redis, codec, key, RedisClock.create(redis.getStatefulConnection()));
+        this(redis, codec, key, new RedisClock(redis));
     }
 
     public Clock getClock() {
@@ -94,7 +97,7 @@ public class RedisDelayQueue<E> implements BlockingQueue<DelayedValue<E>> {
                 LIMIT.duplicate(),
                 ZERO.duplicate(),
                 PrimitiveCodec.INTEGER.encode(maxElements));
-        for (int i = 0; i < result.size(); i+=2) {
+        for (int i = 0; i < result.size(); i += 2) {
             c.add(new TimestampedValue<>(codec.decode(result.get(i)), PrimitiveCodec.LONG.decode(result.get(i + 1))));
         }
         return result.size() / 2;
@@ -203,7 +206,7 @@ public class RedisDelayQueue<E> implements BlockingQueue<DelayedValue<E>> {
     @Override
     public DelayedValue<E> poll(long timeout, TimeUnit unit) throws InterruptedException {
         long t = System.currentTimeMillis() + unit.toMillis(timeout);
-        while (System.currentTimeMillis() < t){
+        while (System.currentTimeMillis() < t) {
             DelayedValue<E> value = poll();
             if (value != null) {
                 return value;

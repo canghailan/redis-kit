@@ -2,8 +2,6 @@ package cc.whohow.redis.util;
 
 import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.Codec;
-import cc.whohow.redis.lettuce.RedisCommandsAdapter;
-import cc.whohow.redis.lettuce.RedisValueCodecAdapter;
 import io.lettuce.core.api.sync.RedisCommands;
 
 import java.nio.ByteBuffer;
@@ -16,26 +14,36 @@ import java.util.concurrent.TimeUnit;
  */
 @SuppressWarnings("unchecked")
 public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
-    protected final RedisCommands<ByteBuffer, E> redis;
+    protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
+    protected final Codec<E> codec;
     protected final ByteBuffer key;
 
-    public RedisList(RedisCommands<ByteBuffer, E> redis, ByteBuffer key) {
+    public RedisList(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, String key) {
+        this(redis, codec, ByteBuffers.fromUtf8(key));
+    }
+
+    public RedisList(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, ByteBuffer key) {
         this.redis = redis;
+        this.codec = codec;
         this.key = key;
     }
 
-    public RedisList(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, String key) {
-        this(new RedisCommandsAdapter<>(redis, new RedisValueCodecAdapter<>(codec)), ByteBuffers.fromUtf8(key));
+    protected ByteBuffer encode(E value) {
+        return codec.encode(value);
+    }
+
+    protected E decode(ByteBuffer byteBuffer) {
+        return codec.decode(byteBuffer);
     }
 
     @Override
     public void addFirst(E e) {
-        redis.lpush(key.duplicate(), e);
+        redis.lpush(key.duplicate(), encode(e));
     }
 
     @Override
     public void addLast(E e) {
-        redis.rpush(key.duplicate(), e);
+        redis.rpush(key.duplicate(), encode(e));
     }
 
     @Override
@@ -62,12 +70,12 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
 
     @Override
     public E pollFirst() {
-        return redis.lpop(key.duplicate());
+        return decode(redis.lpop(key.duplicate()));
     }
 
     @Override
     public E pollLast() {
-        return redis.rpop(key.duplicate());
+        return decode(redis.rpop(key.duplicate()));
     }
 
     @Override
@@ -82,24 +90,24 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
 
     @Override
     public E peekFirst() {
-        return redis.lindex(key.duplicate(), 0);
+        return decode(redis.lindex(key.duplicate(), 0));
     }
 
     @Override
     public E peekLast() {
-        return redis.lindex(key.duplicate(), -1);
+        return decode(redis.lindex(key.duplicate(), -1));
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public boolean removeFirstOccurrence(Object o) {
-        return redis.lrem(key.duplicate(), 1, (E) o) > 0;
+        return redis.lrem(key.duplicate(), 1, encode((E) o)) > 0;
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public boolean removeLastOccurrence(Object o) {
-        return redis.lrem(key.duplicate(), -1, (E) o) > 0;
+        return redis.lrem(key.duplicate(), -1, encode((E) o)) > 0;
     }
 
     @Override
@@ -202,7 +210,7 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
 
     @Override
     public boolean addAll(Collection<? extends E> c) {
-        redis.rpush(key.duplicate(), (E[]) c.toArray());
+        redis.rpush(key.duplicate(), c.stream().map(this::encode).toArray(ByteBuffer[]::new));
         return true;
     }
 
@@ -237,7 +245,7 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
 
     @Override
     public E get(int index) {
-        return redis.lindex(key.duplicate(), index);
+        return decode(redis.lindex(key.duplicate(), index));
     }
 
     /**
@@ -245,7 +253,7 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
      */
     @Override
     public E set(int index, E element) {
-        redis.lset(key.duplicate(), index, element);
+        redis.lset(key.duplicate(), index, encode(element));
         return null;
     }
 
@@ -327,22 +335,22 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
 
     @Override
     public E takeFirst() {
-        return redis.blpop(0, key.duplicate()).getValue();
+        return decode(redis.blpop(0, key.duplicate()).getValue());
     }
 
     @Override
     public E takeLast() {
-        return redis.brpop(0, key.duplicate()).getValue();
+        return decode(redis.brpop(0, key.duplicate()).getValue());
     }
 
     @Override
     public E pollFirst(long timeout, TimeUnit unit) {
-        return redis.blpop(unit.toSeconds(timeout), key.duplicate()).getValueOrElse(null);
+        return redis.blpop(unit.toSeconds(timeout), key.duplicate()).map(this::decode).getValueOrElse(null);
     }
 
     @Override
     public E pollLast(long timeout, TimeUnit unit) {
-        return redis.brpop(unit.toSeconds(timeout), key.duplicate()).getValueOrElse(null);
+        return redis.brpop(unit.toSeconds(timeout), key.duplicate()).map(this::decode).getValueOrElse(null);
     }
 
     @Override

@@ -18,14 +18,6 @@ public class RedisExpireKey<V> extends RedisKey<V> {
     protected final SetArgs pxNx;
     protected final SetArgs pxXx;
 
-    public RedisExpireKey(RedisCommands<String, V> redis, Duration ttl) {
-        super(redis);
-        this.ttl = ttl.toMillis();
-        this.px = SetArgs.Builder.px(this.ttl);
-        this.pxNx = SetArgs.Builder.px(this.ttl).nx();
-        this.pxXx = SetArgs.Builder.px(this.ttl).xx();
-    }
-
     public RedisExpireKey(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<V> codec, Duration ttl) {
         super(redis, codec);
         this.ttl = ttl.toMillis();
@@ -44,7 +36,7 @@ public class RedisExpireKey<V> extends RedisKey<V> {
     }
 
     public void set(String key, V value) {
-        redis.set(key, value, px);
+        redis.set(encodeKey(key), encode(value), px);
     }
 
     /**
@@ -60,7 +52,7 @@ public class RedisExpireKey<V> extends RedisKey<V> {
      */
     @Override
     public V putIfAbsent(String key, V value) {
-        if (Lettuce.ok(redis.set(key, value, pxNx))) {
+        if (Lettuce.ok(redis.set(encodeKey(key), encode(value), pxNx))) {
             return null;
         }
         return value;
@@ -71,7 +63,7 @@ public class RedisExpireKey<V> extends RedisKey<V> {
      */
     @Override
     public V replace(String key, V value) {
-        if (Lettuce.ok(redis.set(key, value, pxXx))) {
+        if (Lettuce.ok(redis.set(encodeKey(key), encode(value), pxXx))) {
             return null;
         }
         return value;

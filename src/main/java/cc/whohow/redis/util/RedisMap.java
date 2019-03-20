@@ -23,10 +23,14 @@ public class RedisMap<K, V> implements ConcurrentMap<K, V> {
     protected final ByteBuffer hashKey;
 
     public RedisMap(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<K> keyCodec, Codec<V> valueCodec, String key) {
+        this(redis, keyCodec, valueCodec, ByteBuffers.fromUtf8(key));
+    }
+
+    public RedisMap(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<K> keyCodec, Codec<V> valueCodec, ByteBuffer key) {
         this.redis = redis;
         this.keyCodec = keyCodec;
         this.valueCodec = valueCodec;
-        this.hashKey = ByteBuffers.fromUtf8(key);
+        this.hashKey = key;
     }
 
     public ByteBuffer encodeKey(K key) {

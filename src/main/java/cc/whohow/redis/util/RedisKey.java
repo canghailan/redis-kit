@@ -3,8 +3,6 @@ package cc.whohow.redis.util;
 import cc.whohow.redis.io.Codec;
 import cc.whohow.redis.io.StringCodec;
 import cc.whohow.redis.lettuce.Lettuce;
-import cc.whohow.redis.lettuce.RedisCodecAdapter;
-import cc.whohow.redis.lettuce.RedisCommandsAdapter;
 import io.lettuce.core.api.sync.RedisCommands;
 
 import java.nio.ByteBuffer;
@@ -14,19 +12,40 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * 键集合
  */
 public class RedisKey<V> implements ConcurrentMap<String, V> {
-    protected final RedisCommands<String, V> redis;
-
-    public RedisKey(RedisCommands<String, V> redis) {
-        this.redis = redis;
-    }
+    protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
+    protected final StringCodec keyCodec;
+    protected final Codec<V> codec;
 
     public RedisKey(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<V> codec) {
-        this(new RedisCommandsAdapter<>(redis, new RedisCodecAdapter<>(new StringCodec(), codec)));
+        this(redis, codec, new StringCodec());
+    }
+
+    public RedisKey(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<V> codec, StringCodec keyCodec) {
+        this.redis = redis;
+        this.codec = codec;
+        this.keyCodec = keyCodec;
+    }
+
+    protected ByteBuffer encodeKey(String key) {
+        return keyCodec.encode(key);
+    }
+
+    protected String decodeKey(ByteBuffer byteBuffer) {
+        return keyCodec.decode(byteBuffer);
+    }
+
+    protected ByteBuffer encode(V value) {
+        return codec.encode(value);
+    }
+
+    protected V decode(ByteBuffer byteBuffer) {
+        return codec.decode(byteBuffer);
     }
 
     @Override
@@ -41,7 +60,7 @@ public class RedisKey<V> implements ConcurrentMap<String, V> {
 
     @Override
     public boolean containsKey(Object key) {
-        return redis.exists((String) key) > 0;
+        return redis.exists(encodeKey((String) key)) > 0;
     }
 
     @Override
@@ -51,16 +70,16 @@ public class RedisKey<V> implements ConcurrentMap<String, V> {
 
     @Override
     public V get(Object key) {
-        return redis.get((String) key);
+        return decode(redis.get(encodeKey((String) key)));
     }
 
     @Override
     public V put(String key, V value) {
-        return redis.getset(key, value);
+        return decode(redis.getset(encodeKey(key), encode(value)));
     }
 
     public void set(String key, V value) {
-        redis.set(key, value);
+        redis.set(encodeKey(key), encode(value));
     }
 
     /**
@@ -68,14 +87,17 @@ public class RedisKey<V> implements ConcurrentMap<String, V> {
      */
     @Override
     public V remove(Object key) {
-        redis.del((String) key);
+        redis.del(encodeKey((String) key));
         return null;
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public void putAll(Map<? extends String, ? extends V> m) {
-        redis.mset((Map<String, V>) m);
+        redis.mset(m.entrySet().stream()
+                .collect(Collectors.toMap(
+                        e -> encodeKey(e.getKey()),
+                        e -> encode(e.getValue()))));
     }
 
     @Override
@@ -112,7 +134,7 @@ public class RedisKey<V> implements ConcurrentMap<String, V> {
      */
     @Override
     public V putIfAbsent(String key, V value) {
-        if (Lettuce.ok(redis.set(key, value, Lettuce.SET_NX))) {
+        if (Lettuce.ok(redis.set(encodeKey(key), encode(value), Lettuce.SET_NX))) {
             return null;
         }
         return value;
@@ -139,7 +161,7 @@ public class RedisKey<V> implements ConcurrentMap<String, V> {
      */
     @Override
     public V replace(String key, V value) {
-        if (Lettuce.ok(redis.set(key, value, Lettuce.SET_XX))) {
+        if (Lettuce.ok(redis.set(encodeKey(key), encode(value), Lettuce.SET_XX))) {
             return null;
         }
         return value;

@@ -1,9 +1,6 @@
 package cc.whohow.redis.util;
 
-import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.PrimitiveCodec;
-import cc.whohow.redis.lettuce.RedisCommandsAdapter;
-import cc.whohow.redis.lettuce.RedisValueCodecAdapter;
 import io.lettuce.core.api.sync.RedisCommands;
 
 import java.nio.ByteBuffer;
@@ -12,26 +9,26 @@ import java.nio.ByteBuffer;
  * Reids计数器
  */
 public class RedisAtomicLong extends Number {
-    protected final RedisCommands<ByteBuffer, Long> redis;
+    protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
     protected final ByteBuffer key;
 
-    public RedisAtomicLong(RedisCommands<ByteBuffer, Long> redis, ByteBuffer key) {
+    public RedisAtomicLong(RedisCommands<ByteBuffer, ByteBuffer> redis, ByteBuffer key) {
         this(redis, key, 0);
     }
 
-    public RedisAtomicLong(RedisCommands<ByteBuffer, Long> redis, ByteBuffer key, long initialValue) {
+    public RedisAtomicLong(RedisCommands<ByteBuffer, ByteBuffer> redis, ByteBuffer key, long initialValue) {
         this.redis = redis;
         this.key = key;
 
-        redis.setnx(key.duplicate(), initialValue);
+        redis.setnx(key.duplicate(), encode(initialValue));
     }
 
-    public RedisAtomicLong(RedisCommands<ByteBuffer, ByteBuffer> redis, String key) {
-        this(new RedisCommandsAdapter<>(redis, new RedisValueCodecAdapter<>(PrimitiveCodec.LONG)), ByteBuffers.fromUtf8(key));
+    protected ByteBuffer encode(long value) {
+        return PrimitiveCodec.LONG.encode(value);
     }
 
-    public RedisAtomicLong(RedisCommands<ByteBuffer, ByteBuffer> redis, String key, long initialValue) {
-        this(new RedisCommandsAdapter<>(redis, new RedisValueCodecAdapter<>(PrimitiveCodec.LONG)), ByteBuffers.fromUtf8(key), initialValue);
+    protected long decode(ByteBuffer byteBuffer) {
+        return PrimitiveCodec.LONG.decode(byteBuffer);
     }
 
     public long get() {
@@ -39,11 +36,11 @@ public class RedisAtomicLong extends Number {
     }
 
     public void set(long newValue) {
-        redis.set(key.duplicate(), newValue);
+        redis.set(key.duplicate(), encode(newValue));
     }
 
     public long getAndSet(long newValue) {
-        return redis.getset(key.duplicate(), newValue);
+        return decode(redis.getset(key.duplicate(), encode(newValue)));
     }
 
     public long getAndIncrement() {
@@ -77,7 +74,7 @@ public class RedisAtomicLong extends Number {
 
     @Override
     public long longValue() {
-        return redis.get(key.duplicate());
+        return decode(redis.get(key.duplicate()));
     }
 
     @Override
