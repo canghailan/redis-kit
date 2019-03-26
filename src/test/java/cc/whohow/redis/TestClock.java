@@ -43,9 +43,5 @@ public class TestClock {
 
     @Test
     public void testClock() {
-        RedisClock clock = new RedisClock(redis);
-        for (int i = 0; i < 10; i++) {
-            System.out.println(clock.millis());
-        }
     }
 }

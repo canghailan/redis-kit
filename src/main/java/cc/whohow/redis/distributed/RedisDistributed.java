@@ -47,7 +47,7 @@ public class RedisDistributed implements
         this.redisURI = redisURI;
         this.redisConnection = redisClient.connect(ByteBufferCodec.INSTANCE, redisURI);
         this.redisPubSubConnection = redisClient.connectPubSub(ByteBufferCodec.INSTANCE, redisURI);
-        this.clock = RedisClock.create(redisConnection);
+        this.clock = new RedisClock(redisConnection.sync());
         this.random = ByteBuffers.fromUtf8(UUID.randomUUID().toString());
         this.id = new CompletableFuture<>();
         this.executor.scheduleAtFixedRate(this, 0, timeout.toMillis() / 3, TimeUnit.MILLISECONDS);
@@ -146,6 +146,7 @@ public class RedisDistributed implements
     @Override
     @SuppressWarnings("unchecked")
     public synchronized void run() {
+        redisConnection.sync().clientSetname(random.duplicate());
         RedisScriptCommands redisScript = new RedisScriptCommands(redisConnection.sync());
         while (true) {
             try {
