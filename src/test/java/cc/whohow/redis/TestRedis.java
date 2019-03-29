@@ -1,7 +1,11 @@
 package cc.whohow.redis;
 
+import cc.whohow.redis.io.ByteBuffers;
+import cc.whohow.redis.io.StringCodec;
 import cc.whohow.redis.lettuce.ByteBufferCodec;
-import cc.whohow.redis.util.RedisRateLimiter;
+import cc.whohow.redis.util.RedisClock;
+import cc.whohow.redis.util.RedisKey;
+import cc.whohow.redis.util.RedisKeyIterator;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
@@ -13,12 +17,9 @@ import org.junit.Test;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.time.Duration;
-import java.util.Date;
 import java.util.Properties;
-import java.util.concurrent.TimeUnit;
 
-public class TestRateLimiter {
+public class TestRedis {
     private static RedisClient redisClient = RedisClient.create();
 
     private static Properties properties;
@@ -44,13 +45,22 @@ public class TestRateLimiter {
     }
 
     @Test
-    public void testRateLimiter() {
-        RedisRateLimiter rateLimiter = new RedisRateLimiter(redis, "rateLimiter1", 10, Duration.ofMinutes(1L));
-        for (int i = 0; i < 100; i++) {
-            if (rateLimiter.tryAcquire(2, TimeUnit.MINUTES)) {
-                System.out.println(new Date());
-                System.out.println(i);
-            }
+    public void testClock() {
+        RedisClock clock = new RedisClock(redis);
+        for (int i = 0; i < 10; i++) {
+            System.out.println(clock.millis());
+        }
+    }
+
+    @Test
+    public void testIterator() {
+        RedisKey<String> redisKey = new RedisKey<>(redis, new StringCodec());
+        redisKey.put("a", "1");
+        redisKey.put("b", "2");
+
+        RedisKeyIterator iterator = new RedisKeyIterator(redis);
+        while (iterator.hasNext()) {
+            System.out.println(ByteBuffers.toUtf8String(iterator.next()));
         }
     }
 }
