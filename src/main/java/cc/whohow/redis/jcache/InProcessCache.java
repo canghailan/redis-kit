@@ -8,6 +8,7 @@ import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.configuration.Configuration;
 import javax.cache.integration.CompletionListener;
+import javax.cache.management.CacheStatisticsMXBean;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
@@ -33,14 +34,23 @@ public class InProcessCache<K, V> implements Cache<K, V> {
         if (configuration.getInProcessCacheMaxEntry() > 0) {
             caffeine.maximumSize(configuration.getInProcessCacheMaxEntry());
         }
-        if (configuration.getInProcessCacheExpiryForUpdate() > 0) {
+        long expiryForUpdate = configuration.getExpiryForUpdate() > 0 ?
+                configuration.getExpiryForUpdateTimeUnit().toMillis(configuration.getExpiryForUpdate()) :
+                -1;
+        long inProcessCacheExpiryForUpdate = configuration.getInProcessCacheExpiryForUpdate() > 0 ?
+                configuration.getInProcessCacheExpiryForUpdateTimeUnit().toMillis(configuration.getInProcessCacheExpiryForUpdate()) :
+                -1;
+        if (0 < inProcessCacheExpiryForUpdate && inProcessCacheExpiryForUpdate < expiryForUpdate) {
             caffeine.expireAfterWrite(
                     configuration.getInProcessCacheExpiryForUpdate(),
                     configuration.getInProcessCacheExpiryForUpdateTimeUnit());
-        } else if (configuration.getExpiryForUpdate() > 0) {
+        } else if (expiryForUpdate > 0) {
             caffeine.expireAfterWrite(
                     configuration.getExpiryForUpdate(),
                     configuration.getExpiryForUpdateTimeUnit());
+        }
+        if (configuration.isStatisticsEnabled()) {
+            caffeine.recordStats();
         }
         this.cache = caffeine.build();
     }
@@ -225,7 +235,12 @@ public class InProcessCache<K, V> implements Cache<K, V> {
     }
 
     @Override
+    public CacheStatisticsMXBean getCacheStatistics() {
+        return new InProcessCacheStatisticsAdapter(cache);
+    }
+
+    @Override
     public String toString() {
-        return cache.toString();
+        return getName();
     }
 }

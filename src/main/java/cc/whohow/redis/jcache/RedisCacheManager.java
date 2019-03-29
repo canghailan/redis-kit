@@ -57,6 +57,8 @@ public class RedisCacheManager implements
         this.redisClient.addListener(this);
         this.redisConnection = redisClient.connect(ByteBufferCodec.INSTANCE, redisURI);
         this.redisPubSubConnection = redisClient.connectPubSub(ByteBufferCodec.INSTANCE, redisURI);
+        this.redisConnection.sync().clientSetname(KEY.duplicate());
+        this.redisPubSubConnection.sync().clientSetname(KEY.duplicate());
         this.redisPubSubConnection.addListener(this);
 
         this.keyspace = "__keyspace@" + redisURI.getDatabase() + "__:";
@@ -114,11 +116,16 @@ public class RedisCacheManager implements
 
     public <K, V> Cache<K, V> newCache(RedisCacheConfiguration<K, V> configuration) {
         if (configuration.isRedisCacheEnabled()) {
+            Cache<K, V> cache;
             if (configuration.isInProcessCacheEnabled()) {
-                return newRedisTierCache(configuration);
+                cache = newRedisTierCache(configuration);
             } else {
-                return newRedisCache(configuration);
+                cache = newRedisCache(configuration);
             }
+            if (configuration.isStatisticsEnabled()) {
+                cache = new CacheStatisticsProxy<>(cache);
+            }
+            return cache;
         } else {
             if (configuration.isInProcessCacheEnabled()) {
                 return newInProcessCache(configuration);
@@ -136,12 +143,12 @@ public class RedisCacheManager implements
         }
     }
 
-    public <K, V> InProcessCache<K, V> newInProcessCache(RedisCacheConfiguration<K, V> configuration) {
-        return new InProcessCache<>(this, configuration);
-    }
-
     public <K, V> RedisTierCache<K, V> newRedisTierCache(RedisCacheConfiguration<K, V> configuration) {
         return new RedisTierCache<>(this, configuration);
+    }
+
+    public <K, V> InProcessCache<K, V> newInProcessCache(RedisCacheConfiguration<K, V> configuration) {
+        return new InProcessCache<>(this, configuration);
     }
 
     @Override
@@ -304,19 +311,27 @@ public class RedisCacheManager implements
         return redisConnection.sync();
     }
 
-    public void enableKeyspaceNotification() {
-        RedisCommands<ByteBuffer, ByteBuffer> redis = redisConnection.sync();
-        String value = redis.configGet("notify-keyspace-events")
+    public String getKeyspaceNotificationConfig() {
+        return redisConnection.sync().configGet("notify-keyspace-events")
                 .getOrDefault("notify-keyspace-events", "");
-        if (value.contains("K") && value.contains("A")) {
+    }
+
+    public boolean isKeyspaceNotificationEnabled() {
+        String config = getKeyspaceNotificationConfig();
+        return config.contains("K") && config.contains("A");
+    }
+
+    public void enableKeyspaceNotification() {
+        String config = getKeyspaceNotificationConfig();
+        if (config.contains("K") && config.contains("A")) {
             return;
         }
-        if (value.contains("E")) {
-            value = "KEA";
+        if (config.contains("E")) {
+            config = "KEA";
         } else {
-            value = "KA";
+            config = "KA";
         }
-        redis.configSet("notify-keyspace-events", value);
+        redisConnection.sync().configSet("notify-keyspace-events", config);
     }
 
     @Override

@@ -1,7 +1,7 @@
 package cc.whohow.redis;
 
 import cc.whohow.redis.distributed.RedisDistributed;
-import cc.whohow.redis.distributed.RedisSnowflakeIdGenerator;
+import cc.whohow.redis.distributed.RedisSnowflakeId;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import org.junit.AfterClass;
@@ -53,10 +53,10 @@ public class TestDistributed {
             distributed.run();
             System.out.println(distributed.getId());
 
-            RedisSnowflakeIdGenerator idGenerator = new RedisSnowflakeIdGenerator(distributed);
+            RedisSnowflakeId redisSnowflakeId = new RedisSnowflakeId(distributed);
             long timestamp = System.currentTimeMillis();
             for (int i = 0; i < 100; i++) {
-                System.out.println(idGenerator.getAsLong());
+                System.out.println(redisSnowflakeId.getAsLong());
             }
             long time = System.currentTimeMillis() - timestamp;
             System.out.println(time + " ms");

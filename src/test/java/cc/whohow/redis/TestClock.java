@@ -1,7 +1,6 @@
 package cc.whohow.redis;
 
-import cc.whohow.redis.io.PrimitiveCodec;
-import cc.whohow.redis.lettuce.RedisValueCodecAdapter;
+import cc.whohow.redis.lettuce.ByteBufferCodec;
 import cc.whohow.redis.util.RedisClock;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
@@ -21,8 +20,8 @@ public class TestClock {
 
     private static Properties properties;
     private static RedisURI redisURI;
-    private static StatefulRedisConnection<ByteBuffer, Long> connection;
-    private static RedisCommands<ByteBuffer, Long> redis;
+    private static StatefulRedisConnection<ByteBuffer, ByteBuffer> connection;
+    private static RedisCommands<ByteBuffer, ByteBuffer> redis;
 
     @BeforeClass
     public static void setUp() throws Exception {
@@ -30,7 +29,7 @@ public class TestClock {
             properties = new Properties();
             properties.load(stream);
             redisURI = RedisURI.create(properties.getProperty("uri"));
-            connection = redisClient.connect(new RedisValueCodecAdapter<>(PrimitiveCodec.LONG), redisURI);
+            connection = redisClient.connect(ByteBufferCodec.INSTANCE, redisURI);
             redis = connection.sync();
         }
     }

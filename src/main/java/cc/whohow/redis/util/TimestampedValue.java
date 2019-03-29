@@ -50,7 +50,7 @@ public class TimestampedValue<T> implements DelayedValue<T> {
 
     @Override
     public String toString() {
-        return Objects.toString(value) + ":" + timestamp;
+        return value + ":" + timestamp;
     }
 
     @Override

@@ -13,6 +13,7 @@ import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.configuration.Configuration;
 import javax.cache.integration.CompletionListener;
+import javax.cache.management.CacheStatisticsMXBean;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
@@ -244,6 +245,11 @@ public class RedisCache<K, V> implements Cache<K, V> {
             return null;
         }
         return factory.apply(codec.decodeValue(encodedValue));
+    }
+
+    @Override
+    public CacheStatisticsMXBean getCacheStatistics() {
+        return NoCacheStatistics.getInstance();
     }
 
     @Override

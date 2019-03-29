@@ -10,6 +10,8 @@ import io.lettuce.core.*;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
 import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.Closeable;
 import java.net.SocketAddress;
@@ -21,7 +23,7 @@ import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 /**
- * Redis分布式注册中心
+ * Redis分布式节点
  */
 public class RedisDistributed implements
         Runnable,
@@ -29,7 +31,8 @@ public class RedisDistributed implements
         RedisConnectionStateListener {
     protected static final ByteBuffer KEY = ByteBuffers.fromUtf8("_rd_");
     protected static final ByteBuffer KEY_PREFIX = ByteBuffers.fromUtf8("_rd_:");
-    protected static final ByteBuffer GC_LOCK = ByteBuffers.fromUtf8("_rd_gc_");
+    protected static final ByteBuffer GC_LOCK_KEY = ByteBuffers.fromUtf8("_rd_gc_");
+    private static final Logger log = LogManager.getLogger();
     protected final ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
     protected final int maxId = 65535;
     protected final Duration timeout = Duration.ofSeconds(30);
@@ -42,6 +45,10 @@ public class RedisDistributed implements
     protected volatile long time;
     protected volatile CompletableFuture<Long> id;
 
+    public RedisDistributed(RedisURI redisURI) {
+        this(RedisClient.create(), redisURI);
+    }
+
     public RedisDistributed(RedisClient redisClient, RedisURI redisURI) {
         this.redisClient = redisClient;
         this.redisURI = redisURI;
@@ -49,6 +56,8 @@ public class RedisDistributed implements
         this.redisPubSubConnection = redisClient.connectPubSub(ByteBufferCodec.INSTANCE, redisURI);
         this.clock = new RedisClock(redisConnection.sync());
         this.random = ByteBuffers.fromUtf8(UUID.randomUUID().toString());
+        this.redisConnection.sync().clientSetname(ByteBuffers.concat(KEY_PREFIX, random));
+        this.redisPubSubConnection.sync().clientSetname(ByteBuffers.concat(KEY_PREFIX, random));
         this.id = new CompletableFuture<>();
         this.executor.scheduleAtFixedRate(this, 0, timeout.toMillis() / 3, TimeUnit.MILLISECONDS);
         this.executor.scheduleWithFixedDelay(this::gc, 0, timeout.toMillis() / 2, TimeUnit.MILLISECONDS);
@@ -110,6 +119,7 @@ public class RedisDistributed implements
      */
     @Override
     public void close() {
+        log.debug("close");
         try {
             synchronized (this) {
                 if (id.isDone()) {
@@ -144,7 +154,6 @@ public class RedisDistributed implements
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public synchronized void run() {
         redisConnection.sync().clientSetname(random.duplicate());
         RedisScriptCommands redisScript = new RedisScriptCommands(redisConnection.sync());
@@ -173,8 +182,8 @@ public class RedisDistributed implements
                         // 加入集群，更新ID
                         time = t;
                         id.complete(i);
-                        // 异步更新节点信息
-                        id.thenRunAsync(this::onNodeChange, executor);
+
+                        log.info("id: {}", i);
                     }
                     break;
                 } else {
@@ -183,9 +192,12 @@ public class RedisDistributed implements
                         id = new CompletableFuture<>();
                     }
                 }
-            } catch (Throwable ignore) {
+            } catch (Throwable e) {
+                log.error(e.getMessage(), e);
             }
         }
+        // 异步更新节点信息
+        id.thenRunAsync(this::onNodeChange, executor);
     }
 
     protected long nextId() {
@@ -219,10 +231,12 @@ public class RedisDistributed implements
      */
     public void gc() {
         RedisCommands<ByteBuffer, ByteBuffer> redis = redisConnection.sync();
-        if (!Lettuce.ok(redis.set(GC_LOCK.duplicate(), random.duplicate(),
+        if (!Lettuce.ok(redis.set(GC_LOCK_KEY.duplicate(), random.duplicate(),
                 new SetArgs().px(timeout.toMillis() / 2).nx()))) {
             return;
         }
+
+        log.debug("gc");
 
         Collection<Long> idSet = getNodeIdSet();
         if (idSet.isEmpty()) {

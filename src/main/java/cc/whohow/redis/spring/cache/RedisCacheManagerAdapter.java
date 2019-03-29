@@ -7,7 +7,6 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-@SuppressWarnings("unchecked")
 public class RedisCacheManagerAdapter implements org.springframework.cache.CacheManager {
     private RedisCacheManager redisCacheManager;
     private Map<String, Cache> cacheAdapters = new ConcurrentHashMap<>();

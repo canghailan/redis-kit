@@ -11,6 +11,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import javax.cache.annotation.GeneratedCacheKey;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.Date;
@@ -23,7 +24,7 @@ public class TestCache {
     private static Properties properties;
     private static RedisURI redisURI;
     private static RedisCacheManager cacheManager;
-    private static Cache cache;
+    private static Cache<GeneratedCacheKey, Data> cache;
 
     @BeforeClass
     public static void setUp() throws Exception {

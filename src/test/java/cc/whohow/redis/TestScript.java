@@ -48,7 +48,6 @@ public class TestScript {
 //        redis.set(ByteBuffers.fromUtf8("a"), ByteBuffers.fromUtf8("test"));
 
 
-
         RedisScriptCommands redisScriptCommands = new RedisScriptCommands(redis);
         Object r = redisScriptCommands.eval("lock", ScriptOutputType.BOOLEAN,
                 new ByteBuffer[]{ByteBuffers.fromUtf8("b")},

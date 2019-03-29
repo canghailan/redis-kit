@@ -1,5 +1,6 @@
 package cc.whohow.redis.jcache;
 
+import javax.cache.management.CacheStatisticsMXBean;
 import java.nio.ByteBuffer;
 import java.util.function.Function;
 
@@ -45,4 +46,6 @@ public interface Cache<K, V> extends javax.cache.Cache<K, V> {
      */
     default void onKeyspaceNotification(ByteBuffer key, ByteBuffer message) {
     }
+
+    CacheStatisticsMXBean getCacheStatistics();
 }
