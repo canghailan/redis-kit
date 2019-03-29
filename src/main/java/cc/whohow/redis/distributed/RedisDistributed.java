@@ -155,7 +155,6 @@ public class RedisDistributed implements
 
     @Override
     public synchronized void run() {
-        redisConnection.sync().clientSetname(random.duplicate());
         RedisScriptCommands redisScript = new RedisScriptCommands(redisConnection.sync());
         while (true) {
             try {
