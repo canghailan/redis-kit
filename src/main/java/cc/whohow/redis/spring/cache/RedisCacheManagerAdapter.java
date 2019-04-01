@@ -21,11 +21,7 @@ public class RedisCacheManagerAdapter implements org.springframework.cache.Cache
     }
 
     private Cache newCacheAdapter(String name) {
-        cc.whohow.redis.jcache.Cache cache = redisCacheManager.getCache(name);
-        if (cache == null) {
-            throw new IllegalStateException();
-        }
-        return new CacheAdapter(cache);
+        return new CacheAdapter(redisCacheManager.getCache(name));
     }
 
     @Override

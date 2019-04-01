@@ -11,6 +11,9 @@ public class CacheAdapter implements org.springframework.cache.Cache {
     protected final Cache cache;
 
     public CacheAdapter(Cache cache) {
+        if (cache == null) {
+            throw new IllegalArgumentException();
+        }
         this.cache = cache;
     }
 
