@@ -7,29 +7,30 @@ import java.util.Date;
 import java.util.Objects;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
-public class TimestampedValue<T> implements DelayedValue<T> {
+public class RedisDelayed<T> implements Delayed, Supplier<T> {
     private final T value;
     private final long timestamp;
 
-    public TimestampedValue(T value, long timestamp) {
+    public RedisDelayed(T value, long timestamp) {
         this.value = value;
         this.timestamp = timestamp;
     }
 
-    public TimestampedValue(T value, Instant instant) {
+    public RedisDelayed(T value, Instant instant) {
         this(value, instant.toEpochMilli());
     }
 
-    public TimestampedValue(T value, Date date) {
+    public RedisDelayed(T value, Date date) {
         this(value, date.getTime());
     }
 
-    public TimestampedValue(T value, Duration delay) {
+    public RedisDelayed(T value, Duration delay) {
         this(value, delay, Clock.systemDefaultZone());
     }
 
-    public TimestampedValue(T value, Duration delay, Clock clock) {
+    public RedisDelayed(T value, Duration delay, Clock clock) {
         this(value, clock.millis() + delay.toMillis());
     }
 
@@ -55,10 +56,10 @@ public class TimestampedValue<T> implements DelayedValue<T> {
 
     @Override
     public boolean equals(Object o) {
-        if (o instanceof DelayedValue) {
-            DelayedValue delayedValue = (DelayedValue) o;
-            return getDelay(TimeUnit.MILLISECONDS) == delayedValue.getDelay(TimeUnit.MILLISECONDS) &&
-                    Objects.equals(get(), delayedValue.get());
+        if (o instanceof RedisDelayed) {
+            RedisDelayed RedisDelayed = (RedisDelayed) o;
+            return getDelay(TimeUnit.MILLISECONDS) == RedisDelayed.getDelay(TimeUnit.MILLISECONDS) &&
+                    Objects.equals(get(), RedisDelayed.get());
         }
         return false;
     }

@@ -3,6 +3,8 @@ package cc.whohow.redis.util;
 import cc.whohow.redis.io.Codec;
 import cc.whohow.redis.io.StringCodec;
 import cc.whohow.redis.lettuce.Lettuce;
+import cc.whohow.redis.script.RedisScriptCommands;
+import io.lettuce.core.ScriptOutputType;
 import io.lettuce.core.api.sync.RedisCommands;
 
 import java.nio.ByteBuffer;
@@ -19,6 +21,7 @@ import java.util.stream.Collectors;
  */
 public class RedisKey<V> implements ConcurrentMap<String, V> {
     protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
+    protected final RedisScriptCommands redisScriptCommands;
     protected final StringCodec keyCodec;
     protected final Codec<V> codec;
 
@@ -28,6 +31,7 @@ public class RedisKey<V> implements ConcurrentMap<String, V> {
 
     public RedisKey(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<V> codec, StringCodec keyCodec) {
         this.redis = redis;
+        this.redisScriptCommands = new RedisScriptCommands(redis);
         this.codec = codec;
         this.keyCodec = keyCodec;
     }
@@ -82,17 +86,12 @@ public class RedisKey<V> implements ConcurrentMap<String, V> {
         redis.set(encodeKey(key), encode(value));
     }
 
-    /**
-     * @return null
-     */
     @Override
     public V remove(Object key) {
-        redis.del(encodeKey((String) key));
-        return null;
+        return decode(redisScriptCommands.eval("getdel", ScriptOutputType.VALUE, encodeKey((String) key)));
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public void putAll(Map<? extends String, ? extends V> m) {
         redis.mset(m.entrySet().stream()
                 .collect(Collectors.toMap(
@@ -129,42 +128,34 @@ public class RedisKey<V> implements ConcurrentMap<String, V> {
         throw new UnsupportedOperationException();
     }
 
-    /**
-     * @return null/value
-     */
     @Override
     public V putIfAbsent(String key, V value) {
-        if (Lettuce.ok(redis.set(encodeKey(key), encode(value), Lettuce.SET_NX))) {
-            return null;
-        }
-        return value;
+        return decode(redisScriptCommands.eval("getset", ScriptOutputType.VALUE,
+                new ByteBuffer[] {encodeKey(key)},
+                new ByteBuffer[] {encode(value), Lettuce.nx()}));
     }
 
-    /**
-     * @throws UnsupportedOperationException UnsupportedOperation
-     */
     @Override
+    @SuppressWarnings("unchecked")
     public boolean remove(Object key, Object value) {
-        throw new UnsupportedOperationException();
+        Long n = redisScriptCommands.eval("cad", ScriptOutputType.INTEGER,
+                new ByteBuffer[] {encodeKey((String) key)},
+                new ByteBuffer[] {encode((V) value)});
+        return n > 0;
     }
 
-    /**
-     * @throws UnsupportedOperationException UnsupportedOperation
-     */
     @Override
     public boolean replace(String key, V oldValue, V newValue) {
-        throw new UnsupportedOperationException();
+        return redisScriptCommands.eval("cas", ScriptOutputType.STATUS,
+                new ByteBuffer[] {encodeKey(key)},
+                new ByteBuffer[] {encode(oldValue), encode(newValue)});
     }
 
-    /**
-     * @return null/value
-     */
     @Override
     public V replace(String key, V value) {
-        if (Lettuce.ok(redis.set(encodeKey(key), encode(value), Lettuce.SET_XX))) {
-            return null;
-        }
-        return value;
+        return decode(redisScriptCommands.eval("getset", ScriptOutputType.VALUE,
+                new ByteBuffer[] {encodeKey(key)},
+                new ByteBuffer[] {encode(value), Lettuce.xx()}));
     }
 
     /**

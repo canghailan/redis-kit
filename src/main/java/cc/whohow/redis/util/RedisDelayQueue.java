@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Reids延迟队列
  */
-public class RedisDelayQueue<E> implements BlockingQueue<DelayedValue<E>> {
+public class RedisDelayQueue<E> implements BlockingQueue<RedisDelayed<E>> {
     private static final ByteBuffer ZERO = PrimitiveCodec.INTEGER.encode(0);
     private static final ByteBuffer ONE = PrimitiveCodec.INTEGER.encode(1);
     private static final ByteBuffer WITHSCORES = ByteBuffers.fromUtf8("WITHSCORES");
@@ -82,23 +82,25 @@ public class RedisDelayQueue<E> implements BlockingQueue<DelayedValue<E>> {
     }
 
     @Override
-    public int drainTo(Collection<? super DelayedValue<E>> c) {
+    public int drainTo(Collection<? super RedisDelayed<E>> c) {
         return drainTo(c, Integer.MAX_VALUE);
     }
 
     @Override
-    public int drainTo(Collection<? super DelayedValue<E>> c, int maxElements) {
+    public int drainTo(Collection<? super RedisDelayed<E>> c, int maxElements) {
         long time = clock.millis();
         List<ByteBuffer> result = redisScriptCommands.eval("zremrangebyscore", ScriptOutputType.MULTI,
                 new ByteBuffer[]{key.duplicate()},
-                ZERO.duplicate(),
-                PrimitiveCodec.LONG.encode(time),
-                WITHSCORES.duplicate(),
-                LIMIT.duplicate(),
-                ZERO.duplicate(),
-                PrimitiveCodec.INTEGER.encode(maxElements));
+                new ByteBuffer[]{
+                        ZERO.duplicate(),
+                        PrimitiveCodec.LONG.encode(time),
+                        WITHSCORES.duplicate(),
+                        LIMIT.duplicate(),
+                        ZERO.duplicate(),
+                        PrimitiveCodec.INTEGER.encode(maxElements)
+                });
         for (int i = 0; i < result.size(); i += 2) {
-            c.add(new TimestampedValue<>(codec.decode(result.get(i)), PrimitiveCodec.LONG.decode(result.get(i + 1))));
+            c.add(new RedisDelayed<>(codec.decode(result.get(i)), PrimitiveCodec.LONG.decode(result.get(i + 1))));
         }
         return result.size() / 2;
     }
@@ -107,7 +109,7 @@ public class RedisDelayQueue<E> implements BlockingQueue<DelayedValue<E>> {
      * @throws UnsupportedOperationException UnsupportedOperation
      */
     @Override
-    public Iterator<DelayedValue<E>> iterator() {
+    public Iterator<RedisDelayed<E>> iterator() {
         throw new UnsupportedOperationException();
     }
 
@@ -128,15 +130,15 @@ public class RedisDelayQueue<E> implements BlockingQueue<DelayedValue<E>> {
     }
 
     @Override
-    public boolean add(DelayedValue<E> delayedValue) {
-        return redis.zadd(this.key.duplicate(), delayedValue.getDelay(TimeUnit.MILLISECONDS), delayedValue.get()) > 0;
+    public boolean add(RedisDelayed<E> RedisDelayed) {
+        return redis.zadd(this.key.duplicate(), RedisDelayed.getDelay(TimeUnit.MILLISECONDS), RedisDelayed.get()) > 0;
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public boolean remove(Object o) {
-        DelayedValue<E> delayedValue = (DelayedValue<E>) o;
-        return redis.zrem(this.key.duplicate(), delayedValue.get()) > 0;
+        RedisDelayed<E> RedisDelayed = (RedisDelayed<E>) o;
+        return redis.zrem(this.key.duplicate(), RedisDelayed.get()) > 0;
     }
 
     /**
@@ -149,7 +151,7 @@ public class RedisDelayQueue<E> implements BlockingQueue<DelayedValue<E>> {
 
     @Override
     @SuppressWarnings("unchecked")
-    public boolean addAll(Collection<? extends DelayedValue<E>> c) {
+    public boolean addAll(Collection<? extends RedisDelayed<E>> c) {
         ScoredValue[] encodedScoredValues = c.stream()
                 .map(e -> ScoredValue.fromNullable(e.getDelay(TimeUnit.MILLISECONDS), e.get()))
                 .toArray(ScoredValue[]::new);
@@ -178,24 +180,24 @@ public class RedisDelayQueue<E> implements BlockingQueue<DelayedValue<E>> {
     }
 
     @Override
-    public boolean offer(DelayedValue<E> delayedValue) {
-        return add(delayedValue);
+    public boolean offer(RedisDelayed<E> RedisDelayed) {
+        return add(RedisDelayed);
     }
 
     @Override
-    public void put(DelayedValue<E> delayedValue) throws InterruptedException {
-        add(delayedValue);
+    public void put(RedisDelayed<E> RedisDelayed) throws InterruptedException {
+        add(RedisDelayed);
     }
 
     @Override
-    public boolean offer(DelayedValue<E> delayedValue, long timeout, TimeUnit unit) throws InterruptedException {
-        return offer(delayedValue);
+    public boolean offer(RedisDelayed<E> RedisDelayed, long timeout, TimeUnit unit) throws InterruptedException {
+        return offer(RedisDelayed);
     }
 
     @Override
-    public DelayedValue<E> take() throws InterruptedException {
+    public RedisDelayed<E> take() throws InterruptedException {
         while (true) {
-            DelayedValue<E> value = poll();
+            RedisDelayed<E> value = poll();
             if (value != null) {
                 return value;
             }
@@ -204,10 +206,10 @@ public class RedisDelayQueue<E> implements BlockingQueue<DelayedValue<E>> {
     }
 
     @Override
-    public DelayedValue<E> poll(long timeout, TimeUnit unit) throws InterruptedException {
+    public RedisDelayed<E> poll(long timeout, TimeUnit unit) throws InterruptedException {
         long t = System.currentTimeMillis() + unit.toMillis(timeout);
         while (System.currentTimeMillis() < t) {
-            DelayedValue<E> value = poll();
+            RedisDelayed<E> value = poll();
             if (value != null) {
                 return value;
             }
@@ -222,8 +224,8 @@ public class RedisDelayQueue<E> implements BlockingQueue<DelayedValue<E>> {
     }
 
     @Override
-    public DelayedValue<E> remove() {
-        DelayedValue<E> e = poll();
+    public RedisDelayed<E> remove() {
+        RedisDelayed<E> e = poll();
         if (e == null) {
             throw new NoSuchElementException();
         }
@@ -231,7 +233,7 @@ public class RedisDelayQueue<E> implements BlockingQueue<DelayedValue<E>> {
     }
 
     @Override
-    public DelayedValue<E> poll() {
+    public RedisDelayed<E> poll() {
         long time = clock.millis();
         List<ByteBuffer> result = redisScriptCommands.eval("zremrangebyscore", ScriptOutputType.MULTI,
                 new ByteBuffer[]{key.duplicate()},
@@ -244,12 +246,12 @@ public class RedisDelayQueue<E> implements BlockingQueue<DelayedValue<E>> {
         if (result.size() < 2) {
             return null;
         }
-        return new TimestampedValue<>(codec.decode(result.get(0)), PrimitiveCodec.LONG.decode(result.get(1)));
+        return new RedisDelayed<>(codec.decode(result.get(0)), PrimitiveCodec.LONG.decode(result.get(1)));
     }
 
     @Override
-    public DelayedValue<E> element() {
-        DelayedValue<E> e = peek();
+    public RedisDelayed<E> element() {
+        RedisDelayed<E> e = peek();
         if (e == null) {
             throw new NoSuchElementException();
         }
@@ -257,11 +259,11 @@ public class RedisDelayQueue<E> implements BlockingQueue<DelayedValue<E>> {
     }
 
     @Override
-    public DelayedValue<E> peek() {
+    public RedisDelayed<E> peek() {
         return redis.zrangeWithScores(this.key.duplicate(), 0, 0).stream()
                 .findFirst()
                 .filter(v -> v.getScore() < clock.millis())
-                .map(v -> new TimestampedValue<>(v.getValue(), (long) v.getScore()))
+                .map(v -> new RedisDelayed<>(v.getValue(), (long) v.getScore()))
                 .orElse(null);
     }
 }

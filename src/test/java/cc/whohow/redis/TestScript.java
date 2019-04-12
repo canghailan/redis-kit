@@ -2,6 +2,7 @@ package cc.whohow.redis;
 
 import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.PrimitiveCodec;
+import cc.whohow.redis.io.StringCodec;
 import cc.whohow.redis.lettuce.ByteBufferCodec;
 import cc.whohow.redis.script.RedisScriptCommands;
 import io.lettuce.core.RedisClient;
@@ -16,7 +17,9 @@ import org.junit.Test;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 public class TestScript {
     private static RedisClient redisClient = RedisClient.create();
@@ -41,6 +44,41 @@ public class TestScript {
     public static void tearDown() {
         connection.close();
         redisClient.shutdown();
+    }
+
+    @Test
+    public void testGet() {
+        RedisScriptCommands redisScriptCommands = new RedisScriptCommands(redis);
+        List<ByteBuffer> r1 = redisScriptCommands.eval("get", ScriptOutputType.MULTI, ByteBuffers.fromUtf8("nx"));
+        System.out.println(r1);
+        List<ByteBuffer> r2 = redisScriptCommands.eval("get", ScriptOutputType.MULTI, ByteBuffers.fromUtf8("a"));
+        System.out.println(r2.stream().map(PrimitiveCodec.LONG::decode).collect(Collectors.toList()));
+    }
+
+    @Test
+    public void testExists() {
+        RedisScriptCommands redisScriptCommands = new RedisScriptCommands(redis);
+        List<ByteBuffer> r1 = redisScriptCommands.eval("exists", ScriptOutputType.MULTI,
+                ByteBuffers.fromUtf8("a"),
+                ByteBuffers.fromUtf8("b"),
+                ByteBuffers.fromUtf8("nx"));
+        System.out.println(r1.stream().map(ByteBuffers::toUtf8String).collect(Collectors.toList()));
+    }
+
+    @Test
+    public void testAcc() {
+        RedisScriptCommands redisScriptCommands = new RedisScriptCommands(redis);
+//        System.out.println(redisScriptCommands.loadRedisScript("acc"));
+        ByteBuffer r = redisScriptCommands.eval("acc", ScriptOutputType.VALUE,
+                new ByteBuffer[] {ByteBuffers.fromUtf8("a")},
+                new ByteBuffer[] {ByteBuffers.fromUtf8("//"), ByteBuffers.fromUtf8("3"),
+                ByteBuffers.fromUtf8("PX"), ByteBuffers.fromUtf8("60000")});
+        System.out.println(ByteBuffers.toUtf8String(r));
+    }
+
+    @Test
+    public void test() {
+        System.out.println(-10/3);
     }
 
     @Test

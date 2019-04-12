@@ -1,6 +1,9 @@
 package cc.whohow.redis.util;
 
+import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.PrimitiveCodec;
+import cc.whohow.redis.script.RedisScriptCommands;
+import io.lettuce.core.ScriptOutputType;
 import io.lettuce.core.api.sync.RedisCommands;
 
 import java.nio.ByteBuffer;
@@ -10,6 +13,7 @@ import java.nio.ByteBuffer;
  */
 public class RedisAtomicLong extends Number {
     protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
+    protected final RedisScriptCommands redisScriptCommands;
     protected final ByteBuffer key;
 
     public RedisAtomicLong(RedisCommands<ByteBuffer, ByteBuffer> redis, ByteBuffer key) {
@@ -18,6 +22,7 @@ public class RedisAtomicLong extends Number {
 
     public RedisAtomicLong(RedisCommands<ByteBuffer, ByteBuffer> redis, ByteBuffer key, long initialValue) {
         this.redis = redis;
+        this.redisScriptCommands = new RedisScriptCommands(redis);
         this.key = key;
 
         redis.setnx(key.duplicate(), encode(initialValue));
@@ -65,6 +70,53 @@ public class RedisAtomicLong extends Number {
 
     public long addAndGet(long delta) {
         return redis.incrby(key.duplicate(), delta);
+    }
+
+    public long getAndAccumulate(long value, String operator) {
+        if ("+".equals(operator)) {
+            return getAndAdd(value);
+        }
+        if ("/".equals(operator)) {
+            operator = "//";
+        }
+        ByteBuffer r = redisScriptCommands.eval("acc", ScriptOutputType.VALUE,
+                new ByteBuffer[]{key.duplicate()},
+                new ByteBuffer[]{ByteBuffers.fromUtf8(operator), PrimitiveCodec.LONG.encode(value)});
+        if (r == null) {
+            return 0;
+        }
+        return PrimitiveCodec.LONG.decode(r);
+    }
+
+    public long accumulateAndGet(long value, String operator) {
+        long r = getAndAccumulate(value, operator);
+        switch (operator) {
+            case "+": {
+                return r + value;
+            }
+            case "-": {
+                return r - value;
+            }
+            case "*": {
+                return r * value;
+            }
+            case "/":
+            case "//": {
+                return r / value;
+            }
+            case "%": {
+                return r % value;
+            }
+            case "^": {
+                while (value-- > 0) {
+                    r *= r;
+                }
+                return r;
+            }
+            default: {
+                return r;
+            }
+        }
     }
 
     @Override
