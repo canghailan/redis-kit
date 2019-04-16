@@ -31,6 +31,14 @@ public class ByteBuffers {
         return byteBuffer;
     }
 
+    public static ByteBuffer concat(ByteBuffer buffer1, ByteBuffer buffer2) {
+        ByteBuffer byteBuffer = ByteBuffer.allocate(buffer1.remaining() + buffer2.remaining());
+        byteBuffer.put(buffer1.duplicate());
+        byteBuffer.put(buffer2.duplicate());
+        byteBuffer.flip();
+        return byteBuffer;
+    }
+
     public static ByteBuffer concat(ByteBuffer... buffers) {
         int capacity = Arrays.stream(buffers).mapToInt(ByteBuffer::remaining).sum();
         ByteBuffer byteBuffer = ByteBuffer.allocate(capacity);
@@ -42,9 +50,9 @@ public class ByteBuffers {
     }
 
     public static ByteBuffer slice(ByteBuffer byteBuffer, int start) {
-        byteBuffer = byteBuffer.duplicate();
-        byteBuffer.position(byteBuffer.position() + start);
-        return byteBuffer;
+        ByteBuffer slice = byteBuffer.duplicate();
+        slice.position(slice.position() + start);
+        return slice;
     }
 
     /**

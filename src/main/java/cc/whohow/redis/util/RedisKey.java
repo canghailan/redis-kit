@@ -22,14 +22,14 @@ import java.util.stream.Collectors;
 public class RedisKey<V> implements ConcurrentMap<String, V> {
     protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
     protected final RedisScriptCommands redisScriptCommands;
-    protected final StringCodec keyCodec;
+    protected final Codec<String> keyCodec;
     protected final Codec<V> codec;
 
     public RedisKey(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<V> codec) {
         this(redis, codec, new StringCodec());
     }
 
-    public RedisKey(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<V> codec, StringCodec keyCodec) {
+    public RedisKey(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<V> codec, Codec<String> keyCodec) {
         this.redis = redis;
         this.redisScriptCommands = new RedisScriptCommands(redis);
         this.codec = codec;
@@ -131,31 +131,31 @@ public class RedisKey<V> implements ConcurrentMap<String, V> {
     @Override
     public V putIfAbsent(String key, V value) {
         return decode(redisScriptCommands.eval("getset", ScriptOutputType.VALUE,
-                new ByteBuffer[] {encodeKey(key)},
-                new ByteBuffer[] {encode(value), Lettuce.nx()}));
+                new ByteBuffer[]{encodeKey(key)},
+                new ByteBuffer[]{encode(value), Lettuce.nx()}));
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public boolean remove(Object key, Object value) {
         Long n = redisScriptCommands.eval("cad", ScriptOutputType.INTEGER,
-                new ByteBuffer[] {encodeKey((String) key)},
-                new ByteBuffer[] {encode((V) value)});
+                new ByteBuffer[]{encodeKey((String) key)},
+                new ByteBuffer[]{encode((V) value)});
         return n > 0;
     }
 
     @Override
     public boolean replace(String key, V oldValue, V newValue) {
         return redisScriptCommands.eval("cas", ScriptOutputType.STATUS,
-                new ByteBuffer[] {encodeKey(key)},
-                new ByteBuffer[] {encode(oldValue), encode(newValue)});
+                new ByteBuffer[]{encodeKey(key)},
+                new ByteBuffer[]{encode(oldValue), encode(newValue)});
     }
 
     @Override
     public V replace(String key, V value) {
         return decode(redisScriptCommands.eval("getset", ScriptOutputType.VALUE,
-                new ByteBuffer[] {encodeKey(key)},
-                new ByteBuffer[] {encode(value), Lettuce.xx()}));
+                new ByteBuffer[]{encodeKey(key)},
+                new ByteBuffer[]{encode(value), Lettuce.xx()}));
     }
 
     /**

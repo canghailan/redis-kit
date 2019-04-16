@@ -26,6 +26,14 @@ public class RedisExpireKey<V> extends RedisKey<V> {
         this.pxXx = SetArgs.Builder.px(this.ttl).xx();
     }
 
+    public RedisExpireKey(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<V> codec, Codec<String> keyCodec, Duration ttl) {
+        super(redis, codec, keyCodec);
+        this.ttl = ttl.toMillis();
+        this.px = SetArgs.Builder.px(this.ttl);
+        this.pxNx = SetArgs.Builder.px(this.ttl).nx();
+        this.pxXx = SetArgs.Builder.px(this.ttl).xx();
+    }
+
     /**
      * @return value
      */
