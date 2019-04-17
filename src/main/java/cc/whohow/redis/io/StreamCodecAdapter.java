@@ -5,14 +5,27 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
-/**
- * 自适应缓冲区编码器
- */
-public abstract class AbstractBufferCodec<T> implements Codec<T> {
+public class StreamCodecAdapter<T> implements Codec<T>, StreamCodec<T> {
+    protected final Codec<T> codec;
     protected final BufferAllocationPredictor predictor;
 
-    protected AbstractBufferCodec(BufferAllocationPredictor predictor) {
+    public StreamCodecAdapter(Codec<T> codec) {
+        this(codec, new BufferAllocationPredictor());
+    }
+
+    public StreamCodecAdapter(Codec<T> codec, BufferAllocationPredictor predictor) {
+        this.codec = codec;
         this.predictor = predictor;
+    }
+
+    @Override
+    public ByteBuffer encode(T value) {
+        return codec.encode(value);
+    }
+
+    @Override
+    public T decode(ByteBuffer buffer) {
+        return codec.decode(buffer);
     }
 
     @Override

@@ -7,7 +7,7 @@ import java.nio.ByteBuffer;
 /**
  * 自适应缓冲区编码器
  */
-public abstract class AbstractStreamCodec<T> implements Codec<T> {
+public abstract class AbstractStreamCodec<T> implements Codec<T>, StreamCodec<T> {
     protected final BufferAllocationPredictor predictor;
 
     protected AbstractStreamCodec(BufferAllocationPredictor predictor) {

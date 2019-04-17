@@ -1,8 +1,5 @@
 package cc.whohow.redis.io;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
 /**
@@ -21,6 +18,14 @@ public class PrefixCodec<T> implements Codec<T> {
         this(codec, ByteBuffers.fromUtf8(prefix));
     }
 
+    public Codec<T> getCodec() {
+        return codec;
+    }
+
+    public ByteBuffer getPrefix() {
+        return prefix.duplicate();
+    }
+
     @Override
     public ByteBuffer encode(T value) {
         return ByteBuffers.concat(prefix, codec.encode(value));
@@ -28,25 +33,26 @@ public class PrefixCodec<T> implements Codec<T> {
 
     @Override
     public T decode(ByteBuffer buffer) {
-//        if (ByteBuffers.startsWith(buffer, prefix)) {
-        return codec.decode(ByteBuffers.slice(buffer, prefix.remaining()));
-//        }
-//        throw new IllegalStateException();
+        if (buffer == null) {
+            return null;
+        }
+        if (skipPrefix(buffer)) {
+            return codec.decode(buffer);
+        }
+        throw new IllegalArgumentException();
     }
 
-    @Override
-    public void encode(T value, OutputStream stream) throws IOException {
-        stream.write(prefix.array(), prefix.arrayOffset(), prefix.remaining());
-        codec.encode(value, stream);
+    protected boolean skipPrefix(ByteBuffer buffer) {
+        buffer.position(buffer.position() + prefix.remaining());
+        return true;
     }
 
-    @Override
-    public T decode(InputStream stream) throws IOException {
+    protected boolean checkAndSkipPrefix(ByteBuffer buffer) {
         for (int i = 0; i < prefix.remaining(); i++) {
-            if (stream.read() != prefix.get(i)) {
-                throw new IllegalStateException();
+            if (buffer.get() != prefix.get(i)) {
+                return false;
             }
         }
-        return codec.decode(stream);
+        return true;
     }
 }

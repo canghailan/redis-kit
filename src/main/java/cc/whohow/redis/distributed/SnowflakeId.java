@@ -3,7 +3,6 @@ package cc.whohow.redis.distributed;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.LockSupport;
 import java.util.function.IntSupplier;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
@@ -94,12 +93,16 @@ public class SnowflakeId implements Supplier<Number>, LongSupplier {
     }
 
     protected long await(long timestamp) {
-        long t = clock.millis();
-        while (t < timestamp) {
-            LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(t - timestamp));
-            t = clock.millis();
+        try {
+            long t = clock.millis();
+            while (t < timestamp) {
+                Thread.sleep(t - timestamp);
+                t = clock.millis();
+            }
+            return t;
+        } catch (InterruptedException e) {
+            throw new IllegalStateException(e);
         }
-        return t;
     }
 
     public static final class Worker implements IntSupplier, LongSupplier {

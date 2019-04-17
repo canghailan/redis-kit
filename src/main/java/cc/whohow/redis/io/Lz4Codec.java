@@ -9,7 +9,7 @@ import java.nio.ByteBuffer;
 /**
  * LZ4压缩编码器
  */
-public class Lz4Codec<T> extends AbstractBufferCodec<T> {
+public class Lz4Codec<T> implements Codec<T> {
     private static final LZ4Factory FACTORY = LZ4Factory.fastestInstance();
     private static final LZ4Compressor COMPRESSOR = FACTORY.fastCompressor();
     private static final LZ4FastDecompressor DECOMPRESSOR = FACTORY.fastDecompressor();
@@ -20,7 +20,6 @@ public class Lz4Codec<T> extends AbstractBufferCodec<T> {
     private final Codec<T> codec;
 
     public Lz4Codec(Codec<T> codec) {
-        super(new BufferAllocationPredictor(1024, 8 * 1024));
         this.codec = codec;
     }
 

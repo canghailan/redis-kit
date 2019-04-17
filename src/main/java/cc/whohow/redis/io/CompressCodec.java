@@ -10,10 +10,20 @@ import java.io.OutputStream;
 
 public class CompressCodec<T> extends AbstractStreamCodec<T> {
     private final String name;
-    private final Codec<T> codec;
+    private final StreamCodec<T> codec;
     private CompressorStreamFactory factory = CompressorStreamFactory.getSingleton();
 
     public CompressCodec(String name, Codec<T> codec) {
+        this(name, codec, new BufferAllocationPredictor(1024, 8 * 1024));
+    }
+
+    public CompressCodec(String name, Codec<T> codec, BufferAllocationPredictor predictor) {
+        super(predictor);
+        this.name = name;
+        this.codec = new StreamCodecAdapter<>(codec, predictor);
+    }
+
+    public CompressCodec(String name, StreamCodec<T> codec) {
         super(new BufferAllocationPredictor(1024, 8 * 1024));
         this.name = name;
         this.codec = codec;

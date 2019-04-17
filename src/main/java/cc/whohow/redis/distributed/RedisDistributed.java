@@ -29,10 +29,10 @@ public class RedisDistributed implements
         Runnable,
         Closeable,
         RedisConnectionStateListener {
+    protected static final Logger log = LogManager.getLogger();
     protected static final ByteBuffer KEY = ByteBuffers.fromUtf8("_rd_");
     protected static final ByteBuffer KEY_PREFIX = ByteBuffers.fromUtf8("_rd_:");
     protected static final ByteBuffer GC_LOCK_KEY = ByteBuffers.fromUtf8("_rd_gc_");
-    private static final Logger log = LogManager.getLogger();
     protected final ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
     protected final int maxId = 65535;
     protected final Duration timeout = Duration.ofSeconds(30);

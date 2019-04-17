@@ -2,7 +2,6 @@ package cc.whohow.redis;
 
 import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.PrimitiveCodec;
-import cc.whohow.redis.io.StringCodec;
 import cc.whohow.redis.lettuce.ByteBufferCodec;
 import cc.whohow.redis.script.RedisScriptCommands;
 import io.lettuce.core.RedisClient;
@@ -70,15 +69,15 @@ public class TestScript {
         RedisScriptCommands redisScriptCommands = new RedisScriptCommands(redis);
 //        System.out.println(redisScriptCommands.loadRedisScript("acc"));
         ByteBuffer r = redisScriptCommands.eval("acc", ScriptOutputType.VALUE,
-                new ByteBuffer[] {ByteBuffers.fromUtf8("a")},
-                new ByteBuffer[] {ByteBuffers.fromUtf8("//"), ByteBuffers.fromUtf8("3"),
-                ByteBuffers.fromUtf8("PX"), ByteBuffers.fromUtf8("60000")});
+                new ByteBuffer[]{ByteBuffers.fromUtf8("a")},
+                new ByteBuffer[]{ByteBuffers.fromUtf8("//"), ByteBuffers.fromUtf8("3"),
+                        ByteBuffers.fromUtf8("PX"), ByteBuffers.fromUtf8("60000")});
         System.out.println(ByteBuffers.toUtf8String(r));
     }
 
     @Test
     public void test() {
-        System.out.println(-10/3);
+        System.out.println(-10 / 3);
     }
 
     @Test

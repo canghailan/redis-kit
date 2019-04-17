@@ -59,15 +59,6 @@ public abstract class ImmutableGeneratedCacheKeyCodec implements Codec<Immutable
         public ImmutableGeneratedCacheKey decode(ByteBuffer buffer) {
             return ImmutableGeneratedCacheKey.empty();
         }
-
-        @Override
-        public void encode(ImmutableGeneratedCacheKey value, OutputStream stream) throws IOException {
-        }
-
-        @Override
-        public ImmutableGeneratedCacheKey decode(InputStream stream) throws IOException {
-            return ImmutableGeneratedCacheKey.empty();
-        }
     }
 
     @SuppressWarnings("unchecked")
@@ -89,16 +80,6 @@ public abstract class ImmutableGeneratedCacheKeyCodec implements Codec<Immutable
         @Override
         public ImmutableGeneratedCacheKey decode(ByteBuffer buffer) {
             return ImmutableGeneratedCacheKey.of(keyCodec.decode(buffer));
-        }
-
-        @Override
-        public void encode(ImmutableGeneratedCacheKey value, OutputStream stream) throws IOException {
-            keyCodec.encode(value.getKey(0), stream);
-        }
-
-        @Override
-        public ImmutableGeneratedCacheKey decode(InputStream stream) throws IOException {
-            return ImmutableGeneratedCacheKey.of(keyCodec.decode(stream));
         }
     }
 

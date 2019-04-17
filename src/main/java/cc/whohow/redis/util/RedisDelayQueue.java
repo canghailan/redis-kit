@@ -3,6 +3,7 @@ package cc.whohow.redis.util;
 import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.Codec;
 import cc.whohow.redis.io.PrimitiveCodec;
+import cc.whohow.redis.lettuce.Lettuce;
 import cc.whohow.redis.lettuce.RedisCommandsAdapter;
 import cc.whohow.redis.lettuce.RedisValueCodecAdapter;
 import cc.whohow.redis.script.RedisScriptCommands;
@@ -25,11 +26,6 @@ import java.util.concurrent.atomic.AtomicLong;
  * Reids延迟队列
  */
 public class RedisDelayQueue<E> implements BlockingQueue<RedisDelayed<E>> {
-    private static final ByteBuffer ZERO = PrimitiveCodec.INTEGER.encode(0);
-    private static final ByteBuffer ONE = PrimitiveCodec.INTEGER.encode(1);
-    private static final ByteBuffer WITHSCORES = ByteBuffers.fromUtf8("WITHSCORES");
-    private static final ByteBuffer LIMIT = ByteBuffers.fromUtf8("LIMIT");
-
     protected final AtomicLong pollInterval = new AtomicLong(1000);
     protected final RedisCommands<ByteBuffer, E> redis;
     protected final RedisScriptCommands redisScriptCommands;
@@ -92,11 +88,11 @@ public class RedisDelayQueue<E> implements BlockingQueue<RedisDelayed<E>> {
         List<ByteBuffer> result = redisScriptCommands.eval("zremrangebyscore", ScriptOutputType.MULTI,
                 new ByteBuffer[]{key.duplicate()},
                 new ByteBuffer[]{
-                        ZERO.duplicate(),
+                        Lettuce.zero(),
                         PrimitiveCodec.LONG.encode(time),
-                        WITHSCORES.duplicate(),
-                        LIMIT.duplicate(),
-                        ZERO.duplicate(),
+                        Lettuce.withscores(),
+                        Lettuce.limit(),
+                        Lettuce.zero(),
                         PrimitiveCodec.INTEGER.encode(maxElements)
                 });
         for (int i = 0; i < result.size(); i += 2) {
@@ -237,12 +233,12 @@ public class RedisDelayQueue<E> implements BlockingQueue<RedisDelayed<E>> {
         long time = clock.millis();
         List<ByteBuffer> result = redisScriptCommands.eval("zremrangebyscore", ScriptOutputType.MULTI,
                 new ByteBuffer[]{key.duplicate()},
-                ZERO.duplicate(),
+                Lettuce.zero(),
                 PrimitiveCodec.LONG.encode(time),
-                WITHSCORES.duplicate(),
-                LIMIT.duplicate(),
-                ZERO.duplicate(),
-                ONE.duplicate());
+                Lettuce.withscores(),
+                Lettuce.limit(),
+                Lettuce.zero(),
+                Lettuce.one());
         if (result.size() < 2) {
             return null;
         }

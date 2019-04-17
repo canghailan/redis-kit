@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD})
 public @interface RedisCacheable {
-    boolean statisticsEnabled() default true;
+    boolean statisticsEnabled() default false;
 
     boolean managementEnabled() default false;
 

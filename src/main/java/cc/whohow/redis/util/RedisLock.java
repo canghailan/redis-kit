@@ -147,14 +147,19 @@ public class RedisLock implements Lock {
      * 获取重试等待时间，默认指数退避，直到最大锁定时间的一半
      */
     protected long getRetryWaitingTime(int retryTimes) {
-        long time;
-        if (retryTimes < 13) {
-            time = 2 << retryTimes;
-        } else {
-            time = retryTimes * 1000L;
+        long base = 3_000; // ms
+        if (retryTimes <= 2) {
+            return base;
         }
-        if (time > maxLockTimeMillis / 2) {
-            time = maxLockTimeMillis / 2;
+        long max = maxLockTimeMillis / 2;
+        // Fibonacci
+        long[] table = {0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597};
+        if (retryTimes >= table.length) {
+            return max;
+        }
+        long time = table[retryTimes] * base;
+        if (time > max) {
+            return max;
         }
         return time;
     }

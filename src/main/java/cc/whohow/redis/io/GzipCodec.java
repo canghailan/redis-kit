@@ -10,9 +10,18 @@ import java.util.zip.GZIPOutputStream;
  * GZIP压缩编码器
  */
 public class GzipCodec<T> extends AbstractStreamCodec<T> {
-    private final Codec<T> codec;
+    private final StreamCodec<T> codec;
 
     public GzipCodec(Codec<T> codec) {
+        this(codec, new BufferAllocationPredictor(1024, 8 * 1024));
+    }
+
+    public GzipCodec(Codec<T> codec, BufferAllocationPredictor predictor) {
+        super(predictor);
+        this.codec = new StreamCodecAdapter<>(codec, predictor);
+    }
+
+    public GzipCodec(StreamCodec<T> codec) {
         super(new BufferAllocationPredictor(1024, 8 * 1024));
         this.codec = codec;
     }

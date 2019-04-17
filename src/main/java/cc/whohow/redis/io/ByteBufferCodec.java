@@ -2,15 +2,7 @@ package cc.whohow.redis.io;
 
 import java.nio.ByteBuffer;
 
-public class ByteBufferCodec extends AbstractBufferCodec<ByteBuffer> {
-    public ByteBufferCodec() {
-        this(new BufferAllocationPredictor(16, 256));
-    }
-
-    public ByteBufferCodec(BufferAllocationPredictor predictor) {
-        super(predictor);
-    }
-
+public class ByteBufferCodec implements Codec<ByteBuffer> {
     @Override
     public ByteBuffer encode(ByteBuffer value) {
         return value;
