@@ -3,6 +3,7 @@ package cc.whohow.redis;
 import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.PrimitiveCodec;
 import cc.whohow.redis.lettuce.ByteBufferCodec;
+import cc.whohow.redis.script.RedisScript;
 import cc.whohow.redis.script.RedisScriptCommands;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
@@ -78,6 +79,16 @@ public class TestScript {
     @Test
     public void test() {
         System.out.println(-10 / 3);
+    }
+
+    @Test
+    public void testError() {
+        RedisScriptCommands redisScriptCommands = new RedisScriptCommands(redis);
+        RedisScript redisScript = new RedisScript("test", "return redis.call('time');");
+        Object result1 = redisScriptCommands.eval(redisScript, ScriptOutputType.MULTI);
+        System.out.println(result1);
+        Object result2 = redisScriptCommands.eval(redisScript, ScriptOutputType.MULTI);
+        System.out.println(result2);
     }
 
     @Test

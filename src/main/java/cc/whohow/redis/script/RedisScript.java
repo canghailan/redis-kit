@@ -4,6 +4,7 @@ import cc.whohow.redis.io.Java9InputStream;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -20,10 +21,22 @@ public class RedisScript {
         this(name, load(name));
     }
 
+    public RedisScript(URL url) {
+        this(url.toString(), load(url));
+    }
+
     public RedisScript(String name, String script) {
         this.name = name;
         this.sha1 = sha1Hex(script);
         this.script = script;
+    }
+
+    private static String load(URL url) {
+        try (Java9InputStream stream = new Java9InputStream(url.openStream())) {
+            return StandardCharsets.UTF_8.decode(stream.readAllBytes(1024)).toString();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     private static String load(String name) {

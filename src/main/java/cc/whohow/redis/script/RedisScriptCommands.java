@@ -1,5 +1,6 @@
 package cc.whohow.redis.script;
 
+import io.lettuce.core.RedisCommandExecutionException;
 import io.lettuce.core.ScriptOutputType;
 import io.lettuce.core.api.sync.RedisCommands;
 
@@ -20,11 +21,37 @@ public class RedisScriptCommands {
     }
 
     public <T> T eval(String name, ScriptOutputType type, ByteBuffer... keys) {
-        return redis.evalsha(getRedisScript(name).getSha1(), type, keys);
+        return eval(getRedisScript(name), type, keys);
     }
 
     public <T> T eval(String name, ScriptOutputType type, ByteBuffer[] keys, ByteBuffer... args) {
-        return redis.evalsha(getRedisScript(name).getSha1(), type, keys, args);
+        return eval(getRedisScript(name), type, keys, args);
+    }
+
+    public <T> T eval(RedisScript script, ScriptOutputType type, ByteBuffer... keys) {
+        try {
+            return redis.evalsha(script.getSha1(), type, keys);
+        } catch (RedisCommandExecutionException e) {
+            if (isNoScript(e)) {
+                return redis.eval(script.getScript(), type, keys);
+            }
+            throw e;
+        }
+    }
+
+    public <T> T eval(RedisScript script, ScriptOutputType type, ByteBuffer[] keys, ByteBuffer... args) {
+        try {
+            return redis.evalsha(script.getSha1(), type, keys, args);
+        } catch (RedisCommandExecutionException e) {
+            if (isNoScript(e)) {
+                return redis.eval(script.getScript(), type, keys, args);
+            }
+            throw e;
+        }
+    }
+
+    protected boolean isNoScript(RedisCommandExecutionException e) {
+        return e != null && e.getMessage() != null && e.getMessage().contains("NOSCRIPT");
     }
 
     public RedisScript getRedisScript(String script) {
