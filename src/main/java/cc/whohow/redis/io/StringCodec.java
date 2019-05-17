@@ -38,7 +38,7 @@ public class StringCodec implements Codec<String> {
             return null;
         }
         if (buffer.hasArray()) {
-            return new String(buffer.array(), buffer.arrayOffset(), buffer.remaining(), charset);
+            return new String(buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.remaining(), charset);
         }
         return charset.decode(buffer).toString();
     }

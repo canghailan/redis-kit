@@ -38,7 +38,7 @@ public class ByteBuffers {
             return null;
         }
         if (byteBuffer.hasArray()) {
-            return new String(byteBuffer.array(), byteBuffer.arrayOffset(), byteBuffer.remaining(), charset);
+            return new String(byteBuffer.array(), byteBuffer.arrayOffset() + byteBuffer.position(), byteBuffer.remaining(), charset);
         }
         return charset.decode(byteBuffer.duplicate()).toString();
     }

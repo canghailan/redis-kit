@@ -36,7 +36,7 @@ public class StreamCodecAdapter<T> implements Codec<T>, StreamCodec<T> {
         }
         if (buffer.hasArray()) {
             if (buffer.hasRemaining()) {
-                stream.write(buffer.array(), buffer.arrayOffset(), buffer.remaining());
+                stream.write(buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.remaining());
             }
         } else {
             while (buffer.hasRemaining()) {
