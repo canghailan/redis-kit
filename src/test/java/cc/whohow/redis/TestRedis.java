@@ -3,9 +3,7 @@ package cc.whohow.redis;
 import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.StringCodec;
 import cc.whohow.redis.lettuce.ByteBufferCodec;
-import cc.whohow.redis.util.RedisClock;
-import cc.whohow.redis.util.RedisKey;
-import cc.whohow.redis.util.RedisKeyIterator;
+import cc.whohow.redis.util.*;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
@@ -62,5 +60,21 @@ public class TestRedis {
         while (iterator.hasNext()) {
             System.out.println(ByteBuffers.toUtf8String(iterator.next()));
         }
+    }
+
+    @Test
+    public void test() {
+        RedisMap<String, String> map = new RedisMap<>(redis, new StringCodec(), new StringCodec(), "testMap");
+        map.put("a", "aa");
+        map.put("b", "bb");
+        map.put("c", "cc");
+        System.out.println(map.get());
+        map.remove("c");
+        System.out.println(map.get());
+
+        RedisSortedSet<String> sortedSet = new RedisSortedSet<>(redis, new StringCodec(), "testSortedSet");
+        sortedSet.put("a", 1);
+        sortedSet.put("b", 2);
+        System.out.println(sortedSet.get());
     }
 }

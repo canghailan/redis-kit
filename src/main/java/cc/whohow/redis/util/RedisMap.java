@@ -6,17 +6,19 @@ import io.lettuce.core.api.sync.RedisCommands;
 
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
  * 散列表
  */
-public class RedisMap<K, V> implements ConcurrentMap<K, V> {
+public class RedisMap<K, V> implements ConcurrentMap<K, V>, Supplier<Map<K, V>> {
     protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
     protected final Codec<K> keyCodec;
     protected final Codec<V> valueCodec;
@@ -208,5 +210,15 @@ public class RedisMap<K, V> implements ConcurrentMap<K, V> {
     @Override
     public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Map<K, V> get() {
+        return redis.hgetall(hashKey.duplicate()).entrySet().stream()
+                .collect(Collectors.toMap(
+                        e -> decodeKey(e.getKey()),
+                        e -> decodeValue(e.getValue()),
+                        (a, b) -> b,
+                        LinkedHashMap::new));
     }
 }

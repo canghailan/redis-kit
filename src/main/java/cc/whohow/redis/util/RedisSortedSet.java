@@ -9,14 +9,17 @@ import io.lettuce.core.api.sync.RedisCommands;
 
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  * 有序集合，按指定值排序
  */
-public class RedisSortedSet<E> implements ConcurrentMap<E, Number> {
+public class RedisSortedSet<E> implements ConcurrentMap<E, Number>, Supplier<Map<E, Number>> {
     protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
     protected final Codec<E> codec;
     protected final ByteBuffer key;
@@ -154,5 +157,15 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number> {
     public Number replace(E key, Number value) {
         redis.zadd(this.key.duplicate(), Lettuce.Z_ADD_XX, value.doubleValue(), encode(key));
         return null;
+    }
+
+    @Override
+    public Map<E, Number> get() {
+        return redis.zrangeWithScores(key.duplicate(), 0, -1).stream()
+                .collect(Collectors.toMap(
+                        e -> decode(e.getValue()),
+                        ScoredValue::getScore,
+                        (a, b) -> b,
+                        LinkedHashMap::new));
     }
 }
