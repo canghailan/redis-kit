@@ -74,7 +74,9 @@ public class TestRedis {
 
         RedisSortedSet<String> sortedSet = new RedisSortedSet<>(redis, new StringCodec(), "testSortedSet");
         sortedSet.put("a", 1);
-        sortedSet.put("b", 2);
+        sortedSet.put("b", 5);
+        sortedSet.put("c", 3);
+        sortedSet.put("d", 2);
         System.out.println(sortedSet.get());
     }
 }

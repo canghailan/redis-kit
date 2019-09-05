@@ -2,6 +2,7 @@ package cc.whohow.redis.distributed;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.IntSupplier;
 import java.util.function.LongSupplier;
@@ -11,6 +12,8 @@ import java.util.function.Supplier;
  * Snowflake算法
  */
 public class SnowflakeId implements Supplier<Number>, LongSupplier {
+    public static final Instant Y2K = Instant.ofEpochMilli(946684800000L); // UTC 2000-01-01 00:00:00
+
     protected final TimeUnit timeUnit;
     protected final long timestampMask;
     protected final long workerIdMask;
@@ -30,8 +33,7 @@ public class SnowflakeId implements Supplier<Number>, LongSupplier {
     }
 
     public SnowflakeId(Clock clock, LongSupplier worker) {
-        // UTC 2000-01-01 00:00:00
-        this(clock, worker, Instant.ofEpochMilli(946684800000L));
+        this(clock, worker, Y2K);
     }
 
     public SnowflakeId(Clock clock, LongSupplier worker, Instant epoch) {
@@ -42,7 +44,7 @@ public class SnowflakeId implements Supplier<Number>, LongSupplier {
                        TimeUnit timeUnit, long timestampBits, long workerIdBits, long sequenceBits) {
         this.clock = clock;
         this.worker = worker;
-        this.epoch = epoch.toEpochMilli();
+        this.epoch = timeUnit.convert(epoch.toEpochMilli(), TimeUnit.MILLISECONDS);
         this.timeUnit = timeUnit;
         this.timestampMask = ~(-1L << timestampBits);
         this.workerIdMask = ~(-1L << workerIdBits);
@@ -54,9 +56,8 @@ public class SnowflakeId implements Supplier<Number>, LongSupplier {
     /**
      * 1970-01-01 00:00:00+00
      */
-    public long snowflake(long timestamp, long workerId, long sequence, long epoch) {
-        long t = timeUnit.convert(timestamp - epoch, TimeUnit.MILLISECONDS);
-        if (t < 0 || t > timestampMask) {
+    public long snowflake(long timestamp, long workerId, long sequence) {
+        if (timestamp < 0 || timestamp > timestampMask) {
             throw new IllegalArgumentException();
         }
         if (workerId < 0 || workerId > workerIdMask) {
@@ -65,7 +66,7 @@ public class SnowflakeId implements Supplier<Number>, LongSupplier {
         if (sequence < 0 || sequence > sequenceMask) {
             throw new IllegalArgumentException();
         }
-        return (t << timestampShift) | (workerId << workerIdShift) | sequence;
+        return (timestamp << timestampShift) | (workerId << workerIdShift) | sequence;
     }
 
     @Override
@@ -73,31 +74,50 @@ public class SnowflakeId implements Supplier<Number>, LongSupplier {
         return getAsLong();
     }
 
+    public long getWorkerId() {
+        return worker.getAsLong();
+    }
+
+    public long getTimestamp() {
+        return getTimestamp(clock.millis());
+    }
+
+    public long getTimestamp(long millis) {
+        return timeUnit.convert(millis, TimeUnit.MILLISECONDS);
+    }
+
     @Override
     public long getAsLong() {
-        long i = worker.getAsLong();
-        long t = clock.millis();
+        long i = getWorkerId();
+        long t = getTimestamp();
         synchronized (this) {
             if (t == timestamp && i == workerId) {
                 sequence = (sequence + 1) & sequenceMask;
                 if (sequence == 0) {
-                    timestamp = await(timestamp);
+                    timestamp = await(timestamp + 1);
                 }
             } else {
                 workerId = i;
                 timestamp = t;
                 sequence = 0;
             }
-            return snowflake(timestamp, workerId, sequence, epoch);
+            return snowflake(timestamp - epoch, workerId, sequence);
         }
+    }
+
+    public long random(long timestamp) {
+        return snowflake(
+                timeUnit.convert(timestamp, TimeUnit.MILLISECONDS) - epoch,
+                workerId,
+                ThreadLocalRandom.current().nextLong(sequenceMask >> 1, sequenceMask));
     }
 
     protected long await(long timestamp) {
         try {
-            long t = clock.millis();
+            long t = getTimestamp();
             while (t < timestamp) {
-                Thread.sleep(t - timestamp);
-                t = clock.millis();
+                Thread.sleep(timeUnit.toMillis(timestamp - t));
+                t = getTimestamp();
             }
             return t;
         } catch (InterruptedException e) {
@@ -106,7 +126,7 @@ public class SnowflakeId implements Supplier<Number>, LongSupplier {
     }
 
     public static final class Worker implements IntSupplier, LongSupplier {
-        static final Worker ZERO = new Worker(0);
+        public static final Worker ZERO = new Worker(0);
 
         private final int id;
 
