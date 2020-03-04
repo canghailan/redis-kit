@@ -43,7 +43,7 @@ public class RedisAtomicLong extends Number {
     }
 
     protected long decode(ByteBuffer byteBuffer) {
-        return PrimitiveCodec.LONG.decode(byteBuffer);
+        return PrimitiveCodec.LONG.decode(byteBuffer, 0L);
     }
 
     public long get() {

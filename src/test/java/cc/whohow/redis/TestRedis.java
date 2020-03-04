@@ -1,6 +1,7 @@
 package cc.whohow.redis;
 
 import cc.whohow.redis.io.ByteBuffers;
+import cc.whohow.redis.io.PrimitiveCodec;
 import cc.whohow.redis.io.StringCodec;
 import cc.whohow.redis.lettuce.ByteBufferCodec;
 import cc.whohow.redis.util.*;
@@ -52,13 +53,40 @@ public class TestRedis {
 
     @Test
     public void testIterator() {
-        RedisKey<String> redisKey = new RedisKey<>(redis, new StringCodec());
-        redisKey.put("a", "1");
-        redisKey.put("b", "2");
+//        RedisKey<String> redisKey = new RedisKey<>(redis, new StringCodec());
+//        redisKey.put("a", "1");
+//        redisKey.put("b", "2");
+        RedisAtomicLong c1 = new RedisAtomicLong(redis, "c:1");
+        RedisAtomicLong c2 = new RedisAtomicLong(redis, "c:2");
+        RedisAtomicLong c3 = new RedisAtomicLong(redis, "c:3");
+        RedisAtomicLong c4 = new RedisAtomicLong(redis, "c:4");
+        RedisAtomicLong c5 = new RedisAtomicLong(redis, "c:5");
 
-        RedisKeyIterator iterator = new RedisKeyIterator(redis);
+        System.out.println(c5.get());
+
+        c1.incrementAndGet();
+        c1.incrementAndGet();
+        c1.incrementAndGet();
+        c2.incrementAndGet();
+        c2.incrementAndGet();
+        c3.incrementAndGet();
+        c4.set(0);
+
+        String prefix = "c:";
+
+        RedisKey<Long> keys = new RedisKey<>(redis, PrimitiveCodec.LONG);
+
+        RedisKeyIterator iterator = new RedisKeyIterator(redis, prefix + "*");
         while (iterator.hasNext()) {
-            System.out.println(ByteBuffers.toUtf8String(iterator.next()));
+            String key = ByteBuffers.toUtf8String(iterator.next());
+            RedisAtomicLong c = new RedisAtomicLong(redis, key);
+            long value = c.getAndSet(0);
+
+            if (value == 0) {
+                keys.remove(key, 0L);
+            }
+
+            System.out.println("aaa" + key.substring(prefix.length()) + " = " + value);
         }
     }
 
