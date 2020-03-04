@@ -16,8 +16,16 @@ public class RedisAtomicLong extends Number {
     protected final RedisScriptCommands redisScriptCommands;
     protected final ByteBuffer key;
 
+    public RedisAtomicLong(RedisCommands<ByteBuffer, ByteBuffer> redis, String key) {
+        this(redis, ByteBuffers.fromUtf8(key));
+    }
+
     public RedisAtomicLong(RedisCommands<ByteBuffer, ByteBuffer> redis, ByteBuffer key) {
         this(redis, key, 0);
+    }
+
+    public RedisAtomicLong(RedisCommands<ByteBuffer, ByteBuffer> redis, String key, long initialValue) {
+        this(redis, ByteBuffers.fromUtf8(key), initialValue);
     }
 
     public RedisAtomicLong(RedisCommands<ByteBuffer, ByteBuffer> redis, ByteBuffer key, long initialValue) {
