@@ -33,7 +33,9 @@ public class RedisAtomicLong extends Number {
         this.redisScriptCommands = new RedisScriptCommands(redis);
         this.key = key;
 
-        redis.setnx(key.duplicate(), encode(initialValue));
+        if (initialValue != 0) {
+            redis.setnx(key.duplicate(), encode(initialValue));
+        }
     }
 
     protected ByteBuffer encode(long value) {
