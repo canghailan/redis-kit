@@ -22,14 +22,14 @@ import java.util.function.Consumer;
 /**
  * Redis键空间事件处理
  */
-public class RedisKeyspaceEvent implements RedisPubSubListener<ByteBuffer, ByteBuffer>, AutoCloseable {
+public class RedisKeyspaceEvents implements RedisPubSubListener<ByteBuffer, ByteBuffer>, AutoCloseable {
     protected static final Logger log = LogManager.getLogger();
     protected final String keyspace;
     protected final int keyOffset;
     protected final NavigableMap<MatchKey, Set<Listener>> listeners = new ConcurrentSkipListMap<>();
     protected volatile StatefulRedisPubSubConnection<ByteBuffer, ByteBuffer> redisPubSubConnection;
 
-    public RedisKeyspaceEvent(RedisClient redisClient, RedisURI redisURI) {
+    public RedisKeyspaceEvents(RedisClient redisClient, RedisURI redisURI) {
         this.keyspace = "__keyspace@" + redisURI.getDatabase() + "__:";
         this.keyOffset = keyspace.length();
         this.redisPubSubConnection = redisClient.connectPubSub(ByteBufferCodec.INSTANCE, redisURI);

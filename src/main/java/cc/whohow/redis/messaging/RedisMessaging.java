@@ -1,7 +1,7 @@
 package cc.whohow.redis.messaging;
 
 import cc.whohow.redis.io.Codec;
-import cc.whohow.redis.util.RedisKeyspaceEvent;
+import cc.whohow.redis.util.RedisKeyspaceEvents;
 import io.lettuce.core.api.sync.RedisCommands;
 
 import java.nio.ByteBuffer;
@@ -13,18 +13,18 @@ import java.util.function.Consumer;
  */
 public class RedisMessaging {
     private final RedisCommands<ByteBuffer, ByteBuffer> redis;
-    private final RedisKeyspaceEvent redisKeyspaceEvent;
+    private final RedisKeyspaceEvents redisKeyspaceEvents;
     private final ExecutorService executor;
 
     public RedisMessaging(RedisCommands<ByteBuffer, ByteBuffer> redis,
-                          RedisKeyspaceEvent redisKeyspaceEvent,
+                          RedisKeyspaceEvents redisKeyspaceEvents,
                           ExecutorService executor) {
         this.redis = redis;
-        this.redisKeyspaceEvent = redisKeyspaceEvent;
+        this.redisKeyspaceEvents = redisKeyspaceEvents;
         this.executor = executor;
     }
 
     public <E> RedisMessageQueue<E> createQueue(String name, Codec<E> codec, Consumer<E> consumer) {
-        return new RedisMessageQueue<>(redis, codec, name, consumer, executor, redisKeyspaceEvent);
+        return new RedisMessageQueue<>(redis, codec, name, consumer, executor, redisKeyspaceEvents);
     }
 }

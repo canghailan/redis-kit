@@ -100,7 +100,7 @@ public class TestRedis {
 
     @Test
     public void testKeyspaceEvent() throws Exception {
-        RedisKeyspaceEvent redisKeyspaceEvent = new RedisKeyspaceEvent(redisClient, redisURI);
+        RedisKeyspaceEvents redisKeyspaceEvents = new RedisKeyspaceEvents(redisClient, redisURI);
 
         Thread.sleep(300_000);
     }
@@ -108,9 +108,9 @@ public class TestRedis {
     @Test
     public void testMessageQueue() throws Exception {
         ExecutorService executor = Executors.newCachedThreadPool();
-        RedisKeyspaceEvent redisKeyspaceEvent = new RedisKeyspaceEvent(redisClient, redisURI);
+        RedisKeyspaceEvents redisKeyspaceEvents = new RedisKeyspaceEvents(redisClient, redisURI);
 
-        RedisMessaging redisMessaging = new RedisMessaging(redis, redisKeyspaceEvent, executor);
+        RedisMessaging redisMessaging = new RedisMessaging(redis, redisKeyspaceEvents, executor);
 
         AtomicInteger counter = new AtomicInteger(0);
 

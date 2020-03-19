@@ -1,7 +1,7 @@
 package cc.whohow.redis.messaging;
 
 import cc.whohow.redis.io.Codec;
-import cc.whohow.redis.util.RedisKeyspaceEvent;
+import cc.whohow.redis.util.RedisKeyspaceEvents;
 import cc.whohow.redis.util.RedisList;
 import io.lettuce.core.api.sync.RedisCommands;
 
@@ -12,20 +12,20 @@ import java.util.function.Consumer;
 /**
  * Redis消息队列，基于键空间事件触发轮询
  */
-public class RedisMessageQueue<E> extends PollingMessageQueue<E> implements RedisKeyspaceEvent.Listener, AutoCloseable {
+public class RedisMessageQueue<E> extends PollingMessageQueue<E> implements RedisKeyspaceEvents.Listener, AutoCloseable {
     private final String name;
     private final ExecutorService executor;
-    private final RedisKeyspaceEvent redisKeyspaceEvent;
+    private final RedisKeyspaceEvents redisKeyspaceEvents;
 
     public RedisMessageQueue(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, String name,
                              Consumer<E> consumer,
                              ExecutorService executor,
-                             RedisKeyspaceEvent redisKeyspaceEvent) {
+                             RedisKeyspaceEvents redisKeyspaceEvents) {
         super(new RedisList<>(redis, codec, name), consumer);
         this.name = name;
         this.executor = executor;
-        this.redisKeyspaceEvent = redisKeyspaceEvent;
-        this.redisKeyspaceEvent.addListener(name, this);
+        this.redisKeyspaceEvents = redisKeyspaceEvents;
+        this.redisKeyspaceEvents.addListener(name, this);
     }
 
     public String getName() {
@@ -58,7 +58,7 @@ public class RedisMessageQueue<E> extends PollingMessageQueue<E> implements Redi
     @Override
     public void close() throws Exception {
         // 关闭消息队列，取消监听，停止轮询
-        redisKeyspaceEvent.removeListener(name, this);
+        redisKeyspaceEvents.removeListener(name, this);
         setWaiting();
     }
 
