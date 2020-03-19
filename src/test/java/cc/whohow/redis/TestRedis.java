@@ -4,6 +4,8 @@ import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.PrimitiveCodec;
 import cc.whohow.redis.io.StringCodec;
 import cc.whohow.redis.lettuce.ByteBufferCodec;
+import cc.whohow.redis.messaging.RedisMessageQueue;
+import cc.whohow.redis.messaging.RedisMessaging;
 import cc.whohow.redis.util.*;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
@@ -16,7 +18,13 @@ import org.junit.Test;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class TestRedis {
     private static RedisClient redisClient = RedisClient.create();
@@ -88,6 +96,54 @@ public class TestRedis {
 
             System.out.println("aaa" + key.substring(prefix.length()) + " = " + value);
         }
+    }
+
+    @Test
+    public void testKeyspaceEvent() throws Exception {
+        RedisKeyspaceEvent redisKeyspaceEvent = new RedisKeyspaceEvent(redisClient, redisURI);
+
+        Thread.sleep(300_000);
+    }
+
+    @Test
+    public void testMessageQueue() throws Exception {
+        ExecutorService executor = Executors.newCachedThreadPool();
+        RedisKeyspaceEvent redisKeyspaceEvent = new RedisKeyspaceEvent(redisClient, redisURI);
+
+        RedisMessaging redisMessaging = new RedisMessaging(redis, redisKeyspaceEvent, executor);
+
+        AtomicInteger counter = new AtomicInteger(0);
+
+        List<RedisMessageQueue<String>> mqs = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            String name = "mq" + i;
+            RedisMessageQueue<String> mq = redisMessaging.createQueue(name, new StringCodec(),
+                    (m) -> {
+                        try {
+                            long ms = ThreadLocalRandom.current().nextLong(5_000);
+                            Thread.sleep(ms);
+                            System.out.println(Thread.currentThread() + " 消费 " + name + ": " + m + "  " + ms + "ms");
+                            System.out.println("counter: " + counter.incrementAndGet());
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    });
+            mq.setReady();
+            mqs.add(mq);
+        }
+
+        for (int i = 0; i < 30; i++) {
+            executor.submit(() -> {
+                int index = ThreadLocalRandom.current().nextInt(mqs.size());
+                RedisMessageQueue<String> mq = mqs.get(index);
+                String data = mq.getName() + "_" + ThreadLocalRandom.current().nextInt(100);
+                mq.offer(data);
+                System.out.println(Thread.currentThread() + " 生产 " + mq.getName() + ": " + data);
+            });
+            Thread.sleep(ThreadLocalRandom.current().nextLong(1_000));
+        }
+
+        Thread.sleep(300_000);
     }
 
     @Test

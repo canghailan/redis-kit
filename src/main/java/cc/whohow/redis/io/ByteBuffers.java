@@ -101,6 +101,17 @@ public class ByteBuffers {
     }
 
     /**
+     * 裁剪
+     */
+    public static ByteBuffer slice(ByteBuffer byteBuffer, int start, int end) {
+        ByteBuffer slice = byteBuffer.duplicate();
+        int p = slice.position();
+        slice.position(p + start);
+        slice.limit(p + end);
+        return slice;
+    }
+
+    /**
      * 是否内容一致
      */
     public static boolean contentEquals(ByteBuffer a, ByteBuffer b) {
@@ -124,6 +135,21 @@ public class ByteBuffers {
         }
         for (int i = byteBuffer.position(), j = prefix.position(); j < prefix.limit(); i++, j++) {
             if (byteBuffer.get(i) != prefix.get(j)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 是否匹配后缀
+     */
+    public static boolean endsWith(ByteBuffer byteBuffer, ByteBuffer suffix) {
+        if (byteBuffer.remaining() < suffix.remaining()) {
+            return false;
+        }
+        for (int i = byteBuffer.limit() - 1, j = suffix.limit() - 1; j >= suffix.position(); i--, j--) {
+            if (byteBuffer.get(i) != suffix.get(j)) {
                 return false;
             }
         }

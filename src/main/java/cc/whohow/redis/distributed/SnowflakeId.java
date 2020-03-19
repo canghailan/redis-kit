@@ -2,6 +2,7 @@ package cc.whohow.redis.distributed;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Date;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.IntSupplier;
@@ -123,6 +124,22 @@ public class SnowflakeId implements Supplier<Number>, LongSupplier {
         } catch (InterruptedException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    public Date extractDate(long id) {
+        return new Date(timeUnit.toMillis(extractTimestamp(id)));
+    }
+
+    public long extractTimestamp(long id) {
+        return ((id >> timestampShift) & timestampMask) + epoch;
+    }
+
+    public long extractWorkerId(long id) {
+        return (id >> workerIdShift) & workerIdMask;
+    }
+
+    public long extractSequence(long id) {
+        return id & sequenceMask;
     }
 
     public static final class Worker implements IntSupplier, LongSupplier {

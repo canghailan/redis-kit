@@ -14,8 +14,10 @@ public class TestId {
 
         for (int i = 0; i < 10; i++) {
             long id = snowflakeId.getAsLong();
-            System.out.println(snowflakeId.random(System.currentTimeMillis()));
-            System.out.println(2020000000000000000L + id);
+            System.out.println("ID:\t\t" + id);
+            System.out.println("时间:\t" + snowflakeId.extractDate(id));
+            System.out.println("机器:\t" + snowflakeId.extractWorkerId(id));
+            System.out.println("序列号:\t" + snowflakeId.extractSequence(id));
         }
     }
 }
