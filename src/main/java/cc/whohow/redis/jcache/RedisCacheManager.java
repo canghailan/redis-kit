@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -89,6 +90,7 @@ public class RedisCacheManager implements
     }
 
     public synchronized <K, V> Cache<K, V> resolveCache(RedisCacheConfiguration configuration) {
+        Objects.requireNonNull(configuration);
         Cache<K, V> cache = caches.get(configuration.getName());
         if (cache == null) {
             cache = createCache(configuration.getName(), configuration);
