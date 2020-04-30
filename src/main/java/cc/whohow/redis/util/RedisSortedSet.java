@@ -3,15 +3,16 @@ package cc.whohow.redis.util;
 import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.Codec;
 import cc.whohow.redis.lettuce.Lettuce;
+import cc.whohow.redis.util.impl.ConcurrentMapEntrySet;
+import cc.whohow.redis.util.impl.ConcurrentMapKeySet;
+import cc.whohow.redis.util.impl.ConcurrentMapValueCollection;
+import cc.whohow.redis.util.impl.MappingIterator;
 import io.lettuce.core.Range;
 import io.lettuce.core.ScoredValue;
 import io.lettuce.core.api.sync.RedisCommands;
 
 import java.nio.ByteBuffer;
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -88,7 +89,7 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number>, Supplier<Map
     }
 
     @Override
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public void putAll(Map<? extends E, ? extends Number> m) {
         ScoredValue[] encodedScoredValues = m.entrySet().stream()
                 .map(e -> ScoredValue.fromNullable(e.getValue().doubleValue(), encode(e.getKey())))
@@ -101,28 +102,56 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number>, Supplier<Map
         redis.del(key.duplicate());
     }
 
-    /**
-     * @throws UnsupportedOperationException UnsupportedOperation
-     */
     @Override
     public Set<E> keySet() {
-        throw new UnsupportedOperationException();
+        return new ConcurrentMapKeySet<E>(this) {
+            @Override
+            public Object[] toArray() {
+                return get().keySet().toArray();
+            }
+
+            @Override
+            public <T> T[] toArray(T[] a) {
+                return get().keySet().toArray(a);
+            }
+        };
     }
 
-    /**
-     * @throws UnsupportedOperationException UnsupportedOperation
-     */
     @Override
     public Collection<Number> values() {
-        throw new UnsupportedOperationException();
+        return new ConcurrentMapValueCollection<Number>(this) {
+            @Override
+            public Object[] toArray() {
+                return get().values().toArray();
+            }
+
+            @Override
+            public <T> T[] toArray(T[] a) {
+                return get().values().toArray(a);
+            }
+        };
     }
 
-    /**
-     * @throws UnsupportedOperationException UnsupportedOperation
-     */
     @Override
     public Set<Entry<E, Number>> entrySet() {
-        throw new UnsupportedOperationException();
+        return new ConcurrentMapEntrySet<E, Number>(this) {
+            @Override
+            public Iterator<Entry<E, Number>> iterator() {
+                return new MappingIterator<>(
+                        new RedisSortedSetIterator(redis, key.duplicate()),
+                        (value) -> new AbstractMap.SimpleImmutableEntry<>(decode(value.getValue()), value.getScore()));
+            }
+
+            @Override
+            public Object[] toArray() {
+                return get().entrySet().toArray();
+            }
+
+            @Override
+            public <T> T[] toArray(T[] a) {
+                return get().entrySet().toArray(a);
+            }
+        };
     }
 
     @Override

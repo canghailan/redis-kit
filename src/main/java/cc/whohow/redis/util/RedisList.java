@@ -2,18 +2,21 @@ package cc.whohow.redis.util;
 
 import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.Codec;
+import cc.whohow.redis.util.impl.NewArray;
 import io.lettuce.core.api.sync.RedisCommands;
 
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  * 链表、双向阻塞队列
  */
 @SuppressWarnings("unchecked")
-public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
+public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E>, Supplier<List<E>> {
     protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
     protected final Codec<E> codec;
     protected final ByteBuffer key;
@@ -181,13 +184,18 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
 
     @Override
     public Object[] toArray() {
-        return redis.lrange(key.duplicate(), 0, -1).toArray();
+        return redis.lrange(key.duplicate(), 0, -1).stream()
+                .map(this::decode)
+                .toArray();
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public <T> T[] toArray(T[] a) {
-        return redis.lrange(key.duplicate(), 0, -1).toArray(a);
+        return redis.lrange(key.duplicate(), 0, -1).stream()
+                .map(this::decode)
+                .map(e -> (T) e)
+                .toArray(new NewArray<>(a));
     }
 
     @Override
@@ -380,7 +388,7 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
 
     @Override
     public int drainTo(Collection<? super E> c) {
-        return drainTo(c, 1);
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -398,5 +406,16 @@ public class RedisList<E> implements List<E>, Deque<E>, BlockingDeque<E> {
             throw new NoSuchElementException();
         }
         return e;
+    }
+
+    @Override
+    public List<E> get() {
+        return getSubList(0, -1);
+    }
+
+    public List<E> getSubList(int fromIndex, int toIndex) {
+        return redis.lrange(key.duplicate(), fromIndex, toIndex).stream()
+                .map(this::decode)
+                .collect(Collectors.toList());
     }
 }

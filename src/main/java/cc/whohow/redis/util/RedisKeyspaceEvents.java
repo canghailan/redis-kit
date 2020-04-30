@@ -16,8 +16,6 @@ import java.util.NavigableMap;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArraySet;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 /**
  * Redis键空间事件处理
@@ -80,7 +78,7 @@ public class RedisKeyspaceEvents implements RedisPubSubListener<ByteBuffer, Byte
             MatchKey matchKey = new MatchKey(key, false);
             MatchKey startMatchKey = new MatchKey(getStartKey(key));
 
-//            log.debug("onKeyEvent {}", matchKey);
+            log.trace("onKeyEvent {}", matchKey);
 
             int keyP = key.position();
             int keyL = key.limit();
@@ -94,7 +92,7 @@ public class RedisKeyspaceEvents implements RedisPubSubListener<ByteBuffer, Byte
                         try {
                             key.limit(keyL).position(keyP);
                             command.limit(commandL).position(commandP);
-                            listener.accept(key, command);
+                            listener.onKeyEvent(key, command);
                         } catch (Throwable ex) {
                             log.error("keyspace event listener error", ex);
                         }
@@ -182,10 +180,11 @@ public class RedisKeyspaceEvents implements RedisPubSubListener<ByteBuffer, Byte
     }
 
     @FunctionalInterface
-    public interface Listener extends Consumer<ByteBuffer>, BiConsumer<ByteBuffer, ByteBuffer> {
-        @Override
-        default void accept(ByteBuffer key, ByteBuffer command) {
-            accept(key);
+    public interface Listener {
+        void onKeyEvent(ByteBuffer key);
+
+        default void onKeyEvent(ByteBuffer key, ByteBuffer command) {
+            onKeyEvent(key);
         }
 
         default void subscribed() {

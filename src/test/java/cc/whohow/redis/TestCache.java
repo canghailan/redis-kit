@@ -4,6 +4,8 @@ import cc.whohow.redis.jcache.Cache;
 import cc.whohow.redis.jcache.ImmutableGeneratedCacheKey;
 import cc.whohow.redis.jcache.RedisCacheManager;
 import cc.whohow.redis.jcache.configuration.MutableRedisCacheConfiguration;
+import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
+import cc.whohow.redis.util.RedisKeyspaceEvents;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
@@ -15,6 +17,8 @@ import javax.cache.annotation.GeneratedCacheKey;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 public class TestCache {
@@ -23,6 +27,7 @@ public class TestCache {
 
     private static Properties properties;
     private static RedisURI redisURI;
+    private static RedisKeyspaceEvents redisKeyspaceEvents;
     private static RedisCacheManager cacheManager;
     private static Cache<GeneratedCacheKey, Data> cache;
 
@@ -32,12 +37,19 @@ public class TestCache {
             properties = new Properties();
             properties.load(stream);
             redisURI = RedisURI.create(properties.getProperty("uri"));
-            cacheManager = new RedisCacheManager(redisClient, redisURI);
+
+            redisKeyspaceEvents = new RedisKeyspaceEvents(redisClient, redisURI);
 
             MutableRedisCacheConfiguration configuration = new MutableRedisCacheConfiguration<>();
             configuration.setName("c.w.Test");
             configuration.setKeyTypeCanonicalName(new String[]{String.class.getCanonicalName()});
             configuration.setValueTypeCanonicalName(Data.class.getCanonicalName());
+
+            Map<String, RedisCacheConfiguration> cacheConfigurationMap = new HashMap<>();
+            cacheConfigurationMap.put(configuration.getName(), configuration);
+
+            cacheManager = new RedisCacheManager(redisClient, redisURI, redisKeyspaceEvents, cacheConfigurationMap::get);
+
             cache = cacheManager.createCache(configuration.getName(), configuration);
         }
     }
@@ -70,17 +82,14 @@ public class TestCache {
 
         System.out.println(cache.getValue(ImmutableGeneratedCacheKey.of("a")));
         System.out.println(cache.getValue(ImmutableGeneratedCacheKey.of("b")));
+
+        System.out.println(cache.getCacheStatistics());
     }
 
     @Test
     public void testRemove() {
         cache.remove(ImmutableGeneratedCacheKey.of("a"));
         cache.remove(ImmutableGeneratedCacheKey.of("b"));
-    }
-
-    @Test
-    public void testSetupKeyspaceNotification() {
-        cacheManager.enableKeyspaceNotification();
     }
 
     @Test

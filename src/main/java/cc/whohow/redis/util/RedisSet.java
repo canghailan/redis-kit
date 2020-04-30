@@ -2,15 +2,19 @@ package cc.whohow.redis.util;
 
 import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.Codec;
+import cc.whohow.redis.util.impl.MappingIterator;
+import cc.whohow.redis.util.impl.NewArray;
 import io.lettuce.core.api.sync.RedisCommands;
 
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
- * 集合、缓冲队列
+ * 集合、去重队列
  */
-public class RedisSet<E> implements Set<E>, Queue<E> {
+public class RedisSet<E> implements Set<E>, Queue<E>, Supplier<Set<E>> {
     protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
     protected final Codec<E> codec;
     protected final ByteBuffer key;
@@ -49,23 +53,25 @@ public class RedisSet<E> implements Set<E>, Queue<E> {
         return redis.sismember(key.duplicate(), encode((E) o));
     }
 
-    /**
-     * @throws UnsupportedOperationException UnsupportedOperation
-     */
     @Override
     public Iterator<E> iterator() {
-        throw new UnsupportedOperationException();
+        return new MappingIterator<>(new RedisSetIterator(redis, key.duplicate()), this::decode);
     }
 
     @Override
     public Object[] toArray() {
-        return redis.smembers(key.duplicate()).toArray();
+        return redis.smembers(key.duplicate()).stream()
+                .map(this::decode)
+                .toArray();
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public <T> T[] toArray(T[] a) {
-        return redis.smembers(key.duplicate()).toArray(a);
+        return redis.smembers(key.duplicate()).stream()
+                .map(this::decode)
+                .map(e -> (T) e)
+                .toArray(new NewArray<>(a));
     }
 
     @Override
@@ -142,5 +148,12 @@ public class RedisSet<E> implements Set<E>, Queue<E> {
             throw new NoSuchElementException();
         }
         return e;
+    }
+
+    @Override
+    public Set<E> get() {
+        return redis.smembers(key.duplicate()).stream()
+                .map(this::decode)
+                .collect(Collectors.toSet());
     }
 }

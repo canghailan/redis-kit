@@ -10,7 +10,7 @@ import java.nio.ByteBuffer;
 import java.util.Iterator;
 
 public class RedisSortedSetIterator extends RedisIterator<ScoredValue<ByteBuffer>, ScoredValueScanCursor<ByteBuffer>> {
-    private ByteBuffer key;
+    private final ByteBuffer key;
 
     public RedisSortedSetIterator(RedisCommands<ByteBuffer, ByteBuffer> redis, ByteBuffer key) {
         super(redis);

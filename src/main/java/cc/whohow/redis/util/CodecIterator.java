@@ -6,8 +6,8 @@ import java.nio.ByteBuffer;
 import java.util.Iterator;
 
 public class CodecIterator<T> implements Iterator<T> {
-    private Iterator<ByteBuffer> iterator;
-    private Codec<T> codec;
+    private final Iterator<ByteBuffer> iterator;
+    private final Codec<T> codec;
 
     public CodecIterator(Iterator<ByteBuffer> iterator, Codec<T> codec) {
         this.iterator = iterator;

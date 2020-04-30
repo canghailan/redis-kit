@@ -5,7 +5,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 
 public class ByteBufferInputStream extends InputStream implements ReadableByteChannel {
-    private ByteBuffer byteBuffer;
+    private final ByteBuffer byteBuffer;
 
     public ByteBufferInputStream(ByteBuffer byteBuffer) {
         this.byteBuffer = byteBuffer;

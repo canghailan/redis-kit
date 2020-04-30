@@ -230,11 +230,6 @@ public class InProcessCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    public void onSynchronization() {
-        cache.invalidateAll();
-    }
-
-    @Override
     public CacheStatisticsMXBean getCacheStatistics() {
         return new InProcessCacheStatisticsAdapter(cache);
     }

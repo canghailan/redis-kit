@@ -9,7 +9,7 @@ import java.nio.ByteBuffer;
 import java.util.Iterator;
 
 public class RedisSetIterator extends RedisIterator<ByteBuffer, ValueScanCursor<ByteBuffer>> {
-    private ByteBuffer key;
+    private final ByteBuffer key;
 
     public RedisSetIterator(RedisCommands<ByteBuffer, ByteBuffer> redis, ByteBuffer key) {
         super(redis);

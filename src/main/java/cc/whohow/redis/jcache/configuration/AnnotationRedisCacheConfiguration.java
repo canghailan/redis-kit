@@ -146,8 +146,8 @@ public class AnnotationRedisCacheConfiguration implements RedisCacheConfiguratio
     }
 
     @Override
-    public List<String> getExConfigurations() {
-        return Arrays.asList(redisCacheable.ex());
+    public List<String> getCustom() {
+        return Arrays.asList(redisCacheable.custom());
     }
 
     @Override

@@ -69,4 +69,9 @@ public class InProcessCacheStatisticsAdapter implements CacheStatisticsMXBean {
     public float getAverageRemoveTime() {
         return 0;
     }
+
+    @Override
+    public String toString() {
+        return cache.stats().toString();
+    }
 }

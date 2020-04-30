@@ -1,27 +1,25 @@
 package cc.whohow.redis.messaging;
 
-import cc.whohow.redis.io.Codec;
 import cc.whohow.redis.util.RedisKeyspaceEvents;
-import cc.whohow.redis.util.RedisList;
-import io.lettuce.core.api.sync.RedisCommands;
 
 import java.nio.ByteBuffer;
+import java.util.Queue;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 
 /**
  * Redis消息队列，基于键空间事件触发轮询
  */
-public class RedisMessageQueue<E> extends PollingMessageQueue<E> implements RedisKeyspaceEvents.Listener, AutoCloseable {
+public class RedisPollingMessageQueue<E> extends PollingMessageQueue<E> implements RedisKeyspaceEvents.Listener, AutoCloseable {
     private final String name;
     private final ExecutorService executor;
     private final RedisKeyspaceEvents redisKeyspaceEvents;
 
-    public RedisMessageQueue(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, String name,
-                             Consumer<E> consumer,
-                             ExecutorService executor,
-                             RedisKeyspaceEvents redisKeyspaceEvents) {
-        super(new RedisList<>(redis, codec, name), consumer);
+    public RedisPollingMessageQueue(Queue<E> queue, String name,
+                                    Consumer<E> consumer,
+                                    ExecutorService executor,
+                                    RedisKeyspaceEvents redisKeyspaceEvents) {
+        super(queue, consumer);
         this.name = name;
         this.executor = executor;
         this.redisKeyspaceEvents = redisKeyspaceEvents;
@@ -44,7 +42,7 @@ public class RedisMessageQueue<E> extends PollingMessageQueue<E> implements Redi
     }
 
     @Override
-    public void accept(ByteBuffer key) {
+    public void onKeyEvent(ByteBuffer key) {
         // 接收事件通知，触发轮询
         setReady();
     }

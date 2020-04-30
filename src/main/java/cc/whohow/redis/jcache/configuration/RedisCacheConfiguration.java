@@ -18,6 +18,26 @@ public interface RedisCacheConfiguration<K, V> extends Configuration<K, V> {
         return true;
     }
 
+    default String getRedisKeySeparator() {
+        return getKeyTypeCanonicalName().length == 0 ? "" : ":";
+    }
+
+    default String getRedisKeyPrefix() {
+        if (getKeyTypeCanonicalName().length == 0) {
+            return getName();
+        } else {
+            return getName() + getRedisKeySeparator();
+        }
+    }
+
+    default String getRedisKeyPattern() {
+        if (getKeyTypeCanonicalName().length == 0) {
+            return getName();
+        } else {
+            return getName() + getRedisKeySeparator() + "*";
+        }
+    }
+
     /**
      * 缓存名
      */
@@ -84,7 +104,7 @@ public interface RedisCacheConfiguration<K, V> extends Configuration<K, V> {
     TimeUnit getInProcessCacheExpiryForUpdateTimeUnit();
 
     /**
-     * 额外参数
+     * 自定义参数
      */
-    List<String> getExConfigurations();
+    List<String> getCustom();
 }

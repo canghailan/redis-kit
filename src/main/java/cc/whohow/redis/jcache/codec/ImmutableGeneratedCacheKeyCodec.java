@@ -25,7 +25,7 @@ public abstract class ImmutableGeneratedCacheKeyCodec implements Codec<Immutable
             case 1: {
                 switch (cacheKeyTypeCanonicalNames[0]) {
                     case "java.lang.String": {
-                        return new SingletonKeyCodec(new StringCodec());
+                        return new SingletonKeyCodec(StringCodec.defaultInstance());
                     }
                     case "java.lang.Integer": {
                         return SingletonKeyCodec.INTEGER_KEY_CODEC;

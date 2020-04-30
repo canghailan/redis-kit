@@ -26,7 +26,7 @@ public class RedisKey<V> implements ConcurrentMap<String, V> {
     protected final Codec<V> codec;
 
     public RedisKey(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<V> codec) {
-        this(redis, codec, new StringCodec());
+        this(redis, codec, StringCodec.defaultInstance());
     }
 
     public RedisKey(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<V> codec, Codec<String> keyCodec) {

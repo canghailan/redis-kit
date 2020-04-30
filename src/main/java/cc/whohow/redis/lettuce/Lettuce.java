@@ -16,6 +16,8 @@ public class Lettuce {
     private static final ByteBuffer ONE = PrimitiveCodec.INTEGER.encode(1);
     private static final ByteBuffer WITHSCORES = ByteBuffers.fromUtf8("WITHSCORES");
     private static final ByteBuffer LIMIT = ByteBuffers.fromUtf8("LIMIT");
+    private static final ByteBuffer PX = ByteBuffers.fromUtf8("PX");
+    private static final ByteBuffer EX = ByteBuffers.fromUtf8("EX");
     private static final ByteBuffer NX = ByteBuffers.fromUtf8("NX");
     private static final ByteBuffer XX = ByteBuffers.fromUtf8("XX");
 
@@ -33,6 +35,14 @@ public class Lettuce {
 
     public static ByteBuffer limit() {
         return LIMIT.duplicate();
+    }
+
+    public static ByteBuffer px() {
+        return PX.duplicate();
+    }
+
+    public static ByteBuffer ex() {
+        return EX.duplicate();
     }
 
     public static ByteBuffer nx() {

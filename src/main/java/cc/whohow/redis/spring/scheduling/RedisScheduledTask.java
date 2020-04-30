@@ -33,9 +33,9 @@ public class RedisScheduledTask extends Task implements Runnable {
     }
 
     private Runnable proxy(Runnable runnable, RedisScheduled redisScheduled) {
-        if (redisScheduled.retry() > 0) {
-            runnable = new RetryRunnable(runnable, redisScheduled.retry());
-        }
+//        if (redisScheduled.retry() > 0) {
+//            runnable = new RetryRunnable(runnable, redisScheduled.retry());
+//        }
         return new LockRunnable(runnable, new RedisLock(
                 redis, redisScheduled.key(), Duration.parse(redisScheduled.min()), Duration.parse(redisScheduled.max())));
     }

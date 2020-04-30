@@ -1,72 +1,70 @@
 package cc.whohow.redis.jcache;
 
-import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import cc.whohow.redis.lettuce.ByteBufferCodec;
-import io.lettuce.core.RedisChannelHandler;
+import cc.whohow.redis.util.RedisKeyspaceEvents;
 import io.lettuce.core.RedisClient;
-import io.lettuce.core.RedisConnectionStateListener;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
 import io.lettuce.core.codec.RedisCodec;
-import io.lettuce.core.pubsub.RedisPubSubListener;
-import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.cache.CacheException;
 import javax.cache.CacheManager;
 import javax.cache.configuration.Configuration;
+import javax.cache.management.CacheStatisticsMXBean;
 import javax.cache.spi.CachingProvider;
-import java.net.SocketAddress;
 import java.net.URI;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Properties;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.function.Function;
 
 /**
  * Redis缓存管理器
- * CONFIG GET notify-keyspace-events
- * CONFIG SET notify-keyspace-events AK
  */
-@SuppressWarnings("unchecked")
-public class RedisCacheManager implements
-        CacheManager,
-        RedisConnectionStateListener,
-        RedisPubSubListener<ByteBuffer, ByteBuffer> {
-    protected static final ByteBuffer KEY = ByteBuffers.fromUtf8("_cache_");
+@SuppressWarnings({"unchecked", "rawtypes"})
+public class RedisCacheManager implements CacheManager {
+    private static final Logger log = LogManager.getLogger();
 
-    /**
-     * Redis URI
-     */
-    protected final Map<String, Cache> caches = new ConcurrentHashMap<>();
     protected final URI uri;
     protected final RedisURI redisURI;
     protected final RedisClient redisClient;
+    protected final RedisKeyspaceEvents redisKeyspaceEvents;
     protected final StatefulRedisConnection<ByteBuffer, ByteBuffer> redisConnection;
-    protected final StatefulRedisPubSubConnection<ByteBuffer, ByteBuffer> redisPubSubConnection;
-    protected final String keyspace;
-    protected final ByteBuffer encodedKeyspace;
+    protected final Function<String, RedisCacheConfiguration<?, ?>> redisCacheConfigurationProvider;
+    protected final ConcurrentMap<String, Cache> caches = new ConcurrentHashMap<>();
 
-    public RedisCacheManager(RedisClient redisClient, RedisURI redisURI) {
-        this.uri = redisURI.toURI();
+    public RedisCacheManager(RedisClient redisClient,
+                             RedisURI redisURI,
+                             RedisKeyspaceEvents redisKeyspaceEvents,
+                             Function<String, RedisCacheConfiguration<?, ?>> redisCacheConfigurationProvider) {
         this.redisURI = redisURI;
         this.redisClient = redisClient;
-        this.redisClient.addListener(this);
+        this.redisKeyspaceEvents = redisKeyspaceEvents;
+        this.redisCacheConfigurationProvider = redisCacheConfigurationProvider;
         this.redisConnection = redisClient.connect(ByteBufferCodec.INSTANCE, redisURI);
-        this.redisPubSubConnection = redisClient.connectPubSub(ByteBufferCodec.INSTANCE, redisURI);
-        this.redisConnection.sync().clientSetname(KEY.duplicate());
-        this.redisPubSubConnection.sync().clientSetname(KEY.duplicate());
-        this.redisPubSubConnection.addListener(this);
-
-        this.keyspace = "__keyspace@" + redisURI.getDatabase() + "__:";
-        this.encodedKeyspace = ByteBuffers.fromUtf8(keyspace);
-        this.redisPubSubConnection.sync().subscribe(KEY.duplicate());
-        this.redisPubSubConnection.sync().psubscribe(ByteBuffers.fromUtf8(keyspace + "*"));
+        this.uri = redisURI.toURI();
         RedisCachingProvider.getInstance().addCacheManager(this);
+    }
+
+    public RedisURI getRedisURI() {
+        return redisURI;
+    }
+
+    public RedisClient getRedisClient() {
+        return redisClient;
+    }
+
+    public RedisCommands<ByteBuffer, ByteBuffer> getRedisCommands() {
+        return redisConnection.sync();
+    }
+
+    public RedisKeyspaceEvents getRedisKeyspaceEvents() {
+        return redisKeyspaceEvents;
     }
 
     @Override
@@ -89,20 +87,13 @@ public class RedisCacheManager implements
         return null;
     }
 
-    public synchronized <K, V> Cache<K, V> resolveCache(RedisCacheConfiguration configuration) {
-        Objects.requireNonNull(configuration);
-        Cache<K, V> cache = caches.get(configuration.getName());
-        if (cache == null) {
-            cache = createCache(configuration.getName(), configuration);
-        }
-        return cache;
-    }
-
     @Override
-    public synchronized <K, V, C extends Configuration<K, V>> Cache<K, V> createCache(String cacheName, C configuration) throws IllegalArgumentException {
+    public synchronized <K, V, C extends Configuration<K, V>> Cache<K, V> createCache(
+            String cacheName, C configuration) throws IllegalArgumentException {
         if (caches.containsKey(cacheName)) {
             throw new IllegalStateException();
         }
+        Objects.requireNonNull(configuration);
         Cache<K, V> cache = newCache((RedisCacheConfiguration<K, V>) configuration);
         caches.put(cacheName, cache);
         return cache;
@@ -118,16 +109,11 @@ public class RedisCacheManager implements
 
     public <K, V> Cache<K, V> newCache(RedisCacheConfiguration<K, V> configuration) {
         if (configuration.isRedisCacheEnabled()) {
-            Cache<K, V> cache;
             if (configuration.isInProcessCacheEnabled()) {
-                cache = newRedisTierCache(configuration);
+                return newRedisTierCache(configuration);
             } else {
-                cache = newRedisCache(configuration);
+                return newRedisCache(configuration);
             }
-            if (configuration.isStatisticsEnabled()) {
-                cache = new CacheStatisticsProxy<>(cache);
-            }
-            return cache;
         } else {
             if (configuration.isInProcessCacheEnabled()) {
                 return newInProcessCache(configuration);
@@ -160,7 +146,11 @@ public class RedisCacheManager implements
 
     @Override
     public <K, V> Cache<K, V> getCache(String cacheName) {
-        return caches.get(cacheName);
+        Cache<K, V> cache = caches.get(cacheName);
+        if (cache != null) {
+            return cache;
+        }
+        return (Cache<K, V>) createCache(cacheName, redisCacheConfigurationProvider.apply(cacheName));
     }
 
     @Override
@@ -178,12 +168,20 @@ public class RedisCacheManager implements
 
     @Override
     public void enableManagement(String cacheName, boolean enabled) {
-        throw new UnsupportedOperationException();
+        log.info("enableManagement {} {}", cacheName, enabled);
     }
 
     @Override
     public void enableStatistics(String cacheName, boolean enabled) {
-        throw new UnsupportedOperationException();
+        log.info("enableStatistics {} {}", cacheName, enabled);
+    }
+
+    public Map<String, CacheStatisticsMXBean> getCacheStatistics() {
+        Map<String, CacheStatisticsMXBean> cacheStatistics = new HashMap<>();
+        for (Map.Entry<String, Cache> e : caches.entrySet()) {
+            cacheStatistics.put(e.getKey(), e.getValue().getCacheStatistics());
+        }
+        return cacheStatistics;
     }
 
     @Override
@@ -192,13 +190,13 @@ public class RedisCacheManager implements
             for (Cache cache : caches.values()) {
                 try {
                     cache.close();
-                } catch (Throwable ignore) {
+                } catch (Throwable e) {
+                    log.warn("Close Cache ERROR", e);
                 }
             }
             caches.clear();
         } finally {
             redisConnection.close();
-            redisPubSubConnection.close();
         }
     }
 
@@ -213,127 +211,6 @@ public class RedisCacheManager implements
             return clazz.cast(this);
         }
         throw new IllegalArgumentException();
-    }
-
-    @Override
-    public void onRedisConnected(RedisChannelHandler<?, ?> connection, SocketAddress socketAddress) {
-        for (Cache<?, ?> cache : caches.values()) {
-            cache.onRedisConnected();
-        }
-    }
-
-    @Override
-    public void onRedisDisconnected(RedisChannelHandler<?, ?> connection) {
-        for (Cache<?, ?> cache : caches.values()) {
-            cache.onRedisDisconnected();
-        }
-    }
-
-    @Override
-    public void onRedisExceptionCaught(RedisChannelHandler<?, ?> connection, Throwable cause) {
-    }
-
-    @Override
-    public void message(ByteBuffer channel, ByteBuffer message) {
-        if (isCacheManagerNotification(channel)) {
-            onCacheManagerNotification(StandardCharsets.UTF_8.decode(message).toString());
-        } else if (isKeyNotification(channel)) {
-            onKeyNotification(channel, message);
-        }
-    }
-
-    @Override
-    public void message(ByteBuffer pattern, ByteBuffer channel, ByteBuffer message) {
-        if (isKeyNotification(channel)) {
-            onKeyNotification(channel, message);
-        }
-    }
-
-    @Override
-    public void subscribed(ByteBuffer channel, long count) {
-    }
-
-    @Override
-    public void psubscribed(ByteBuffer pattern, long count) {
-    }
-
-    @Override
-    public void unsubscribed(ByteBuffer channel, long count) {
-    }
-
-    @Override
-    public void punsubscribed(ByteBuffer pattern, long count) {
-    }
-
-    private boolean isCacheManagerNotification(ByteBuffer channel) {
-        return ByteBuffers.contentEquals(channel, KEY);
-    }
-
-    private void onCacheManagerNotification(String message) {
-        if ("sync".equalsIgnoreCase(message)) {
-            for (Cache<?, ?> cache : caches.values()) {
-                cache.onSynchronization();
-            }
-        }
-    }
-
-    private boolean isKeyNotification(ByteBuffer channel) {
-        return ByteBuffers.startsWith(channel, encodedKeyspace);
-    }
-
-    private ByteBuffer getKeyFromKeyNotificationChannel(ByteBuffer channel) {
-        ByteBuffer key = channel.duplicate();
-        key.position(key.position() + encodedKeyspace.remaining());
-        return key;
-    }
-
-    private String getCacheNameFromKey(ByteBuffer key) {
-        ByteBuffer cacheName = key.duplicate();
-        cacheName.mark();
-        while (cacheName.hasRemaining()) {
-            if (cacheName.get() == ':') {
-                cacheName.limit(cacheName.position() - 1);
-                break;
-            }
-        }
-        cacheName.reset();
-        return StandardCharsets.UTF_8.decode(cacheName).toString();
-    }
-
-    public void onKeyNotification(ByteBuffer channel, ByteBuffer message) {
-        ByteBuffer key = getKeyFromKeyNotificationChannel(channel);
-        String cacheName = getCacheNameFromKey(key);
-        Cache<?, ?> cache = caches.get(cacheName);
-        if (cache != null) {
-            cache.onKeyspaceNotification(key, message);
-        }
-    }
-
-    public RedisCommands<ByteBuffer, ByteBuffer> getRedisCommands() {
-        return redisConnection.sync();
-    }
-
-    public String getKeyspaceNotificationConfig() {
-        return redisConnection.sync().configGet("notify-keyspace-events")
-                .getOrDefault("notify-keyspace-events", "");
-    }
-
-    public boolean isKeyspaceNotificationEnabled() {
-        String config = getKeyspaceNotificationConfig();
-        return config.contains("K") && config.contains("A");
-    }
-
-    public void enableKeyspaceNotification() {
-        String config = getKeyspaceNotificationConfig();
-        if (config.contains("K") && config.contains("A")) {
-            return;
-        }
-        if (config.contains("E")) {
-            config = "KEA";
-        } else {
-            config = "KA";
-        }
-        redisConnection.sync().configSet("notify-keyspace-events", config);
     }
 
     @Override

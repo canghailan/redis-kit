@@ -26,6 +26,7 @@ public class RedisExpireCache<K, V> extends RedisCache<K, V> {
     @Override
     public void put(K key, V value) {
         redis.set(codec.encodeKey(key), codec.encodeValue(value), px);
+        cacheStats.cachePut(1);
     }
 
     @Override
@@ -40,7 +41,11 @@ public class RedisExpireCache<K, V> extends RedisCache<K, V> {
 
     @Override
     public boolean putIfAbsent(K key, V value) {
-        return Lettuce.ok(redis.set(codec.encodeKey(key), codec.encodeValue(value), pxNx));
+        boolean ok = Lettuce.ok(redis.set(codec.encodeKey(key), codec.encodeValue(value), pxNx));
+        if (ok) {
+            cacheStats.cachePut(1);
+        }
+        return ok;
     }
 
     @Override
@@ -50,7 +55,11 @@ public class RedisExpireCache<K, V> extends RedisCache<K, V> {
 
     @Override
     public boolean replace(K key, V value) {
-        return Lettuce.ok(redis.set(codec.encodeKey(key), codec.encodeValue(value), pxXx));
+        boolean ok = Lettuce.ok(redis.set(codec.encodeKey(key), codec.encodeValue(value), pxXx));
+        if (ok) {
+            cacheStats.cachePut(1);
+        }
+        return ok;
     }
 
     @Override

@@ -1,6 +1,7 @@
 package cc.whohow.redis.io;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.function.Function;
@@ -17,6 +18,7 @@ public class PrimitiveCodec<T> implements Codec<T> {
     public static final PrimitiveCodec<Float> FLOAT = new PrimitiveCodec<>(Float::parseFloat);
     public static final PrimitiveCodec<Double> DOUBLE = new PrimitiveCodec<>(Double::parseDouble);
     public static final PrimitiveCodec<Number> NUMBER = new PrimitiveCodec<>(BigDecimal::new);
+    public static final PrimitiveCodec<BigInteger> BIGINT = new PrimitiveCodec<>(BigInteger::new);
 
     private final Function<String, T> parse;
 

@@ -14,10 +14,19 @@ public class CacheStats implements CacheStatisticsMXBean {
     protected final DoubleAdder cachePutTime = new DoubleAdder();
     protected final DoubleAdder cacheRemoveTime = new DoubleAdder();
 
+    public void cacheGet(int hits, int misses) {
+        cacheHits.add(hits);
+        cacheMisses.add(misses);
+    }
+
     public void cacheGet(int hits, int misses, long time) {
         cacheHits.add(hits);
         cacheMisses.add(misses);
         cacheGetTime.add(time);
+    }
+
+    public void cacheHit(int hits) {
+        cacheHits.add(hits);
     }
 
     public void cacheHit(int hits, long time) {
@@ -25,14 +34,26 @@ public class CacheStats implements CacheStatisticsMXBean {
         cacheGetTime.add(time);
     }
 
+    public void cacheMiss(int misses) {
+        cacheMisses.add(misses);
+    }
+
     public void cacheMiss(int misses, long time) {
         cacheMisses.add(misses);
         cacheGetTime.add(time);
     }
 
+    public void cachePut(int puts) {
+        cachePuts.add(puts);
+    }
+
     public void cachePut(int puts, long time) {
         cachePuts.add(puts);
         cachePutTime.add(time);
+    }
+
+    public void cacheRemove(int removals) {
+        cacheRemovals.add(removals);
     }
 
     public void cacheRemove(int removals, long time) {
@@ -63,8 +84,8 @@ public class CacheStats implements CacheStatisticsMXBean {
 
     @Override
     public float getCacheHitPercentage() {
-        long h = cacheHits.longValue();
-        long m = cacheMisses.longValue();
+        long h = getCacheHits();
+        long m = getCacheMisses();
         return divide(h, h + m);
     }
 
@@ -75,8 +96,8 @@ public class CacheStats implements CacheStatisticsMXBean {
 
     @Override
     public float getCacheMissPercentage() {
-        long h = cacheHits.longValue();
-        long m = cacheMisses.longValue();
+        long h = getCacheHits();
+        long m = getCacheMisses();
         return divide(m, h + m);
     }
 
@@ -124,6 +145,7 @@ public class CacheStats implements CacheStatisticsMXBean {
         return "CacheStats{" +
                 "cacheHits=" + cacheHits +
                 ", cacheMisses=" + cacheMisses +
+                ", cacheGets=" + getCacheGets() +
                 ", cachePuts=" + cachePuts +
                 ", cacheRemovals=" + cacheRemovals +
                 ", cacheEvictions=" + cacheEvictions +
@@ -132,7 +154,6 @@ public class CacheStats implements CacheStatisticsMXBean {
                 ", cacheRemoveTime=" + cacheRemoveTime +
                 ", cacheHitPercentage=" + getCacheHitPercentage() +
                 ", cacheMissPercentage=" + getCacheMissPercentage() +
-                ", cacheGets=" + getCacheGets() +
                 ", averageGetTime=" + getAverageGetTime() +
                 ", averagePutTime=" + getAveragePutTime() +
                 ", averageRemoveTime=" + getAverageRemoveTime() +

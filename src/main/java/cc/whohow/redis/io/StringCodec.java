@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
  * 字符串编码器
  */
 public class StringCodec implements Codec<String> {
+    private static final StringCodec DEFAULT_INSTANCE = new StringCodec();
     /**
      * NULL字符串占位符
      */
@@ -21,6 +22,10 @@ public class StringCodec implements Codec<String> {
 
     public StringCodec(Charset charset) {
         this.charset = charset;
+    }
+
+    public static StringCodec defaultInstance() {
+        return DEFAULT_INSTANCE;
     }
 
     private static boolean isNull(ByteBuffer buffer) {

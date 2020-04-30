@@ -10,7 +10,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 public class RedisMapIterator extends RedisIterator<Map.Entry<ByteBuffer, ByteBuffer>, MapScanCursor<ByteBuffer, ByteBuffer>> {
-    private ByteBuffer key;
+    private final ByteBuffer key;
 
     public RedisMapIterator(RedisCommands<ByteBuffer, ByteBuffer> redis, ByteBuffer key) {
         super(redis);

@@ -88,6 +88,13 @@ public class PollingMessageQueue<E> implements Callable<Long> {
     }
 
     /**
+     * 获取底层队列
+     */
+    public Queue<E> getQueue() {
+        return queue;
+    }
+
+    /**
      * 生产
      */
     public void offer(E e) {

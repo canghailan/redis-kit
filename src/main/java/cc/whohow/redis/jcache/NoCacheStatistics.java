@@ -67,4 +67,9 @@ public class NoCacheStatistics implements CacheStatisticsMXBean {
     public float getAverageRemoveTime() {
         return 0;
     }
+
+    @Override
+    public String toString() {
+        return "NoCacheStatistics";
+    }
 }

@@ -1,6 +1,9 @@
 package cc.whohow.redis.jcache;
 
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
+import cc.whohow.redis.util.RedisKeyspaceEvents;
+import io.lettuce.core.RedisChannelHandler;
+import io.lettuce.core.RedisConnectionStateListener;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -12,6 +15,7 @@ import javax.cache.management.CacheStatisticsMXBean;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.Map;
@@ -21,9 +25,11 @@ import java.util.function.Function;
 /**
  * 两级缓存，仅支持 Read Through 模式
  */
-public class RedisTierCache<K, V> implements Cache<K, V> {
+public class RedisTierCache<K, V> implements
+        Cache<K, V>,
+        RedisConnectionStateListener,
+        RedisKeyspaceEvents.Listener {
     private static final Logger log = LogManager.getLogger();
-
     protected final RedisCacheManager cacheManager;
     protected final RedisCacheConfiguration<K, V> configuration;
     protected final RedisCache<K, V> redisCache;
@@ -35,6 +41,8 @@ public class RedisTierCache<K, V> implements Cache<K, V> {
         this.configuration = configuration;
         this.redisCache = cacheManager.newRedisCache(configuration);
         this.inProcessCache = cacheManager.newInProcessCache(configuration);
+        cacheManager.getRedisClient().addListener(this);
+        cacheManager.getRedisKeyspaceEvents().addListener(configuration.getRedisKeyPattern(), this);
     }
 
     @Override
@@ -196,6 +204,7 @@ public class RedisTierCache<K, V> implements Cache<K, V> {
             redisCache.close();
         } finally {
             inProcessCache.close();
+            cacheManager.getRedisClient().removeListener(this);
         }
     }
 
@@ -231,33 +240,8 @@ public class RedisTierCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    public void onRedisConnected() {
-        inProcessCache.removeAll();
-        log.debug("onRedisConnected invalidateAll");
-    }
-
-    @Override
-    public void onRedisDisconnected() {
-        inProcessCache.removeAll();
-        log.debug("onRedisDisconnected invalidateAll");
-    }
-
-    @Override
-    public void onSynchronization() {
-        inProcessCache.removeAll();
-        log.debug("onSynchronization invalidateAll");
-    }
-
-    @Override
-    public void onKeyspaceNotification(ByteBuffer key, ByteBuffer message) {
-        K k = redisCache.getCodec().decodeKey(key);
-        inProcessCache.remove(k);
-        log.debug("onKeyspaceNotification invalidate {}", k);
-    }
-
-    @Override
     public CacheStatisticsMXBean getCacheStatistics() {
-        return NoCacheStatistics.getInstance();
+        return new RedisTierCacheStatistics(getRedisCacheStatistics(), getInProcessCacheStatistics());
     }
 
     public CacheStatisticsMXBean getRedisCacheStatistics() {
@@ -291,5 +275,29 @@ public class RedisTierCache<K, V> implements Cache<K, V> {
     @Override
     public String toString() {
         return redisCache.toString();
+    }
+
+    @Override
+    public void onRedisConnected(RedisChannelHandler<?, ?> connection, SocketAddress socketAddress) {
+        log.info("RedisConnected");
+        inProcessCache.removeAll();
+    }
+
+    @Override
+    public void onRedisDisconnected(RedisChannelHandler<?, ?> connection) {
+        log.warn("RedisConnected");
+        inProcessCache.removeAll();
+    }
+
+    @Override
+    public void onRedisExceptionCaught(RedisChannelHandler<?, ?> connection, Throwable cause) {
+        log.warn("RedisExceptionCaught");
+    }
+
+    @Override
+    public void onKeyEvent(ByteBuffer key) {
+        K k = redisCache.getCodec().decodeKey(key);
+        inProcessCache.remove(k);
+        log.debug("onKeyEvent: {}", k);
     }
 }

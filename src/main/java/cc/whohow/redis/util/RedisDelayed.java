@@ -55,6 +55,7 @@ public class RedisDelayed<T> implements Delayed, Supplier<T> {
     }
 
     @Override
+    @SuppressWarnings("rawtypes")
     public boolean equals(Object o) {
         if (o instanceof RedisDelayed) {
             RedisDelayed RedisDelayed = (RedisDelayed) o;

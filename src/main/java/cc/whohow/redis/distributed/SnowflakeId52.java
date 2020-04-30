@@ -5,6 +5,9 @@ import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 
+/**
+ * 52位整型ID，其中36位秒级时间戳，6位机器ID，10位顺序ID
+ */
 public class SnowflakeId52 extends SnowflakeId {
     public SnowflakeId52() {
         this(Clock.systemDefaultZone(), Worker.ZERO);

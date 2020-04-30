@@ -8,9 +8,9 @@ import java.lang.annotation.*;
 public @interface RedisScheduled {
     String key();
 
-    String min() default "PT1M";
+    String min() default "PT3S";
 
     String max();
 
-    int retry() default 0;
+//    int retry() default 0;
 }

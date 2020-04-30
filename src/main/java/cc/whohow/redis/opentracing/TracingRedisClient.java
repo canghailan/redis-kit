@@ -11,7 +11,7 @@ import io.opentracing.contrib.redis.lettuce.TracingStatefulRedisConnection;
 
 public class TracingRedisClient extends RedisClient {
     private final Tracer tracer;
-    private boolean traceWithActiveSpanOnly = true;
+    private final boolean traceWithActiveSpanOnly = true;
 
     public TracingRedisClient(RedisURI redisURI, Tracer tracer) {
         this(null, redisURI, tracer);

@@ -30,7 +30,7 @@ public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfigura
     protected long inProcessCacheExpiryForUpdate = 24 * 60 * 60;
     protected TimeUnit inProcessCacheExpiryForUpdateTimeUnit = TimeUnit.SECONDS;
 
-    private List<String> exConfigurations = new ArrayList<>();
+    private List<String> custom = new ArrayList<>();
 
     public MutableRedisCacheConfiguration() {
     }
@@ -51,7 +51,7 @@ public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfigura
         this.inProcessCacheMaxEntry = that.getInProcessCacheMaxEntry();
         this.inProcessCacheExpiryForUpdate = that.getInProcessCacheExpiryForUpdate();
         this.inProcessCacheExpiryForUpdateTimeUnit = that.getInProcessCacheExpiryForUpdateTimeUnit();
-        this.exConfigurations = that.getExConfigurations();
+        this.custom = that.getCustom();
     }
 
     @Override
@@ -189,12 +189,11 @@ public class MutableRedisCacheConfiguration<K, V> implements RedisCacheConfigura
         this.inProcessCacheExpiryForUpdateTimeUnit = inProcessCacheExpiryForUpdateTimeUnit;
     }
 
-    @Override
-    public List<String> getExConfigurations() {
-        return exConfigurations;
+    public List<String> getCustom() {
+        return custom;
     }
 
-    public void setExConfigurations(List<String> exConfigurations) {
-        this.exConfigurations = exConfigurations;
+    public void setCustom(List<String> custom) {
+        this.custom = custom;
     }
 }

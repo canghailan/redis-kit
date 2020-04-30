@@ -4,8 +4,8 @@ import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.PrimitiveCodec;
 import cc.whohow.redis.io.StringCodec;
 import cc.whohow.redis.lettuce.ByteBufferCodec;
-import cc.whohow.redis.messaging.RedisMessageQueue;
 import cc.whohow.redis.messaging.RedisMessaging;
+import cc.whohow.redis.messaging.RedisPollingMessageQueue;
 import cc.whohow.redis.util.*;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
@@ -20,6 +20,7 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -114,10 +115,10 @@ public class TestRedis {
 
         AtomicInteger counter = new AtomicInteger(0);
 
-        List<RedisMessageQueue<String>> mqs = new ArrayList<>();
+        List<RedisPollingMessageQueue<String>> mqs = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
             String name = "mq" + i;
-            RedisMessageQueue<String> mq = redisMessaging.createQueue(name, new StringCodec(),
+            RedisPollingMessageQueue<String> mq = redisMessaging.createQueue(name, new StringCodec(),
                     (m) -> {
                         try {
                             long ms = ThreadLocalRandom.current().nextLong(5_000);
@@ -135,7 +136,7 @@ public class TestRedis {
         for (int i = 0; i < 30; i++) {
             executor.submit(() -> {
                 int index = ThreadLocalRandom.current().nextInt(mqs.size());
-                RedisMessageQueue<String> mq = mqs.get(index);
+                RedisPollingMessageQueue<String> mq = mqs.get(index);
                 String data = mq.getName() + "_" + ThreadLocalRandom.current().nextInt(100);
                 mq.offer(data);
                 System.out.println(Thread.currentThread() + " 生产 " + mq.getName() + ": " + data);
@@ -162,5 +163,14 @@ public class TestRedis {
         sortedSet.put("c", 3);
         sortedSet.put("d", 2);
         System.out.println(sortedSet.get());
+
+        for (Map.Entry<String, Number> e : sortedSet.entrySet()) {
+            System.out.println(e.getKey() + "=" + e.getValue());
+        }
+
+        RedisKeyIterator redisKeyIterator = new RedisKeyIterator(redis);
+        while (redisKeyIterator.hasNext()) {
+            System.out.println(ByteBuffers.toUtf8String(redisKeyIterator.next()));
+        }
     }
 }

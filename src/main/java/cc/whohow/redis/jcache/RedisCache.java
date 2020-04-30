@@ -3,11 +3,15 @@ package cc.whohow.redis.jcache;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import cc.whohow.redis.jcache.processor.EntryProcessorResultWrapper;
 import cc.whohow.redis.lettuce.Lettuce;
+import cc.whohow.redis.util.RedisKeyIterator;
+import cc.whohow.redis.util.impl.MappingIterator;
 import io.lettuce.core.KeyScanCursor;
 import io.lettuce.core.ScanArgs;
 import io.lettuce.core.ScanCursor;
 import io.lettuce.core.api.sync.RedisCommands;
 import io.lettuce.core.codec.RedisCodec;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
@@ -17,6 +21,7 @@ import javax.cache.management.CacheStatisticsMXBean;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.function.Function;
@@ -26,10 +31,12 @@ import java.util.stream.Collectors;
  * 普通Redis缓存，不支持过期时间
  */
 public class RedisCache<K, V> implements Cache<K, V> {
+    private static final Logger log = LogManager.getLogger();
     protected final RedisCacheManager cacheManager;
     protected final RedisCacheConfiguration<K, V> configuration;
     protected final RedisCodec<K, V> codec;
     protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
+    protected final CacheStats cacheStats = new CacheStats();
 
     public RedisCache(RedisCacheManager cacheManager, RedisCacheConfiguration<K, V> configuration) {
         Objects.requireNonNull(configuration.getName());
@@ -45,7 +52,14 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public V get(K key) {
-        return codec.decodeValue(redis.get(codec.encodeKey(key)));
+        ByteBuffer encodedValue = redis.get(codec.encodeKey(key));
+        if (encodedValue != null) {
+            cacheStats.cacheHit(1);
+            return codec.decodeValue(encodedValue);
+        } else {
+            cacheStats.cacheMiss(1);
+            return codec.decodeValue(null);
+        }
     }
 
     @Override
@@ -56,8 +70,17 @@ public class RedisCache<K, V> implements Cache<K, V> {
         ByteBuffer[] encodedKeys = keys.stream()
                 .map(key -> (K) key)
                 .map(codec::encodeKey)
+                .peek(Buffer::mark)
                 .toArray(ByteBuffer[]::new);
         return redis.mget(encodedKeys).stream()
+                .peek(kv -> kv.getKey().reset())
+                .peek(kv -> {
+                    if (kv.hasValue()) {
+                        cacheStats.cacheHit(1);
+                    } else {
+                        cacheStats.cacheMiss(1);
+                    }
+                })
                 .collect(Collectors.toMap(
                         kv -> codec.decodeKey(kv.getKey()),
                         kv -> codec.decodeValue(kv.getValueOrElse(null))));
@@ -76,11 +99,19 @@ public class RedisCache<K, V> implements Cache<K, V> {
     @Override
     public void put(K key, V value) {
         redis.set(codec.encodeKey(key), codec.encodeValue(value));
+        cacheStats.cachePut(1);
     }
 
     @Override
     public V getAndPut(K key, V value) {
-        return codec.decodeValue(redis.getset(codec.encodeKey(key), codec.encodeValue(value)));
+        ByteBuffer encodedValue = redis.getset(codec.encodeKey(key), codec.encodeValue(value));
+        if (encodedValue != null) {
+            cacheStats.cacheHit(1);
+            return codec.decodeValue(encodedValue);
+        } else {
+            cacheStats.cacheMiss(1);
+            return codec.decodeValue(null);
+        }
     }
 
     @Override
@@ -93,16 +124,25 @@ public class RedisCache<K, V> implements Cache<K, V> {
                         e -> codec.encodeKey(e.getKey()),
                         e -> codec.encodeValue(e.getValue())));
         redis.mset(encodedKeyValues);
+        cacheStats.cachePut(map.size());
     }
 
     @Override
     public boolean putIfAbsent(K key, V value) {
-        return Lettuce.ok(redis.set(codec.encodeKey(key), codec.encodeValue(value), Lettuce.SET_NX));
+        boolean ok = Lettuce.ok(redis.set(codec.encodeKey(key), codec.encodeValue(value), Lettuce.SET_NX));
+        if (ok) {
+            cacheStats.cachePut(1);
+        }
+        return ok;
     }
 
     @Override
     public boolean remove(K key) {
-        return redis.del(codec.encodeKey(key)) > 0;
+        boolean ok = redis.del(codec.encodeKey(key)) > 0;
+        if (ok) {
+            cacheStats.cacheRemove(1);
+        }
+        return ok;
     }
 
     @Override
@@ -122,7 +162,11 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public boolean replace(K key, V value) {
-        return Lettuce.ok(redis.set(codec.encodeKey(key), codec.encodeValue(value), Lettuce.SET_XX));
+        boolean ok = Lettuce.ok(redis.set(codec.encodeKey(key), codec.encodeValue(value), Lettuce.SET_XX));
+        if (ok) {
+            cacheStats.cachePut(1);
+        }
+        return ok;
     }
 
     @Override
@@ -139,17 +183,19 @@ public class RedisCache<K, V> implements Cache<K, V> {
                 .map(key -> (K) key)
                 .map(codec::encodeKey)
                 .toArray(ByteBuffer[]::new);
-        redis.del(encodedKeys);
+        long n = redis.del(encodedKeys);
+        cacheStats.cacheRemove((int) n);
     }
 
     @Override
     public void removeAll() {
-        ScanArgs scanArgs = ScanArgs.Builder.matches(getName() + ":*").limit(100);
+        ScanArgs scanArgs = ScanArgs.Builder.matches(configuration.getRedisKeyPattern()).limit(100);
         ScanCursor scanCursor = ScanCursor.INITIAL;
         while (!scanCursor.isFinished()) {
             KeyScanCursor<ByteBuffer> keyScanCursor = redis.scan(scanCursor, scanArgs);
             if (!keyScanCursor.getKeys().isEmpty()) {
                 redis.del(keyScanCursor.getKeys().toArray(new ByteBuffer[0]));
+                cacheStats.cacheRemove(keyScanCursor.getKeys().size());
             }
             scanCursor = keyScanCursor;
         }
@@ -198,6 +244,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public void close() {
+        log.info("Close Cache: {}", getName());
     }
 
     @Override
@@ -225,8 +272,11 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public Iterator<Entry<K, V>> iterator() {
-        throw new UnsupportedOperationException();
+        return new MappingIterator<>(new MappingIterator<>(
+                new RedisKeyIterator(redis, configuration.getRedisKeyPattern()), codec::decodeKey), this::getEntry);
     }
+
+
 
     @Override
     public String toString() {
@@ -241,19 +291,27 @@ public class RedisCache<K, V> implements Cache<K, V> {
     @Override
     public CacheValue<V> getValue(K key, Function<V, ? extends CacheValue<V>> factory) {
         ByteBuffer encodedValue = redis.get(codec.encodeKey(key));
-        if (encodedValue == null) {
+        if (encodedValue != null) {
+            CacheValue<V> cacheValue = factory.apply(codec.decodeValue(encodedValue));
+            cacheStats.cacheHit(1);
+            return cacheValue;
+        } else {
+            cacheStats.cacheMiss(1);
             return null;
         }
-        return factory.apply(codec.decodeValue(encodedValue));
     }
 
     @Override
     public CacheStatisticsMXBean getCacheStatistics() {
-        return NoCacheStatistics.getInstance();
+        return cacheStats;
     }
 
     @Override
     public CacheValue<V> getValue(K key) {
         return getValue(key, ImmutableCacheValue::new);
+    }
+
+    public Cache.Entry<K, V> getEntry(K key) {
+        return new LazyCacheEntry<>(this, key);
     }
 }

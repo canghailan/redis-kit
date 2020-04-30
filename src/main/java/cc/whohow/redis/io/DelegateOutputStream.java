@@ -4,8 +4,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 public class DelegateOutputStream extends OutputStream {
-    private OutputStream delegate;
-    private boolean close;
+    private final OutputStream delegate;
+    private final boolean close;
 
     public DelegateOutputStream(OutputStream delegate, boolean close) {
         this.delegate = delegate;
