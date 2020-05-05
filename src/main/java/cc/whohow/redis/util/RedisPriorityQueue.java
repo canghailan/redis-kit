@@ -86,7 +86,7 @@ public class RedisPriorityQueue<E> implements Queue<Map.Entry<E, Number>>, Suppl
         return false;
     }
 
-    public boolean removeIfKey(E k) {
+    public boolean removeKey(E k) {
         return redis.zrem(key.duplicate(), encode(k)) > 0;
     }
 
