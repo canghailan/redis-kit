@@ -4,6 +4,7 @@ import cc.whohow.redis.io.*;
 import cc.whohow.redis.jcache.ImmutableGeneratedCacheKey;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
 import java.io.IOException;
@@ -18,6 +19,10 @@ import java.util.Objects;
  */
 public abstract class ImmutableGeneratedCacheKeyCodec implements Codec<ImmutableGeneratedCacheKey> {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    static {
+        OBJECT_MAPPER.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, true);
+    }
 
     public static Codec<ImmutableGeneratedCacheKey> create(String... cacheKeyTypeCanonicalNames) {
         Objects.requireNonNull(cacheKeyTypeCanonicalNames);
