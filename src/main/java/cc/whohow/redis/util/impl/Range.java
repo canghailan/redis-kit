@@ -5,20 +5,23 @@ import java.util.Iterator;
 import java.util.function.BiFunction;
 import java.util.function.Predicate;
 
+/**
+ * 仿for循环控制结构
+ */
 public class Range<T> implements Iterable<T> {
-    protected final T start;
-    protected final Predicate<T> stop;
-    protected final BiFunction<T, Integer, T> step;
+    protected final T init;
+    protected final Predicate<T> condition;
+    protected final BiFunction<T, Integer, T> increment;
 
-    public Range(T start, Predicate<T> stop, BiFunction<T, Integer, T> step) {
-        this.start = start;
-        this.stop = stop;
-        this.step = step;
+    public Range(T init, Predicate<T> condition, BiFunction<T, Integer, T> increment) {
+        this.init = init;
+        this.condition = condition;
+        this.increment = increment;
     }
 
     @Override
     public Iterator<T> iterator() {
-        return new RangeIterator<>(start, stop, step);
+        return new RangeIterator<>(init, condition, increment);
     }
 
     public static class MaxBound<T> implements Predicate<T> {
@@ -35,9 +38,9 @@ public class Range<T> implements Iterable<T> {
         @Override
         public boolean test(T value) {
             if (inclusive) {
-                return comparator.compare(value, max) > 0;
+                return comparator.compare(value, max) <= 0;
             } else {
-                return comparator.compare(value, max) >= 0;
+                return comparator.compare(value, max) < 0;
             }
         }
     }
@@ -56,9 +59,9 @@ public class Range<T> implements Iterable<T> {
         @Override
         public boolean test(T value) {
             if (inclusive) {
-                return comparator.compare(value, min) < 0;
+                return comparator.compare(value, min) >= 0;
             } else {
-                return comparator.compare(value, min) <= 0;
+                return comparator.compare(value, min) > 0;
             }
         }
     }

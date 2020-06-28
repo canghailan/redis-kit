@@ -10,24 +10,24 @@ public class DateRange extends Range<Date> {
         this(Date.from(start.toInstant()), Date.from(stop.toInstant()), step);
     }
 
-    public DateRange(Date start, Date stop, Duration step) {
+    public DateRange(Date start, Date stop, Duration increment) {
         super(start,
-                step.toMillis() > 0 ?
+                increment.toMillis() > 0 ?
                         new MaxBound<>(Date::compareTo, false, stop) :
                         new MinBound<>(Date::compareTo, false, stop),
-                new Step(step));
+                new Increment(increment));
     }
 
-    private static class Step implements BiFunction<Date, Integer, Date> {
-        protected final long step;
+    private static class Increment implements BiFunction<Date, Integer, Date> {
+        protected final long increment;
 
-        public Step(Duration step) {
-            this.step = step.toMillis();
+        public Increment(Duration increment) {
+            this.increment = increment.toMillis();
         }
 
         @Override
-        public Date apply(Date date, Integer integer) {
-            return new Date(date.getTime() + step);
+        public Date apply(Date date, Integer index) {
+            return new Date(date.getTime() + increment);
         }
     }
 }

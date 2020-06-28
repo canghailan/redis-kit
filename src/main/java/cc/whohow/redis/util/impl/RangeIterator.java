@@ -5,27 +5,27 @@ import java.util.function.BiFunction;
 import java.util.function.Predicate;
 
 public class RangeIterator<T> implements Iterator<T> {
-    protected final Predicate<T> stop;
-    protected final BiFunction<T, Integer, T> step;
+    protected final Predicate<T> condition;
+    protected final BiFunction<T, Integer, T> increment;
     protected T next;
     protected int index;
 
-    public RangeIterator(T start, Predicate<T> stop, BiFunction<T, Integer, T> step) {
-        this.next = start;
+    public RangeIterator(T init, Predicate<T> condition, BiFunction<T, Integer, T> increment) {
+        this.next = init;
         this.index = 0;
-        this.stop = stop;
-        this.step = step;
+        this.condition = condition;
+        this.increment = increment;
     }
 
     @Override
     public boolean hasNext() {
-        return !stop.test(next);
+        return condition.test(next);
     }
 
     @Override
     public T next() {
-        T value = next;
-        next = step.apply(next, ++index);
+        T value = this.next;
+        this.next = increment.apply(this.next, ++index);
         return value;
     }
 }
