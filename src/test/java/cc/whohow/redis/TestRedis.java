@@ -18,10 +18,8 @@ import org.junit.Test;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.time.Duration;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
@@ -172,5 +170,25 @@ public class TestRedis {
         while (redisKeyIterator.hasNext()) {
             System.out.println(ByteBuffers.toUtf8String(redisKeyIterator.next()));
         }
+    }
+
+    @Test
+    public void testTimeWindowCounter() throws Exception {
+        RedisTimeWindowCounter counter = new RedisTimeWindowCounter(redis, "wt", Duration.ofSeconds(2));
+        Random random = new Random();
+        for (int i = 0; i < 100; i++) {
+            Date date = new Date();
+            counter.incrementAndGet(date);
+            System.out.println(date);
+            Thread.sleep(random.nextInt(2500));
+        }
+
+        System.out.println(counter.sumLast(Duration.ofMinutes(1)));
+        System.out.println(counter.sum());
+        counter.get().entrySet()
+                .forEach(System.out::println);
+        counter.retainLast(Duration.ofMinutes(1));
+        counter.get().entrySet()
+                .forEach(System.out::println);
     }
 }

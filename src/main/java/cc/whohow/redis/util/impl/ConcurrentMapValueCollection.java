@@ -1,6 +1,5 @@
 package cc.whohow.redis.util.impl;
 
-import java.util.AbstractCollection;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;

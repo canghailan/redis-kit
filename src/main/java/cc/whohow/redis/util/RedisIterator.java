@@ -62,4 +62,9 @@ public abstract class RedisIterator<T, C extends ScanCursor> implements Iterator
     public T next() {
         return next = iterator.next();
     }
+
+    @Override
+    public void remove() {
+        remove(next);
+    }
 }

@@ -3,7 +3,6 @@ package cc.whohow.redis.spring.scheduling;
 import cc.whohow.redis.spring.annotation.RedisScheduled;
 import cc.whohow.redis.util.LockRunnable;
 import cc.whohow.redis.util.RedisLock;
-import cc.whohow.redis.util.RetryRunnable;
 import io.lettuce.core.api.sync.RedisCommands;
 import org.springframework.scheduling.config.Task;
 import org.springframework.scheduling.support.ScheduledMethodRunnable;
