@@ -3,6 +3,4 @@
 benchmark/
 target/
 *.iml
-*.txt
-*.xml
-*.properties
+redis.properties
