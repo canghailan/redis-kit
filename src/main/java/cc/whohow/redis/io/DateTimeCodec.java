@@ -7,33 +7,23 @@ import java.util.Date;
 import java.util.function.Function;
 
 public class DateTimeCodec<T> implements Codec<T> {
-    private static final DateTimeCodec<Date> DATE = date(Duration.ofMillis(1));
-    private static final DateTimeCodec<Long> MILLIS = millis(Duration.ofMillis(1));
+    private static final DateTimeCodec<Date> DATE = new DateTimeCodec<>(Date::getTime, Date::new);
+    private static final DateTimeCodec<Long> MILLIS = new DateTimeCodec<>(Function.identity(), Function.identity());
 
     protected final Function<T, Long> toEpochMilli;
     protected final Function<Long, T> ofEpochMilli;
-    protected final long accuracy;
 
-    public DateTimeCodec(Function<T, Long> toEpochMilli, Function<Long, T> ofEpochMilli, Duration accuracy) {
+    public DateTimeCodec(Function<T, Long> toEpochMilli, Function<Long, T> ofEpochMilli) {
         this.toEpochMilli = toEpochMilli;
         this.ofEpochMilli = ofEpochMilli;
-        this.accuracy = accuracy.toMillis();
     }
 
     public static DateTimeCodec<Date> date() {
         return DATE;
     }
 
-    public static DateTimeCodec<Date> date(Duration accuracy) {
-        return new DateTimeCodec<>(Date::getTime, Date::new, accuracy);
-    }
-
     public static DateTimeCodec<Long> millis() {
         return MILLIS;
-    }
-
-    public static DateTimeCodec<Long> millis(Duration accuracy) {
-        return new DateTimeCodec<>(Function.identity(), Function.identity(), accuracy);
     }
 
     @Override
@@ -41,8 +31,7 @@ public class DateTimeCodec<T> implements Codec<T> {
         if (value == null) {
             return ByteBuffers.empty();
         }
-        long millis = toEpochMilli.apply(value) / accuracy;
-        return ByteBuffers.from(Long.toString(millis), StandardCharsets.US_ASCII);
+        return ByteBuffers.from(Long.toString(toEpochMilli.apply(value)), StandardCharsets.US_ASCII);
     }
 
     @Override
@@ -54,7 +43,33 @@ public class DateTimeCodec<T> implements Codec<T> {
         if (ByteBuffers.isEmpty(buffer)) {
             return defaultValue;
         }
-        long millis = Long.parseLong(ByteBuffers.toString(buffer, StandardCharsets.US_ASCII)) * accuracy;
-        return ofEpochMilli.apply(millis);
+        return ofEpochMilli.apply(Long.parseLong(ByteBuffers.toString(buffer, StandardCharsets.US_ASCII)));
+    }
+
+    public static class Accuracy<T> extends DateTimeCodec<T> {
+        protected final long accuracy;
+
+        public Accuracy(Function<T, Long> toEpochMilli, Function<Long, T> ofEpochMilli, Duration accuracy) {
+            super(toEpochMilli, ofEpochMilli);
+            this.accuracy = accuracy.toMillis();
+        }
+
+        public static DateTimeCodec<Date> date(Duration accuracy) {
+            return new Accuracy<>(Date::getTime, Date::new, accuracy);
+        }
+
+        public static DateTimeCodec<Long> millis(Duration accuracy) {
+            return new Accuracy<>(Function.identity(), Function.identity(), accuracy);
+        }
+
+        @Override
+        public ByteBuffer encode(T value) {
+            if (value == null) {
+                return ByteBuffers.empty();
+            }
+            long t = toEpochMilli.apply(value);
+            long ta = t - t % accuracy;
+            return ByteBuffers.from(Long.toString(ta), StandardCharsets.US_ASCII);
+        }
     }
 }

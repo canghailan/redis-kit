@@ -4,8 +4,11 @@ import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.Codec;
 import cc.whohow.redis.io.PrimitiveCodec;
 import io.lettuce.core.api.sync.RedisCommands;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -18,6 +21,7 @@ import java.util.stream.StreamSupport;
  * 窗口计数器
  */
 public class RedisWindowCounter<W> {
+    private static final Logger LOG = LogManager.getLogger(RedisWindowCounter.class);
     protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
     protected final Codec<W> codec;
     protected final ByteBuffer key;
@@ -52,6 +56,7 @@ public class RedisWindowCounter<W> {
      * 获取窗口计数值
      */
     public long get(W window) {
+        LOG.trace("hget {} {}", this, window);
         return decodeLong(redis.hget(key.duplicate(), encode(window)));
     }
 
@@ -74,6 +79,7 @@ public class RedisWindowCounter<W> {
      */
     public long sum(Stream<W> window) {
         ByteBuffer[] encodedKeys = window
+                .peek(w -> LOG.trace("hmget {} {}", this, w))
                 .map(this::encode)
                 .toArray(ByteBuffer[]::new);
         return redis.hmget(key.duplicate(), encodedKeys).stream()
@@ -86,6 +92,7 @@ public class RedisWindowCounter<W> {
      * 获取所有窗口计数总数
      */
     public long sum() {
+        LOG.trace("hgetall {}", this);
         return redis.hgetall(key.duplicate()).values().stream()
                 .mapToLong(this::decodeLong)
                 .sum();
@@ -95,6 +102,7 @@ public class RedisWindowCounter<W> {
      * 设置计数值
      */
     public void set(W window, long newValue) {
+        LOG.trace("hset {} {} {}", this, window, newValue);
         redis.hset(key.duplicate(), encode(window), encodeLong(newValue));
     }
 
@@ -119,6 +127,7 @@ public class RedisWindowCounter<W> {
     }
 
     public long addAndGet(W window, long delta) {
+        LOG.trace("hincrby {} {} {}", this, window, delta);
         return redis.hincrby(key.duplicate(), encode(window), delta);
     }
 
@@ -133,6 +142,7 @@ public class RedisWindowCounter<W> {
             Map.Entry<ByteBuffer, ByteBuffer> next = iterator.next();
             W window = decode(next.getKey().duplicate());
             if (predicate.test(window)) {
+                LOG.trace("hdel {} {}", this, window);
                 batch[n++] = next.getKey().duplicate();
             }
             if (n == batch.length) {
@@ -149,11 +159,17 @@ public class RedisWindowCounter<W> {
      * 读取所有窗口计数到内存
      */
     public Map<W, Long> get() {
+        LOG.trace("hgetall {}", this);
         return redis.hgetall(key.duplicate()).entrySet().stream()
                 .collect(Collectors.toMap(
                         e -> decode(e.getKey()),
                         e -> decodeLong(e.getValue()),
                         (a, b) -> b,
                         LinkedHashMap::new));
+    }
+
+    @Override
+    public String toString() {
+        return StandardCharsets.ISO_8859_1.decode(key.duplicate()).toString();
     }
 }
