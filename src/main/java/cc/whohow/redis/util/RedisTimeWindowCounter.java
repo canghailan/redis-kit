@@ -49,8 +49,20 @@ public class RedisTimeWindowCounter extends RedisWindowCounter<Date> {
      */
     public long sumLast(Duration duration) {
         LOG.trace("sumLast({})", duration);
-        Date now = new Date();
-        return sum(new Date(now.getTime() - duration.toMillis()), now);
+        return sumLast((int) (duration.toMillis() / accuracy.toMillis()));
+    }
+
+    /**
+     * 最近N个计数总数
+     */
+    public long sumLast(int n) {
+        LOG.trace("sumLast({})", n);
+        long t = System.currentTimeMillis();
+        Date[] window = new Date[n];
+        for (int i = 0; i < window.length; i++) {
+            window[i] = new Date(t - accuracy.toMillis() * i);
+        }
+        return sum(window);
     }
 
     /**
@@ -60,6 +72,14 @@ public class RedisTimeWindowCounter extends RedisWindowCounter<Date> {
         LOG.trace("retainLast({})", duration);
         long t = System.currentTimeMillis() - duration.toMillis();
         long ta = t - t % accuracy.toMillis();
-        removeIf(new Date(ta)::after);
+        retainAfter(new Date(ta));
+    }
+
+    /**
+     * 仅保留指定时间后计数，移除其他计数窗口
+     */
+    public void retainAfter(Date retain) {
+        LOG.trace("retainLast({})", retain);
+        removeIf(retain::after);
     }
 }
