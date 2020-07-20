@@ -155,6 +155,10 @@ public class RedisWindowCounter<W> {
         }
     }
 
+    public void clear() {
+        redis.del(key.duplicate());
+    }
+
     /**
      * 读取所有窗口计数到内存
      */
