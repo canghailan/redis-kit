@@ -1,15 +1,19 @@
 package cc.whohow.redis.util;
 
+import cc.whohow.redis.io.ByteBuffers;
 import io.lettuce.core.MapScanCursor;
 import io.lettuce.core.ScanArgs;
 import io.lettuce.core.ScanCursor;
 import io.lettuce.core.api.sync.RedisCommands;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.Map;
 
 public class RedisMapIterator extends RedisIterator<Map.Entry<ByteBuffer, ByteBuffer>, MapScanCursor<ByteBuffer, ByteBuffer>> {
+    private static final Logger log = LogManager.getLogger();
     private final ByteBuffer key;
 
     public RedisMapIterator(RedisCommands<ByteBuffer, ByteBuffer> redis, ByteBuffer key) {
@@ -34,6 +38,7 @@ public class RedisMapIterator extends RedisIterator<Map.Entry<ByteBuffer, ByteBu
 
     @Override
     protected MapScanCursor<ByteBuffer, ByteBuffer> scan(ScanCursor scanCursor) {
+        log.trace("HSCAN {} {} [match?] [limit?]", this, scanCursor.getCursor());
         return redis.hscan(key.duplicate(), scanCursor, scanArgs);
     }
 
@@ -44,6 +49,12 @@ public class RedisMapIterator extends RedisIterator<Map.Entry<ByteBuffer, ByteBu
 
     @Override
     protected void remove(Map.Entry<ByteBuffer, ByteBuffer> value) {
+        log.trace("HDEL {} [value?]", this);
         redis.hdel(key.duplicate(), value.getKey().duplicate());
+    }
+
+    @Override
+    public String toString() {
+        return ByteBuffers.toString(key);
     }
 }

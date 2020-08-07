@@ -81,25 +81,18 @@ public class TestRedis {
 
         String prefix = "c:";
 
-        RedisKey<Long> keys = new RedisKey<>(redis, PrimitiveCodec.LONG);
-
         RedisKeyIterator iterator = new RedisKeyIterator(redis, prefix + "*");
         while (iterator.hasNext()) {
             String key = ByteBuffers.toUtf8String(iterator.next());
             RedisAtomicLong c = new RedisAtomicLong(redis, key);
             long value = c.getAndSet(0);
-
-            if (value == 0) {
-                keys.remove(key, 0L);
-            }
-
             System.out.println("aaa" + key.substring(prefix.length()) + " = " + value);
         }
     }
 
     @Test
     public void testKeyspaceEvent() throws Exception {
-        RedisKeyspaceEvents redisKeyspaceEvents = new RedisKeyspaceEvents(redisClient, redisURI);
+        RedisKeyspaceNotification redisKeyspaceNotification = new RedisKeyspaceNotification(redisClient, redisURI);
 
         Thread.sleep(300_000);
     }
@@ -107,9 +100,9 @@ public class TestRedis {
     @Test
     public void testMessageQueue() throws Exception {
         ExecutorService executor = Executors.newCachedThreadPool();
-        RedisKeyspaceEvents redisKeyspaceEvents = new RedisKeyspaceEvents(redisClient, redisURI);
+        RedisKeyspaceNotification redisKeyspaceNotification = new RedisKeyspaceNotification(redisClient, redisURI);
 
-        RedisMessaging redisMessaging = new RedisMessaging(redis, redisKeyspaceEvents, executor);
+        RedisMessaging redisMessaging = new RedisMessaging(redis, redisKeyspaceNotification, executor);
 
         AtomicInteger counter = new AtomicInteger(0);
 

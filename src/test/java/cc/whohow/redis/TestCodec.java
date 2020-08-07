@@ -100,27 +100,6 @@ public class TestCodec {
     }
 
     @Test
-    public void testLz4Codec() {
-        Random random = new Random();
-        String string = random.ints(100000).mapToObj(Integer::toString).collect(Collectors.joining());
-
-        Codec<String> stringCodec = new StringCodec();
-        Codec<String> lz4Codec = new Lz4Codec<>(stringCodec);
-
-        ByteBuffer b1 = stringCodec.encode(string);
-        ByteBuffer b2 = lz4Codec.encode(string);
-        String decoded = lz4Codec.decode(b2.duplicate());
-
-        System.out.println(b1.remaining());
-        System.out.println(b2.remaining());
-        System.out.println(b2.getInt(0));
-//        System.out.println(string);
-//        System.out.println(decoded);
-
-        Assert.assertEquals(string, decoded);
-    }
-
-    @Test
     public void testGzipCodec() {
         Random random = new Random();
         String string = random.ints(100000).mapToObj(Integer::toString).collect(Collectors.joining());

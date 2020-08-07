@@ -12,7 +12,7 @@ public class ByteBufferOutputStream extends OutputStream implements WritableByte
     }
 
     public ByteBufferOutputStream(int size) {
-        this.byteBuffer = ByteBuffer.allocate(size);
+        this(ByteBuffer.allocate(size));
     }
 
     public ByteBufferOutputStream(ByteBuffer byteBuffer) {
@@ -23,37 +23,33 @@ public class ByteBufferOutputStream extends OutputStream implements WritableByte
         return byteBuffer;
     }
 
-    private void ensureByteBufferRemaining(int minRemaining) {
-        if (byteBuffer.remaining() < minRemaining) {
-            int growth = byteBuffer.capacity();
-            if (growth < minRemaining) {
-                growth = minRemaining;
-            }
-            byteBuffer = copyOf(byteBuffer, byteBuffer.capacity() + growth);
+    public synchronized int position() {
+        return byteBuffer.position();
+    }
+
+    protected synchronized void ensureCapacity(int minCapacity) {
+        if (byteBuffer.capacity() < minCapacity) {
+            int newCapacity = Integer.max(minCapacity, byteBuffer.capacity() * 2);
+            byteBuffer = ByteBuffers.resize(byteBuffer, newCapacity);
         }
     }
 
-    private ByteBuffer copyOf(ByteBuffer byteBuffer, int capacity) {
-        byteBuffer.flip();
-        return ByteBuffer.allocate(capacity).put(byteBuffer);
-    }
-
-    public int write(ByteBuffer b) {
-        int n = b.remaining();
-        ensureByteBufferRemaining(n);
+    public synchronized int write(ByteBuffer b) {
+        int bytes = b.remaining();
+        ensureCapacity(position() + bytes);
         byteBuffer.put(b);
-        return n;
+        return bytes;
     }
 
     @Override
-    public void write(byte[] b, int off, int len) {
-        ensureByteBufferRemaining(len);
+    public synchronized void write(byte[] b, int off, int len) {
+        ensureCapacity(position() + len);
         byteBuffer.put(b, off, len);
     }
 
     @Override
-    public void write(int b) {
-        ensureByteBufferRemaining(1);
+    public synchronized void write(int b) {
+        ensureCapacity(position() + 1);
         byteBuffer.put((byte) b);
     }
 

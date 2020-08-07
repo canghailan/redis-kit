@@ -2,6 +2,7 @@ package cc.whohow.redis.util;
 
 import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.Codec;
+import cc.whohow.redis.util.impl.ArrayType;
 import cc.whohow.redis.util.impl.MappingIterator;
 import io.lettuce.core.ScoredValue;
 import io.lettuce.core.api.sync.RedisCommands;
@@ -9,33 +10,30 @@ import io.lettuce.core.api.sync.RedisCommands;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
-public class RedisPriorityQueue<E> implements Queue<Map.Entry<E, Number>>, Supplier<Queue<Map.Entry<E, Number>>> {
-    protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
-    protected final Codec<E> codec;
-    protected final ByteBuffer key;
-
+public class RedisPriorityQueue<E>
+        extends RedisSortedSetKey<E>
+        implements Queue<Map.Entry<E, Number>>, Supplier<Queue<Map.Entry<E, Number>>> {
     public RedisPriorityQueue(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, String key) {
         this(redis, codec, ByteBuffers.fromUtf8(key));
     }
 
     public RedisPriorityQueue(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, ByteBuffer key) {
-        this.redis = redis;
-        this.codec = codec;
-        this.key = key;
+        super(redis, codec, key);
     }
 
-    protected ByteBuffer encode(E value) {
-        return codec.encode(value);
+    protected Map.Entry<E, Number> decode(ScoredValue<ByteBuffer> scoredValue) {
+        return new AbstractMap.SimpleImmutableEntry<>(decode(scoredValue.getValue()), scoredValue.getScore());
     }
 
-    protected E decode(ByteBuffer byteBuffer) {
-        return codec.decode(byteBuffer);
+    protected Map.Entry<E, Number> toEntry(ScoredValue<E> scoredValue) {
+        return new AbstractMap.SimpleImmutableEntry<>(scoredValue.getValue(), scoredValue.getScore());
     }
 
     @Override
     public int size() {
-        return redis.zcard(key.duplicate()).intValue();
+        return (int) zcard();
     }
 
     @Override
@@ -48,27 +46,29 @@ public class RedisPriorityQueue<E> implements Queue<Map.Entry<E, Number>>, Suppl
     public boolean contains(Object o) {
         if (o instanceof Map.Entry) {
             Map.Entry<E, Number> e = (Map.Entry<E, Number>) o;
-            return redis.zscore(key.duplicate(), encode(e.getKey())) != null;
+            return zscore(e.getKey()) != null;
         }
         return false;
     }
 
     @Override
     public Iterator<Map.Entry<E, Number>> iterator() {
-        return new MappingIterator<>(
-                new RedisSortedSetIterator(redis, key.duplicate()),
-                (value) -> new AbstractMap.SimpleImmutableEntry<>(decode(value.getValue()), value.getScore()));
+        return new MappingIterator<>(new RedisSortedSetIterator(redis, zsetKey.duplicate()), this::decode);
     }
 
     @Override
     public Object[] toArray() {
-        return get().toArray();
+        return zrangeWithScores(0, -1)
+                .map(this::toEntry)
+                .toArray();
     }
 
     @Override
     @SuppressWarnings("SuspiciousToArrayCall")
     public <T> T[] toArray(T[] a) {
-        return get().toArray(a);
+        return zrangeWithScores(0, -1)
+                .map(this::toEntry)
+                .toArray(ArrayType.of(a)::newInstance);
     }
 
     @Override
@@ -81,13 +81,9 @@ public class RedisPriorityQueue<E> implements Queue<Map.Entry<E, Number>>, Suppl
     public boolean remove(Object o) {
         if (o instanceof Map.Entry) {
             Map.Entry<E, Number> e = (Map.Entry<E, Number>) o;
-            return redis.zrem(key.duplicate(), encode(e.getKey())) > 0;
+            return zrem(e.getKey()) > 0;
         }
         return false;
-    }
-
-    public boolean removeKey(E k) {
-        return redis.zrem(key.duplicate(), encode(k)) > 0;
     }
 
     @Override
@@ -96,25 +92,21 @@ public class RedisPriorityQueue<E> implements Queue<Map.Entry<E, Number>>, Suppl
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public boolean addAll(Collection<? extends Map.Entry<E, Number>> c) {
         if (c.isEmpty()) {
             return false;
         }
-        redis.zadd(key.duplicate(), c.stream()
-                .map(e -> ScoredValue.fromNullable(e.getValue().doubleValue(), encode(e.getKey())))
-                .toArray(ScoredValue[]::new));
+        zadd(c);
         return true;
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public boolean removeAll(Collection<?> c) {
-        return redis.zrem(key.duplicate(), c.stream()
+        return zrem(c.stream()
                 .map(e -> (Map.Entry<E, Number>) e)
                 .map(Map.Entry::getKey)
-                .map(this::encode)
-                .toArray(ByteBuffer[]::new)) > 0;
+                .collect(Collectors.toSet())) > 0;
     }
 
     @Override
@@ -124,11 +116,11 @@ public class RedisPriorityQueue<E> implements Queue<Map.Entry<E, Number>>, Suppl
 
     @Override
     public void clear() {
-        redis.del(key.duplicate());
+        del();
     }
 
     public boolean offer(E e, Number priority) {
-        redis.zadd(key.duplicate(), priority.doubleValue(), encode(e));
+        zadd(priority.doubleValue(), e);
         return true;
     }
 
@@ -144,8 +136,11 @@ public class RedisPriorityQueue<E> implements Queue<Map.Entry<E, Number>>, Suppl
 
     @Override
     public Map.Entry<E, Number> poll() {
-        // TODO
-        throw new UnsupportedOperationException();
+        ScoredValue<E> value = zpopminWithScores();
+        if (value.hasValue()) {
+            return toEntry(value);
+        }
+        return null;
     }
 
     @Override
@@ -155,17 +150,17 @@ public class RedisPriorityQueue<E> implements Queue<Map.Entry<E, Number>>, Suppl
 
     @Override
     public Map.Entry<E, Number> peek() {
-        return redis.zrangeWithScores(key.duplicate(), 0, 0).stream()
+        return zrangeWithScores(0, 0)
                 .findFirst()
-                .map(v -> new AbstractMap.SimpleImmutableEntry<E, Number>(decode(v.getValue()), v.getScore()))
+                .map(this::toEntry)
                 .orElse(null);
     }
 
     @Override
     public Queue<Map.Entry<E, Number>> get() {
-        return redis.zrangeWithScores(key.duplicate(), 0, -1).stream()
-                .map(v -> new AbstractMap.SimpleImmutableEntry<E, Number>(decode(v.getValue()), v.getScore()))
-                .collect(LinkedList::new, LinkedList::addLast, LinkedList::addAll);
+        return zrangeWithScores(0, -1)
+                .map(this::toEntry)
+                .collect(Collectors.toCollection(LinkedList::new));
     }
 
     protected Map.Entry<E, Number> checkElement(Map.Entry<E, Number> e) {
@@ -173,5 +168,10 @@ public class RedisPriorityQueue<E> implements Queue<Map.Entry<E, Number>>, Suppl
             throw new NoSuchElementException();
         }
         return e;
+    }
+
+    @Override
+    public String toString() {
+        return ByteBuffers.toString(zsetKey);
     }
 }

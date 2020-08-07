@@ -1,13 +1,14 @@
 package cc.whohow.redis.spring.cache;
 
+import cc.whohow.redis.jcache.CacheLoader;
 import org.springframework.cache.Cache;
 
+import javax.cache.integration.CacheLoaderException;
 import java.util.Objects;
 import java.util.concurrent.Callable;
-import java.util.function.Function;
 
 @SuppressWarnings("unchecked")
-public class ValueLoaderAdapter<K, V> implements Function<K, V> {
+public class ValueLoaderAdapter<K, V> implements CacheLoader<K, V> {
     private final Object key;
     private final Callable<?> valueLoader;
 
@@ -17,9 +18,9 @@ public class ValueLoaderAdapter<K, V> implements Function<K, V> {
     }
 
     @Override
-    public V apply(K k) {
+    public V load(K key) throws CacheLoaderException {
         try {
-            if (Objects.equals(k, key)) {
+            if (Objects.equals(this.key, key)) {
                 return (V) valueLoader.call();
             }
         } catch (Exception e) {

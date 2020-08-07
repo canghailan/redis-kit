@@ -2,18 +2,23 @@ package cc.whohow.redis.util;
 
 import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.PrimitiveCodec;
+import cc.whohow.redis.lettuce.Lettuce;
 import cc.whohow.redis.script.RedisScriptCommands;
 import io.lettuce.core.ScriptOutputType;
 import io.lettuce.core.api.sync.RedisCommands;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.nio.ByteBuffer;
 
 /**
- * Reids计数器
+ * Redis计数器
+ *
+ * @see java.util.concurrent.atomic.AtomicLong
  */
 public class RedisAtomicLong extends Number {
+    private static final Logger log = LogManager.getLogger();
     protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
-    protected final RedisScriptCommands redisScriptCommands;
     protected final ByteBuffer key;
 
     public RedisAtomicLong(RedisCommands<ByteBuffer, ByteBuffer> redis, String key) {
@@ -30,11 +35,11 @@ public class RedisAtomicLong extends Number {
 
     public RedisAtomicLong(RedisCommands<ByteBuffer, ByteBuffer> redis, ByteBuffer key, long initialValue) {
         this.redis = redis;
-        this.redisScriptCommands = new RedisScriptCommands(redis);
         this.key = key;
 
         if (initialValue != 0) {
-            redis.setnx(key.duplicate(), encode(initialValue));
+            log.trace("SET {} {} NX", this, initialValue);
+            redis.set(key.duplicate(), encode(initialValue), Lettuce.SET_NX);
         }
     }
 
@@ -51,10 +56,12 @@ public class RedisAtomicLong extends Number {
     }
 
     public void set(long newValue) {
+        log.trace("set {} {}", this, newValue);
         redis.set(key.duplicate(), encode(newValue));
     }
 
     public long getAndSet(long newValue) {
+        log.trace("getset {} {}", this, newValue);
         return decode(redis.getset(key.duplicate(), encode(newValue)));
     }
 
@@ -71,14 +78,17 @@ public class RedisAtomicLong extends Number {
     }
 
     public long incrementAndGet() {
+        log.trace("incr {}", this);
         return redis.incr(key.duplicate());
     }
 
     public long decrementAndGet() {
+        log.trace("decr {}", this);
         return redis.decr(key.duplicate());
     }
 
     public long addAndGet(long delta) {
+        log.trace("incrby {} {}", this, delta);
         return redis.incrby(key.duplicate(), delta);
     }
 
@@ -89,9 +99,15 @@ public class RedisAtomicLong extends Number {
         if ("/".equals(operator)) {
             operator = "//";
         }
-        ByteBuffer r = redisScriptCommands.eval("acc", ScriptOutputType.VALUE,
-                new ByteBuffer[]{key.duplicate()},
-                new ByteBuffer[]{ByteBuffers.fromUtf8(operator), PrimitiveCodec.LONG.encode(value)});
+        log.trace("eval acc {} {} {}", this, operator, value);
+        ByteBuffer r = new RedisScriptCommands(redis).eval("acc", ScriptOutputType.VALUE,
+                new ByteBuffer[]{
+                        key.duplicate()
+                },
+                new ByteBuffer[]{
+                        ByteBuffers.fromUtf8(operator),
+                        PrimitiveCodec.LONG.encode(value)
+                });
         if (r == null) {
             return 0;
         }
@@ -136,6 +152,7 @@ public class RedisAtomicLong extends Number {
 
     @Override
     public long longValue() {
+        log.trace("get {}", this);
         return decode(redis.get(key.duplicate()));
     }
 
@@ -147,5 +164,10 @@ public class RedisAtomicLong extends Number {
     @Override
     public double doubleValue() {
         return (double) longValue();
+    }
+
+    @Override
+    public String toString() {
+        return ByteBuffers.toString(key);
     }
 }

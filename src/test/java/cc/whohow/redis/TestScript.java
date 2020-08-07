@@ -22,7 +22,7 @@ import java.util.Properties;
 import java.util.stream.Collectors;
 
 public class TestScript {
-    private static RedisClient redisClient = RedisClient.create();
+    private static final RedisClient redisClient = RedisClient.create();
 
     private static Properties properties;
     private static RedisURI redisURI;
@@ -49,9 +49,9 @@ public class TestScript {
     @Test
     public void testGet() {
         RedisScriptCommands redisScriptCommands = new RedisScriptCommands(redis);
-        List<ByteBuffer> r1 = redisScriptCommands.eval("get", ScriptOutputType.MULTI, ByteBuffers.fromUtf8("nx"));
+        List<ByteBuffer> r1 = redisScriptCommands.eval("get", ScriptOutputType.MULTI, new ByteBuffer[]{ByteBuffers.fromUtf8("nx")});
         System.out.println(r1);
-        List<ByteBuffer> r2 = redisScriptCommands.eval("get", ScriptOutputType.MULTI, ByteBuffers.fromUtf8("a"));
+        List<ByteBuffer> r2 = redisScriptCommands.eval("get", ScriptOutputType.MULTI, new ByteBuffer[]{ByteBuffers.fromUtf8("a")});
         System.out.println(r2.stream().map(PrimitiveCodec.LONG::decode).collect(Collectors.toList()));
     }
 
@@ -59,9 +59,9 @@ public class TestScript {
     public void testExists() {
         RedisScriptCommands redisScriptCommands = new RedisScriptCommands(redis);
         List<ByteBuffer> r1 = redisScriptCommands.eval("exists", ScriptOutputType.MULTI,
-                ByteBuffers.fromUtf8("a"),
-                ByteBuffers.fromUtf8("b"),
-                ByteBuffers.fromUtf8("nx"));
+                new ByteBuffer[]{ByteBuffers.fromUtf8("a"),
+                        ByteBuffers.fromUtf8("b"),
+                        ByteBuffers.fromUtf8("nx")});
         System.out.println(r1.stream().map(ByteBuffers::toUtf8String).collect(Collectors.toList()));
     }
 
@@ -99,9 +99,9 @@ public class TestScript {
         RedisScriptCommands redisScriptCommands = new RedisScriptCommands(redis);
         Object r = redisScriptCommands.eval("lock", ScriptOutputType.BOOLEAN,
                 new ByteBuffer[]{ByteBuffers.fromUtf8("b")},
-                ByteBuffers.fromUtf8("test1"),
-                ByteBuffers.fromUtf8("ex"),
-                PrimitiveCodec.LONG.encode(120L));
+                new ByteBuffer[]{ByteBuffers.fromUtf8("test1"),
+                        ByteBuffers.fromUtf8("ex"),
+                        PrimitiveCodec.LONG.encode(120L)});
         System.out.println(r);
 
 //        ByteBuffer r = redisScriptCommands.eval("existkeys", ScriptOutputType.VALUE,

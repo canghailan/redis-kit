@@ -57,6 +57,22 @@ public class PollingMessageQueue<E> implements Callable<Long> {
     }
 
     /**
+     * 开始消费
+     */
+    public void start() {
+        log.debug("start");
+        setReady();
+    }
+
+    /**
+     * 停止消费
+     */
+    public void stop() {
+        log.debug("stop");
+        setWaiting();
+    }
+
+    /**
      * 通知数据已准备就绪
      */
     public boolean setReady() {
@@ -121,6 +137,7 @@ public class PollingMessageQueue<E> implements Callable<Long> {
                     if (value == null) {
                         break;
                     }
+                    log.trace("consume {}", value);
                     consumer.accept(value);
                     n++;
                 } catch (Throwable e) {

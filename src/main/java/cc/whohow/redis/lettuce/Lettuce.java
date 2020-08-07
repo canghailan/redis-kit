@@ -14,6 +14,8 @@ public class Lettuce {
     public static final ZAddArgs Z_ADD_XX = ZAddArgs.Builder.xx();
     private static final ByteBuffer ZERO = PrimitiveCodec.INTEGER.encode(0);
     private static final ByteBuffer ONE = PrimitiveCodec.INTEGER.encode(1);
+    private static final ByteBuffer NEG_INF = ByteBuffers.fromUtf8("-inf");
+    private static final ByteBuffer INF = ByteBuffers.fromUtf8("+inf");
     private static final ByteBuffer WITHSCORES = ByteBuffers.fromUtf8("WITHSCORES");
     private static final ByteBuffer LIMIT = ByteBuffers.fromUtf8("LIMIT");
     private static final ByteBuffer PX = ByteBuffers.fromUtf8("PX");
@@ -27,6 +29,14 @@ public class Lettuce {
 
     public static ByteBuffer one() {
         return ONE.duplicate();
+    }
+
+    public static ByteBuffer inf() {
+        return INF.duplicate();
+    }
+
+    public static ByteBuffer negInf() {
+        return NEG_INF.duplicate();
     }
 
     public static ByteBuffer withscores() {

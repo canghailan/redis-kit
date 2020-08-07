@@ -2,12 +2,10 @@ package cc.whohow.redis.util;
 
 import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.Codec;
-import cc.whohow.redis.lettuce.Lettuce;
 import cc.whohow.redis.util.impl.ConcurrentMapEntrySet;
 import cc.whohow.redis.util.impl.ConcurrentMapKeySet;
 import cc.whohow.redis.util.impl.ConcurrentMapValueCollection;
 import cc.whohow.redis.util.impl.MappingIterator;
-import io.lettuce.core.Range;
 import io.lettuce.core.ScoredValue;
 import io.lettuce.core.api.sync.RedisCommands;
 
@@ -20,32 +18,26 @@ import java.util.stream.Collectors;
 /**
  * 有序集合，按指定值排序
  */
-public class RedisSortedSet<E> implements ConcurrentMap<E, Number>, Supplier<Map<E, Number>> {
-    protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
-    protected final Codec<E> codec;
-    protected final ByteBuffer key;
-
+public class RedisSortedSet<E> extends RedisSortedSetKey<E> implements ConcurrentMap<E, Number>, Supplier<Map<E, Number>> {
     public RedisSortedSet(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, String key) {
         this(redis, codec, ByteBuffers.fromUtf8(key));
     }
 
     public RedisSortedSet(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, ByteBuffer key) {
-        this.redis = redis;
-        this.codec = codec;
-        this.key = key;
+        super(redis, codec, key);
     }
 
-    protected ByteBuffer encode(E value) {
-        return codec.encode(value);
+    public ScoredValue<ByteBuffer> encode(Map.Entry<E, Number> entry) {
+        return ScoredValue.fromNullable(entry.getValue().doubleValue(), encode(entry.getKey()));
     }
 
-    protected E decode(ByteBuffer byteBuffer) {
-        return codec.decode(byteBuffer);
+    protected Map.Entry<E, Number> decode(ScoredValue<ByteBuffer> scoredValue) {
+        return new AbstractMap.SimpleImmutableEntry<>(decode(scoredValue.getValue()), scoredValue.getScore());
     }
 
     @Override
     public int size() {
-        return redis.zcard(key.duplicate()).intValue();
+        return (int) zcard();
     }
 
     @Override
@@ -60,14 +52,13 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number>, Supplier<Map
 
     @Override
     public boolean containsValue(Object value) {
-        Number number = (Number) value;
-        return redis.zcount(key.duplicate(), Range.create(number, number)) > 0;
+        return zcount((Number) value, (Number) value) > 0;
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public Number get(Object key) {
-        return redis.zscore(this.key.duplicate(), encode((E) key));
+        return zscore((E) key);
     }
 
     /**
@@ -75,31 +66,28 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number>, Supplier<Map
      */
     @Override
     public Number put(E key, Number value) {
-        if (redis.zadd(this.key.duplicate(), value.doubleValue(), encode(key)) > 0) {
+        if (zadd(value, key) > 0) {
             return null;
+        } else {
+            return value;
         }
-        return value;
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public Number remove(Object key) {
-        redis.zrem(this.key.duplicate(), encode((E) key));
+        zrem((E) key);
         return null;
     }
 
     @Override
-    @SuppressWarnings({"unchecked", "rawtypes"})
     public void putAll(Map<? extends E, ? extends Number> m) {
-        ScoredValue[] encodedScoredValues = m.entrySet().stream()
-                .map(e -> ScoredValue.fromNullable(e.getValue().doubleValue(), encode(e.getKey())))
-                .toArray(ScoredValue[]::new);
-        redis.zadd(key.duplicate(), encodedScoredValues);
+        zadd(m);
     }
 
     @Override
     public void clear() {
-        redis.del(key.duplicate());
+        del();
     }
 
     @Override
@@ -138,8 +126,7 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number>, Supplier<Map
             @Override
             public Iterator<Entry<E, Number>> iterator() {
                 return new MappingIterator<>(
-                        new RedisSortedSetIterator(redis, key.duplicate()),
-                        (value) -> new AbstractMap.SimpleImmutableEntry<>(decode(value.getValue()), value.getScore()));
+                        new RedisSortedSetIterator(redis, zsetKey.duplicate()), RedisSortedSet.this::decode);
             }
 
             @Override
@@ -162,7 +149,7 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number>, Supplier<Map
 
     @Override
     public Number putIfAbsent(E key, Number value) {
-        redis.zadd(this.key.duplicate(), Lettuce.Z_ADD_NX, value.doubleValue(), encode(key));
+        zaddnx(value, key);
         return null;
     }
 
@@ -184,15 +171,15 @@ public class RedisSortedSet<E> implements ConcurrentMap<E, Number>, Supplier<Map
 
     @Override
     public Number replace(E key, Number value) {
-        redis.zadd(this.key.duplicate(), Lettuce.Z_ADD_XX, value.doubleValue(), encode(key));
+        zaddxx(value, key);
         return null;
     }
 
     @Override
     public Map<E, Number> get() {
-        return redis.zrangeWithScores(key.duplicate(), 0, -1).stream()
+        return zrangeWithScores(0, -1)
                 .collect(Collectors.toMap(
-                        e -> decode(e.getValue()),
+                        ScoredValue::getValue,
                         ScoredValue::getScore,
                         (a, b) -> b,
                         LinkedHashMap::new));

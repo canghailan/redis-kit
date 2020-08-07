@@ -18,7 +18,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 public class TestRedisLocal {
-    private static RedisClient redisClient = RedisClient.create();
+    private static final RedisClient redisClient = RedisClient.create();
 
     private static Properties properties;
     private static RedisURI redisURI;
@@ -47,11 +47,16 @@ public class TestRedisLocal {
 
     @Test
     public void test() throws Exception {
-        RedisLocal redisLocal = new RedisLocal(redis, executor);
+        RedisLocal redisLocal = new RedisLocal(redis, executor, "RL");
         System.out.println(redisLocal.getId());
         System.out.println(redisLocal.getActiveIds());
         System.out.println(redisLocal.isLeader());
-        System.out.println(redisLocal.getRedisLocalMap().get());
+        System.out.println(redisLocal.getLocalMap().orElseThrow(IllegalStateException::new).get());
+        Thread.sleep(10_000);
+        System.out.println(redisLocal.getId());
+        System.out.println(redisLocal.getActiveIds());
+        System.out.println(redisLocal.isLeader());
+        System.out.println(redisLocal.getLocalMap().orElseThrow(IllegalStateException::new).get());
         Thread.sleep(600_000);
     }
 }

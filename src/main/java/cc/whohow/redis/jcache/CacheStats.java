@@ -4,6 +4,9 @@ import javax.cache.management.CacheStatisticsMXBean;
 import java.util.concurrent.atomic.DoubleAdder;
 import java.util.concurrent.atomic.LongAdder;
 
+/**
+ * 缓存统计
+ */
 public class CacheStats implements CacheStatisticsMXBean {
     protected final LongAdder cacheHits = new LongAdder();
     protected final LongAdder cacheMisses = new LongAdder();

@@ -4,16 +4,20 @@ import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 
 public class ByteBuffers {
     private static final ByteBuffer EMPTY = ByteBuffer.allocate(0);
+    private static final ByteBuffer[] EMPTY_ARRAY = new ByteBuffer[0];
 
     /**
      * 空Buffer引用
      */
     public static ByteBuffer empty() {
         return EMPTY;
+    }
+
+    public static ByteBuffer[] emptyArray() {
+        return EMPTY_ARRAY;
     }
 
     /**
@@ -57,14 +61,32 @@ public class ByteBuffers {
         return toString(byteBuffer, StandardCharsets.UTF_8);
     }
 
+    public static String toString(ByteBuffer byteBuffer) {
+        return toString(byteBuffer, StandardCharsets.ISO_8859_1);
+    }
+
     /**
      * 拷贝
      */
-    public static ByteBuffer copy(ByteBuffer bytes) {
-        ByteBuffer byteBuffer = ByteBuffer.allocate(bytes.remaining());
-        byteBuffer.put(bytes.duplicate());
-        byteBuffer.flip();
-        return byteBuffer;
+    public static ByteBuffer copy(ByteBuffer byteBuffer) {
+        ByteBuffer copy = ByteBuffer.allocate(byteBuffer.remaining());
+        copy.put(byteBuffer.duplicate());
+        copy.flip();
+        return copy;
+    }
+
+    /**
+     * 拷贝
+     */
+    public static ByteBuffer resize(ByteBuffer byteBuffer, int newCapacity) {
+        ByteBuffer src = byteBuffer.duplicate();
+        ByteBuffer dst = ByteBuffer.allocate(newCapacity);
+        int position = src.position();
+        src.flip();
+        dst.put(src);
+        dst.position(position);
+        dst.limit(dst.capacity());
+        return dst;
     }
 
     /**
@@ -79,54 +101,6 @@ public class ByteBuffers {
     }
 
     /**
-     * 连接
-     */
-    public static ByteBuffer concat(ByteBuffer... buffers) {
-        int capacity = Arrays.stream(buffers).mapToInt(ByteBuffer::remaining).sum();
-        ByteBuffer byteBuffer = ByteBuffer.allocate(capacity);
-        for (ByteBuffer buffer : buffers) {
-            byteBuffer.put(buffer.duplicate());
-        }
-        byteBuffer.flip();
-        return byteBuffer;
-    }
-
-    /**
-     * 裁剪
-     */
-    public static ByteBuffer slice(ByteBuffer byteBuffer, int start) {
-        ByteBuffer slice = byteBuffer.duplicate();
-        slice.position(slice.position() + start);
-        return slice;
-    }
-
-    /**
-     * 裁剪
-     */
-    public static ByteBuffer slice(ByteBuffer byteBuffer, int start, int end) {
-        ByteBuffer slice = byteBuffer.duplicate();
-        int p = slice.position();
-        slice.position(p + start);
-        slice.limit(p + end);
-        return slice;
-    }
-
-    /**
-     * 是否内容一致
-     */
-    public static boolean contentEquals(ByteBuffer a, ByteBuffer b) {
-        if (a.remaining() != b.remaining()) {
-            return false;
-        }
-        for (int i = a.position(), j = b.position(); i < a.limit(); i++, j++) {
-            if (a.get(i) != b.get(j)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
      * 是否匹配前缀
      */
     public static boolean startsWith(ByteBuffer byteBuffer, ByteBuffer prefix) {
@@ -135,21 +109,6 @@ public class ByteBuffers {
         }
         for (int i = byteBuffer.position(), j = prefix.position(); j < prefix.limit(); i++, j++) {
             if (byteBuffer.get(i) != prefix.get(j)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
-     * 是否匹配后缀
-     */
-    public static boolean endsWith(ByteBuffer byteBuffer, ByteBuffer suffix) {
-        if (byteBuffer.remaining() < suffix.remaining()) {
-            return false;
-        }
-        for (int i = byteBuffer.limit() - 1, j = suffix.limit() - 1; j >= suffix.position(); i--, j--) {
-            if (byteBuffer.get(i) != suffix.get(j)) {
                 return false;
             }
         }

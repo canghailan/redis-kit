@@ -4,11 +4,14 @@ import io.lettuce.core.ScanArgs;
 import io.lettuce.core.ScanCursor;
 import io.lettuce.core.ValueScanCursor;
 import io.lettuce.core.api.sync.RedisCommands;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 
 public class RedisSetIterator extends RedisIterator<ByteBuffer, ValueScanCursor<ByteBuffer>> {
+    private static final Logger log = LogManager.getLogger();
     private final ByteBuffer key;
 
     public RedisSetIterator(RedisCommands<ByteBuffer, ByteBuffer> redis, ByteBuffer key) {
@@ -33,6 +36,7 @@ public class RedisSetIterator extends RedisIterator<ByteBuffer, ValueScanCursor<
 
     @Override
     protected ValueScanCursor<ByteBuffer> scan(ScanCursor scanCursor) {
+        log.trace("SSCAN {} {} [match?] [limit?]", this, scanCursor.getCursor());
         return redis.sscan(key.duplicate(), scanCursor, scanArgs);
     }
 
@@ -43,6 +47,7 @@ public class RedisSetIterator extends RedisIterator<ByteBuffer, ValueScanCursor<
 
     @Override
     protected void remove(ByteBuffer value) {
+        log.trace("SREM {} [value?]", this);
         redis.srem(key.duplicate(), value.duplicate());
     }
 }

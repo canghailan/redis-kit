@@ -12,33 +12,30 @@ public class ByteBufferInputStream extends InputStream implements ReadableByteCh
     }
 
     @Override
-    public int read(byte[] b, int off, int len) {
+    public synchronized int read(byte[] b, int off, int len) {
         if (byteBuffer.hasRemaining()) {
-            if (len > byteBuffer.remaining()) {
-                len = byteBuffer.remaining();
-            }
-            byteBuffer.get(b, off, len);
-            return len;
+            int bytes = Integer.min(len, byteBuffer.remaining());
+            byteBuffer.get(b, off, bytes);
+            return bytes;
+        } else {
+            return -1;
         }
-        return -1;
     }
 
     @Override
-    public long skip(long n) {
-        if (n > byteBuffer.remaining()) {
-            n = byteBuffer.remaining();
-        }
-        byteBuffer.position(byteBuffer.position() + (int) n);
-        return n;
+    public synchronized long skip(long n) {
+        int bytes = (int) Long.min(n, byteBuffer.remaining());
+        byteBuffer.position(byteBuffer.position() + bytes);
+        return bytes;
     }
 
     @Override
-    public int available() {
+    public synchronized int available() {
         return byteBuffer.remaining();
     }
 
     @Override
-    public void mark(int readlimit) {
+    public synchronized void mark(int limit) {
         byteBuffer.mark();
     }
 
@@ -56,26 +53,22 @@ public class ByteBufferInputStream extends InputStream implements ReadableByteCh
      * @see java.io.ByteArrayInputStream#read()
      */
     @Override
-    public int read() {
+    public synchronized int read() {
         return byteBuffer.hasRemaining() ? byteBuffer.get() & 0xff : -1;
     }
 
     @Override
-    public int read(ByteBuffer dst) {
+    public synchronized int read(ByteBuffer dst) {
         if (byteBuffer.hasRemaining()) {
-            int n = dst.remaining();
-            if (n < byteBuffer.remaining()) {
-                ByteBuffer src = byteBuffer.duplicate();
-                src.limit(src.position() + n);
-                dst.put(src);
-                byteBuffer.position(byteBuffer.position() + n);
-            } else {
-                n = byteBuffer.remaining();
-                dst.put(byteBuffer);
-            }
-            return n;
+            int bytes = Integer.min(dst.remaining(), byteBuffer.remaining());
+            ByteBuffer src = byteBuffer.duplicate();
+            src.limit(src.position() + bytes);
+            dst.put(src);
+            byteBuffer.position(byteBuffer.position() + bytes);
+            return bytes;
+        } else {
+            return -1;
         }
-        return -1;
     }
 
     @Override

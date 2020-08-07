@@ -2,7 +2,7 @@ package cc.whohow.redis.jcache;
 
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import cc.whohow.redis.lettuce.ByteBufferCodec;
-import cc.whohow.redis.util.RedisKeyspaceEvents;
+import cc.whohow.redis.util.RedisKeyspaceNotification;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
@@ -33,18 +33,18 @@ public class RedisCacheManager implements CacheManager {
     protected final URI uri;
     protected final RedisURI redisURI;
     protected final RedisClient redisClient;
-    protected final RedisKeyspaceEvents redisKeyspaceEvents;
+    protected final RedisKeyspaceNotification redisKeyspaceNotification;
     protected final StatefulRedisConnection<ByteBuffer, ByteBuffer> redisConnection;
     protected final Function<String, RedisCacheConfiguration<?, ?>> redisCacheConfigurationProvider;
     protected final ConcurrentMap<String, Cache> caches = new ConcurrentHashMap<>();
 
     public RedisCacheManager(RedisClient redisClient,
                              RedisURI redisURI,
-                             RedisKeyspaceEvents redisKeyspaceEvents,
+                             RedisKeyspaceNotification redisKeyspaceNotification,
                              Function<String, RedisCacheConfiguration<?, ?>> redisCacheConfigurationProvider) {
         this.redisURI = redisURI;
         this.redisClient = redisClient;
-        this.redisKeyspaceEvents = redisKeyspaceEvents;
+        this.redisKeyspaceNotification = redisKeyspaceNotification;
         this.redisCacheConfigurationProvider = redisCacheConfigurationProvider;
         this.redisConnection = redisClient.connect(ByteBufferCodec.INSTANCE, redisURI);
         this.uri = redisURI.toURI();
@@ -63,8 +63,8 @@ public class RedisCacheManager implements CacheManager {
         return redisConnection.sync();
     }
 
-    public RedisKeyspaceEvents getRedisKeyspaceEvents() {
-        return redisKeyspaceEvents;
+    public RedisKeyspaceNotification getRedisKeyspaceNotification() {
+        return redisKeyspaceNotification;
     }
 
     @Override
@@ -186,9 +186,11 @@ public class RedisCacheManager implements CacheManager {
 
     @Override
     public void close() {
+        log.info("close RedisCacheManager: {}", this);
         try {
             for (Cache cache : caches.values()) {
                 try {
+                    log.debug("close Cache: {}", cache.getName());
                     cache.close();
                 } catch (Throwable e) {
                     log.warn("Close Cache ERROR", e);
@@ -196,6 +198,7 @@ public class RedisCacheManager implements CacheManager {
             }
             caches.clear();
         } finally {
+            log.debug("close RedisConnection");
             redisConnection.close();
         }
     }

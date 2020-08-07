@@ -55,7 +55,7 @@ public class JacksonCodec<T> extends AbstractStreamCodec<T> {
     }
 
     public JacksonCodec(ObjectMapper objectMapper, JavaType type) {
-        super(new BufferAllocationPredictor(128, 512));
+        super(new ByteBufferAllocator(128, 512));
         this.objectMapper = objectMapper;
         this.type = type;
     }

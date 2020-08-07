@@ -1,8 +1,9 @@
 package cc.whohow.redis.script;
 
-import cc.whohow.redis.io.Java9InputStream;
+import cc.whohow.redis.io.IO;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -32,17 +33,20 @@ public class RedisScript {
     }
 
     private static String load(URL url) {
-        try (Java9InputStream stream = new Java9InputStream(url.openStream())) {
-            return StandardCharsets.UTF_8.decode(stream.readAllBytes(1024)).toString();
+        try (InputStream stream = url.openStream()) {
+            return StandardCharsets.UTF_8.decode(IO.read(stream, 1024)).toString();
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
     }
 
     private static String load(String name) {
-        try (Java9InputStream stream = new Java9InputStream(Thread.currentThread().getContextClassLoader()
-                .getResourceAsStream(name + ".lua"))) {
-            return StandardCharsets.UTF_8.decode(stream.readAllBytes(1024)).toString();
+        String lua = name + ".lua";
+        try (InputStream stream = Thread.currentThread().getContextClassLoader().getResourceAsStream(lua)) {
+            if (stream == null) {
+                throw new IllegalArgumentException(lua + "not found");
+            }
+            return StandardCharsets.UTF_8.decode(IO.read(stream, 1024)).toString();
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

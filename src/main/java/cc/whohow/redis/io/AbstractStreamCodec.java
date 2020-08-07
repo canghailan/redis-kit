@@ -8,19 +8,19 @@ import java.nio.ByteBuffer;
  * 自适应缓冲区编码器
  */
 public abstract class AbstractStreamCodec<T> implements Codec<T>, StreamCodec<T> {
-    protected final BufferAllocationPredictor predictor;
+    protected final ByteBufferAllocator byteBufferAllocator;
 
-    protected AbstractStreamCodec(BufferAllocationPredictor predictor) {
-        this.predictor = predictor;
+    protected AbstractStreamCodec(ByteBufferAllocator byteBufferAllocator) {
+        this.byteBufferAllocator = byteBufferAllocator;
     }
 
     @Override
     public ByteBuffer encode(T value) {
-        try (ByteBufferOutputStream stream = new ByteBufferOutputStream(predictor.getPredicted())) {
+        try (ByteBufferOutputStream stream = new ByteBufferOutputStream(byteBufferAllocator.allocate())) {
             encode(value, stream);
             ByteBuffer byteBuffer = stream.getByteBuffer();
             byteBuffer.flip();
-            predictor.accept(byteBuffer.remaining());
+            byteBufferAllocator.record(byteBuffer.remaining());
             return byteBuffer;
         } catch (IOException e) {
             throw new UncheckedIOException(e);

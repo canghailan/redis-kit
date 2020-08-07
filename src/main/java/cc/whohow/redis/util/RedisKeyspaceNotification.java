@@ -10,7 +10,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Set;
@@ -20,14 +19,14 @@ import java.util.concurrent.CopyOnWriteArraySet;
 /**
  * Redis键空间事件处理
  */
-public class RedisKeyspaceEvents implements RedisPubSubListener<ByteBuffer, ByteBuffer>, AutoCloseable {
+public class RedisKeyspaceNotification implements RedisPubSubListener<ByteBuffer, ByteBuffer>, AutoCloseable {
     protected static final Logger log = LogManager.getLogger();
     protected final String keyspace;
     protected final int keyOffset;
     protected final NavigableMap<MatchKey, Set<Listener>> listeners = new ConcurrentSkipListMap<>();
     protected volatile StatefulRedisPubSubConnection<ByteBuffer, ByteBuffer> redisPubSubConnection;
 
-    public RedisKeyspaceEvents(RedisClient redisClient, RedisURI redisURI) {
+    public RedisKeyspaceNotification(RedisClient redisClient, RedisURI redisURI) {
         this.keyspace = "__keyspace@" + redisURI.getDatabase() + "__:";
         this.keyOffset = keyspace.length();
         this.redisPubSubConnection = redisClient.connectPubSub(ByteBufferCodec.INSTANCE, redisURI);
@@ -63,7 +62,7 @@ public class RedisKeyspaceEvents implements RedisPubSubListener<ByteBuffer, Byte
         }
     }
 
-    protected ByteBuffer getKey(ByteBuffer channel) {
+    protected ByteBuffer toKey(ByteBuffer channel) {
         channel.position(channel.position() + keyOffset);
         return channel;
     }
@@ -74,7 +73,7 @@ public class RedisKeyspaceEvents implements RedisPubSubListener<ByteBuffer, Byte
 
     protected void onEvent(ByteBuffer channel, ByteBuffer command) {
         try {
-            ByteBuffer key = getKey(channel);
+            ByteBuffer key = toKey(channel);
             MatchKey matchKey = new MatchKey(key, false);
             MatchKey startMatchKey = new MatchKey(getStartKey(key));
 
@@ -253,9 +252,9 @@ public class RedisKeyspaceEvents implements RedisPubSubListener<ByteBuffer, Byte
         @Override
         public String toString() {
             if (pattern) {
-                return StandardCharsets.US_ASCII.decode(key.duplicate()) + "*";
+                return ByteBuffers.toString(key) + "*";
             } else {
-                return StandardCharsets.US_ASCII.decode(key.duplicate()).toString();
+                return ByteBuffers.toString(key);
             }
         }
     }

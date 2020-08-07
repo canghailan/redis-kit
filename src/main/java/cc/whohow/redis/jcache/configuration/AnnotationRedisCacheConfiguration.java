@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * 基于RedisCacheable注解的缓存配置
  */
+@SuppressWarnings("rawtypes")
 public class AnnotationRedisCacheConfiguration implements RedisCacheConfiguration {
     private final CacheMethodDetails<? extends Annotation> cacheMethodDetails;
     private final Method method;

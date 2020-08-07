@@ -2,13 +2,16 @@ package cc.whohow.redis.util;
 
 import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.Codec;
+import cc.whohow.redis.util.impl.ConcurrentMapEntrySet;
+import cc.whohow.redis.util.impl.ConcurrentMapKeySet;
+import cc.whohow.redis.util.impl.ConcurrentMapValueCollection;
+import cc.whohow.redis.util.impl.MappingIterator;
 import io.lettuce.core.api.sync.RedisCommands;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.nio.ByteBuffer;
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -19,6 +22,7 @@ import java.util.stream.Collectors;
  * 散列表
  */
 public class RedisMap<K, V> implements ConcurrentMap<K, V>, Supplier<Map<K, V>> {
+    private static final Logger log = LogManager.getLogger();
     protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
     protected final Codec<K> keyCodec;
     protected final Codec<V> valueCodec;
@@ -51,8 +55,15 @@ public class RedisMap<K, V> implements ConcurrentMap<K, V>, Supplier<Map<K, V>> 
         return valueCodec.decode(buffer);
     }
 
+    public Map.Entry<K, V> decode(Map.Entry<ByteBuffer, ByteBuffer> buffer) {
+        return new AbstractMap.SimpleImmutableEntry<>(decodeKey(buffer.getKey()), decodeValue(buffer.getValue()));
+    }
+
     @Override
     public int size() {
+        if (log.isTraceEnabled()) {
+            log.trace("HLEN {}", toString());
+        }
         return redis.hlen(hashKey.duplicate()).intValue();
     }
 
@@ -64,6 +75,9 @@ public class RedisMap<K, V> implements ConcurrentMap<K, V>, Supplier<Map<K, V>> 
     @Override
     @SuppressWarnings("unchecked")
     public boolean containsKey(Object key) {
+        if (log.isTraceEnabled()) {
+            log.trace("HEXISTS {} {}", toString(), key);
+        }
         return redis.hexists(hashKey.duplicate(), encodeKey((K) key));
     }
 
@@ -78,6 +92,9 @@ public class RedisMap<K, V> implements ConcurrentMap<K, V>, Supplier<Map<K, V>> 
     @Override
     @SuppressWarnings("unchecked")
     public V get(Object key) {
+        if (log.isTraceEnabled()) {
+            log.trace("HGET {} {}", toString(), key);
+        }
         return decodeValue(redis.hget(hashKey.duplicate(), encodeKey((K) key)));
     }
 
@@ -86,6 +103,9 @@ public class RedisMap<K, V> implements ConcurrentMap<K, V>, Supplier<Map<K, V>> 
      */
     @Override
     public V put(K key, V value) {
+        if (log.isTraceEnabled()) {
+            log.trace("HSET {} {} {}", toString(), key, value);
+        }
         redis.hset(hashKey.duplicate(), encodeKey(key), encodeValue(value));
         return null;
     }
@@ -96,12 +116,22 @@ public class RedisMap<K, V> implements ConcurrentMap<K, V>, Supplier<Map<K, V>> 
     @Override
     @SuppressWarnings("unchecked")
     public V remove(Object key) {
-        redis.hdel(hashKey.duplicate(), encodeKey((K) key));
+        hdel((K) key);
         return null;
+    }
+
+    public long hdel(K key) {
+        if (log.isTraceEnabled()) {
+            log.trace("HDEL {} {}", toString(), key);
+        }
+        return redis.hdel(hashKey.duplicate(), encodeKey(key));
     }
 
     @Override
     public void putAll(Map<? extends K, ? extends V> m) {
+        if (log.isTraceEnabled()) {
+            log.trace("HMSET {} {}", toString(), m);
+        }
         Map<ByteBuffer, ByteBuffer> encodedKeyValues = m.entrySet().stream()
                 .collect(Collectors.toMap(
                         e -> encodeKey(e.getKey()),
@@ -111,38 +141,40 @@ public class RedisMap<K, V> implements ConcurrentMap<K, V>, Supplier<Map<K, V>> 
 
     @Override
     public void clear() {
+        if (log.isTraceEnabled()) {
+            log.trace("DEL {}", toString());
+        }
         redis.del(hashKey.duplicate());
     }
 
-    /**
-     * @throws UnsupportedOperationException UnsupportedOperation
-     */
     @Override
     public Set<K> keySet() {
-        throw new UnsupportedOperationException();
+        return new ConcurrentMapKeySet<>(this);
     }
 
-    /**
-     * @throws UnsupportedOperationException UnsupportedOperation
-     */
     @Override
     public Collection<V> values() {
-        throw new UnsupportedOperationException();
+        return new ConcurrentMapValueCollection<>(this);
     }
 
-    /**
-     * @throws UnsupportedOperationException UnsupportedOperation
-     */
     @Override
     public Set<Entry<K, V>> entrySet() {
-        throw new UnsupportedOperationException();
+        return new ConcurrentMapEntrySet<K, V>(this) {
+            @Override
+            public Iterator<Entry<K, V>> iterator() {
+                return new MappingIterator<>(new RedisMapIterator(redis, hashKey.duplicate()), RedisMap.this::decode);
+            }
+        };
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public V getOrDefault(Object key, V defaultValue) {
-        ByteBuffer encodedValue = redis.get(encodeKey((K) key));
-        return ByteBuffers.isEmpty(encodedValue) ? defaultValue : decodeValue(encodedValue);
+        if (log.isTraceEnabled()) {
+            log.trace("HGET {} {}", toString(), key);
+        }
+        ByteBuffer encodedValue = redis.hget(hashKey.duplicate(), encodeKey((K) key));
+        return encodedValue == null ? defaultValue : decodeValue(encodedValue);
     }
 
     /**
@@ -150,10 +182,18 @@ public class RedisMap<K, V> implements ConcurrentMap<K, V>, Supplier<Map<K, V>> 
      */
     @Override
     public V putIfAbsent(K key, V value) {
-        if (redis.hsetnx(hashKey.duplicate(), encodeKey(key), encodeValue(value))) {
+        if (hsetnx(key, value)) {
+            return value;
+        } else {
             return null;
         }
-        return value;
+    }
+
+    public boolean hsetnx(K key, V value) {
+        if (log.isTraceEnabled()) {
+            log.trace("HSETNX {} {} {}", toString(), key, value);
+        }
+        return redis.hsetnx(hashKey.duplicate(), encodeKey(key), encodeValue(value));
     }
 
     /**
@@ -214,11 +254,19 @@ public class RedisMap<K, V> implements ConcurrentMap<K, V>, Supplier<Map<K, V>> 
 
     @Override
     public Map<K, V> get() {
+        if (log.isTraceEnabled()) {
+            log.trace("HGETALL {}", toString());
+        }
         return redis.hgetall(hashKey.duplicate()).entrySet().stream()
                 .collect(Collectors.toMap(
                         e -> decodeKey(e.getKey()),
                         e -> decodeValue(e.getValue()),
                         (a, b) -> b,
                         LinkedHashMap::new));
+    }
+
+    @Override
+    public String toString() {
+        return ByteBuffers.toString(hashKey);
     }
 }

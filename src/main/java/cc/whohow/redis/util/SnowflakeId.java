@@ -1,18 +1,17 @@
-package cc.whohow.redis.distributed;
+package cc.whohow.redis.util;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Date;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-import java.util.function.IntSupplier;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.LongSupplier;
-import java.util.function.Supplier;
 
 /**
  * Snowflake算法
  */
-public class SnowflakeId implements Supplier<Number>, LongSupplier {
+public class SnowflakeId implements LongSupplier {
     public static final Instant Y2K = Instant.ofEpochMilli(946684800000L); // UTC 2000-01-01 00:00:00
 
     protected final TimeUnit timeUnit;
@@ -30,7 +29,7 @@ public class SnowflakeId implements Supplier<Number>, LongSupplier {
     protected volatile long sequence;
 
     public SnowflakeId() {
-        this(Clock.systemDefaultZone(), Worker.ZERO);
+        this(Clock.systemDefaultZone(), new AtomicLong(0)::get);
     }
 
     public SnowflakeId(Clock clock, LongSupplier worker) {
@@ -68,11 +67,6 @@ public class SnowflakeId implements Supplier<Number>, LongSupplier {
             throw new IllegalArgumentException();
         }
         return (timestamp << timestampShift) | (workerId << workerIdShift) | sequence;
-    }
-
-    @Override
-    public Number get() {
-        return getAsLong();
     }
 
     public long getWorkerId() {
@@ -142,23 +136,17 @@ public class SnowflakeId implements Supplier<Number>, LongSupplier {
         return id & sequenceMask;
     }
 
-    public static final class Worker implements IntSupplier, LongSupplier {
-        public static final Worker ZERO = new Worker(0);
-
-        private final int id;
-
-        public Worker(int id) {
-            this.id = id;
+    public static class I52 extends SnowflakeId {
+        public I52() {
+            this(Clock.systemDefaultZone(), new AtomicLong(0)::get);
         }
 
-        @Override
-        public int getAsInt() {
-            return id;
+        public I52(Clock clock, LongSupplier worker) {
+            this(clock, worker, Y2K);
         }
 
-        @Override
-        public long getAsLong() {
-            return id;
+        public I52(Clock clock, LongSupplier worker, Instant epoch) {
+            super(clock, worker, epoch, TimeUnit.SECONDS, 36L, 6L, 10L);
         }
     }
 }

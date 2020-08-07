@@ -1,6 +1,6 @@
 package cc.whohow.redis.messaging;
 
-import cc.whohow.redis.util.RedisKeyspaceEvents;
+import cc.whohow.redis.util.RedisKeyspaceNotification;
 
 import java.nio.ByteBuffer;
 import java.util.Queue;
@@ -10,20 +10,20 @@ import java.util.function.Consumer;
 /**
  * Redis消息队列，基于键空间事件触发轮询
  */
-public class RedisPollingMessageQueue<E> extends PollingMessageQueue<E> implements RedisKeyspaceEvents.Listener, AutoCloseable {
+public class RedisPollingMessageQueue<E> extends PollingMessageQueue<E> implements RedisKeyspaceNotification.Listener, AutoCloseable {
     private final String name;
     private final ExecutorService executor;
-    private final RedisKeyspaceEvents redisKeyspaceEvents;
+    private final RedisKeyspaceNotification redisKeyspaceNotification;
 
     public RedisPollingMessageQueue(Queue<E> queue, String name,
                                     Consumer<E> consumer,
                                     ExecutorService executor,
-                                    RedisKeyspaceEvents redisKeyspaceEvents) {
+                                    RedisKeyspaceNotification redisKeyspaceNotification) {
         super(queue, consumer);
         this.name = name;
         this.executor = executor;
-        this.redisKeyspaceEvents = redisKeyspaceEvents;
-        this.redisKeyspaceEvents.addListener(name, this);
+        this.redisKeyspaceNotification = redisKeyspaceNotification;
+        this.redisKeyspaceNotification.addListener(name, this);
     }
 
     public String getName() {
@@ -44,20 +44,20 @@ public class RedisPollingMessageQueue<E> extends PollingMessageQueue<E> implemen
     @Override
     public void onKeyEvent(ByteBuffer key) {
         // 接收事件通知，触发轮询
-        setReady();
+        start();
     }
 
     @Override
     public void subscribed() {
         // 断线重连，触发轮询
-        setReady();
+        start();
     }
 
     @Override
     public void close() throws Exception {
         // 关闭消息队列，取消监听，停止轮询
-        redisKeyspaceEvents.removeListener(name, this);
-        setWaiting();
+        redisKeyspaceNotification.removeListener(name, this);
+        stop();
     }
 
     @Override

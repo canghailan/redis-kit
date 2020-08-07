@@ -4,34 +4,34 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
-public class RedisDelayed<T> implements Delayed, Supplier<T> {
-    private final T value;
+public class RedisDelayed<E> implements Delayed, Map.Entry<E, Number> {
+    private final E element;
     private final long timestamp;
 
-    public RedisDelayed(T value, long timestamp) {
-        this.value = value;
+    public RedisDelayed(E element, long timestamp) {
+        this.element = element;
         this.timestamp = timestamp;
     }
 
-    public RedisDelayed(T value, Instant instant) {
-        this(value, instant.toEpochMilli());
+    public RedisDelayed(E element, Instant instant) {
+        this(element, instant.toEpochMilli());
     }
 
-    public RedisDelayed(T value, Date date) {
-        this(value, date.getTime());
+    public RedisDelayed(E element, Date date) {
+        this(element, date.getTime());
     }
 
-    public RedisDelayed(T value, Duration delay) {
-        this(value, delay, Clock.systemDefaultZone());
+    public RedisDelayed(E element, Duration delay) {
+        this(element, delay, Clock.systemDefaultZone());
     }
 
-    public RedisDelayed(T value, Duration delay, Clock clock) {
-        this(value, clock.millis() + delay.toMillis());
+    public RedisDelayed(E element, Duration delay, Clock clock) {
+        this(element, clock.millis() + delay.toMillis());
     }
 
     @Override
@@ -45,28 +45,41 @@ public class RedisDelayed<T> implements Delayed, Supplier<T> {
     }
 
     @Override
-    public T get() {
-        return value;
+    public E getKey() {
+        return element;
     }
 
     @Override
-    public String toString() {
-        return value + ":" + timestamp;
+    public Number getValue() {
+        return timestamp;
+    }
+
+    @Override
+    public Number setValue(Number value) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
     @SuppressWarnings("rawtypes")
     public boolean equals(Object o) {
+        if (o == this) {
+            return true;
+        }
         if (o instanceof RedisDelayed) {
-            RedisDelayed RedisDelayed = (RedisDelayed) o;
-            return getDelay(TimeUnit.MILLISECONDS) == RedisDelayed.getDelay(TimeUnit.MILLISECONDS) &&
-                    Objects.equals(get(), RedisDelayed.get());
+            RedisDelayed that = (RedisDelayed) o;
+            return getDelay(TimeUnit.MILLISECONDS) == that.getDelay(TimeUnit.MILLISECONDS) &&
+                    Objects.equals(getKey(), that.getKey());
         }
         return false;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(get(), getDelay(TimeUnit.MILLISECONDS));
+        return Objects.hash(getKey(), getDelay(TimeUnit.MILLISECONDS));
+    }
+
+    @Override
+    public String toString() {
+        return timestamp + " " + element;
     }
 }

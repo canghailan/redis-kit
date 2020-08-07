@@ -1,7 +1,7 @@
 package cc.whohow.redis.jcache;
 
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
-import cc.whohow.redis.util.RedisKeyspaceEvents;
+import cc.whohow.redis.util.RedisKeyspaceNotification;
 import io.lettuce.core.RedisChannelHandler;
 import io.lettuce.core.RedisConnectionStateListener;
 import org.apache.logging.log4j.LogManager;
@@ -20,7 +20,6 @@ import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
 
 /**
  * 两级缓存，仅支持 Read Through 模式
@@ -28,7 +27,7 @@ import java.util.function.Function;
 public class RedisTierCache<K, V> implements
         Cache<K, V>,
         RedisConnectionStateListener,
-        RedisKeyspaceEvents.Listener {
+        RedisKeyspaceNotification.Listener {
     private static final Logger log = LogManager.getLogger();
     protected final RedisCacheManager cacheManager;
     protected final RedisCacheConfiguration<K, V> configuration;
@@ -42,7 +41,7 @@ public class RedisTierCache<K, V> implements
         this.redisCache = cacheManager.newRedisCache(configuration);
         this.inProcessCache = cacheManager.newInProcessCache(configuration);
         cacheManager.getRedisClient().addListener(this);
-        cacheManager.getRedisKeyspaceEvents().addListener(configuration.getRedisKeyPattern(), this);
+        cacheManager.getRedisKeyspaceNotification().addListener(configuration.getRedisKeyPattern(), this);
     }
 
     @Override
@@ -253,28 +252,13 @@ public class RedisTierCache<K, V> implements
     }
 
     @Override
-    public V get(K key, Function<? super K, ? extends V> loader) {
-        return inProcessCache.get(key, new CacheValueLoader<>(redisCache, loader));
+    public V get(K key, CacheLoader<K, ? extends V> cacheLoader) {
+        return inProcessCache.get(key, new TierCacheLoader<>(redisCache, cacheLoader));
     }
 
     @Override
-    public CacheValue<V> getValue(K key) {
-        return getValue(key, ImmutableCacheValue::new);
-    }
-
-    @Override
-    public CacheValue<V> getValue(K key, Function<V, ? extends CacheValue<V>> factory) {
-        CacheValueHolder<K, V> cacheValueHolder = new CacheValueHolder<>(redisCache, factory);
-        V value = inProcessCache.get(key, cacheValueHolder);
-        if (cacheValueHolder.getValue() != null) {
-            return cacheValueHolder.getValue();
-        }
-        return value == null ? null : factory.apply(value);
-    }
-
-    @Override
-    public String toString() {
-        return redisCache.toString();
+    public CacheValue<V> getValue(K key, CacheLoader<K, ? extends V> cacheLoader) {
+        return inProcessCache.getValue(key, new TierCacheLoader<>(redisCache, cacheLoader));
     }
 
     @Override
@@ -291,13 +275,18 @@ public class RedisTierCache<K, V> implements
 
     @Override
     public void onRedisExceptionCaught(RedisChannelHandler<?, ?> connection, Throwable cause) {
-        log.warn("RedisExceptionCaught");
+        log.warn("RedisExceptionCaught", cause);
     }
 
     @Override
     public void onKeyEvent(ByteBuffer key) {
         K k = redisCache.getCodec().decodeKey(key);
+        log.trace("onKeyEvent: {}", k);
         inProcessCache.remove(k);
-        log.debug("onKeyEvent: {}", k);
+    }
+
+    @Override
+    public String toString() {
+        return redisCache.toString();
     }
 }

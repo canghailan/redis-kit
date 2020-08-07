@@ -1,13 +1,12 @@
 package cc.whohow.redis.spring.cache;
 
 import cc.whohow.redis.jcache.Cache;
+import cc.whohow.redis.jcache.CacheValue;
 
 import java.util.concurrent.Callable;
 
-@SuppressWarnings("unchecked")
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class CacheAdapter implements org.springframework.cache.Cache {
-    private static final CacheValueWrapper NULL = new CacheValueWrapper(null);
-
     protected final Cache cache;
 
     public CacheAdapter(Cache cache) {
@@ -29,11 +28,11 @@ public class CacheAdapter implements org.springframework.cache.Cache {
 
     @Override
     public ValueWrapper get(Object key) {
-        return (ValueWrapper) cache.getValue(key, this::wrap);
-    }
-
-    private ValueWrapper wrap(Object value) {
-        return value == null ? NULL : new CacheValueWrapper(value);
+        CacheValue cacheValue = cache.getValue(key);
+        if (cacheValue == null) {
+            return null;
+        }
+        return new CacheValueWrapper<>(cacheValue.get());
     }
 
     @Override

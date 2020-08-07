@@ -1,7 +1,6 @@
 package cc.whohow.redis;
 
-import cc.whohow.redis.distributed.SnowflakeId;
-import cc.whohow.redis.distributed.SnowflakeId52;
+import cc.whohow.redis.util.SnowflakeId;
 import org.junit.Test;
 
 public class TestId {
@@ -10,7 +9,7 @@ public class TestId {
         System.out.println(System.currentTimeMillis());
         System.out.println(2018112014555500001L);
 
-        SnowflakeId snowflakeId = new SnowflakeId52();
+        SnowflakeId snowflakeId = new SnowflakeId.I52();
 
         for (int i = 0; i < 10; i++) {
             long id = snowflakeId.getAsLong();

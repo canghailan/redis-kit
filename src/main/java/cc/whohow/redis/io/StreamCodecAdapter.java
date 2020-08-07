@@ -7,15 +7,15 @@ import java.nio.ByteBuffer;
 
 public class StreamCodecAdapter<T> implements Codec<T>, StreamCodec<T> {
     protected final Codec<T> codec;
-    protected final BufferAllocationPredictor predictor;
+    protected final ByteBufferAllocator byteBufferAllocator;
 
     public StreamCodecAdapter(Codec<T> codec) {
-        this(codec, new BufferAllocationPredictor());
+        this(codec, new ByteBufferAllocator());
     }
 
-    public StreamCodecAdapter(Codec<T> codec, BufferAllocationPredictor predictor) {
+    public StreamCodecAdapter(Codec<T> codec, ByteBufferAllocator byteBufferAllocator) {
         this.codec = codec;
-        this.predictor = predictor;
+        this.byteBufferAllocator = byteBufferAllocator;
     }
 
     @Override
@@ -34,21 +34,13 @@ public class StreamCodecAdapter<T> implements Codec<T>, StreamCodec<T> {
         if (buffer == null) {
             return;
         }
-        if (buffer.hasArray()) {
-            if (buffer.hasRemaining()) {
-                stream.write(buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.remaining());
-            }
-        } else {
-            while (buffer.hasRemaining()) {
-                stream.write(buffer.get());
-            }
-        }
+        IO.write(stream, buffer);
     }
 
     @Override
     public T decode(InputStream stream) throws IOException {
-        ByteBuffer buffer = new Java9InputStream(stream).readAllBytes(predictor.getPredicted());
-        predictor.accept(buffer.remaining());
+        ByteBuffer buffer = IO.read(stream, byteBufferAllocator.guess());
+        byteBufferAllocator.record(buffer.remaining());
         return decode(buffer);
     }
 }

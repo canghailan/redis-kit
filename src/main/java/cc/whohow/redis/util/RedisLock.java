@@ -1,11 +1,14 @@
 package cc.whohow.redis.util;
 
 import cc.whohow.redis.io.ByteBuffers;
+import cc.whohow.redis.io.PrimitiveCodec;
 import cc.whohow.redis.lettuce.Lettuce;
 import cc.whohow.redis.script.RedisScriptCommands;
 import io.lettuce.core.ScriptOutputType;
 import io.lettuce.core.SetArgs;
 import io.lettuce.core.api.sync.RedisCommands;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.nio.ByteBuffer;
 import java.time.Duration;
@@ -20,6 +23,7 @@ import java.util.concurrent.locks.LockSupport;
  * https://redis.io/topics/distlock
  */
 public class RedisLock implements Lock {
+    private static final Logger log = LogManager.getLogger();
     protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
     protected final RedisScriptCommands redisScriptCommands;
 
@@ -54,7 +58,7 @@ public class RedisLock implements Lock {
 
     public RedisLock(RedisCommands<ByteBuffer, ByteBuffer> redis, String key, Duration minLockTime, Duration maxLockTime, String token) {
         if (minLockTime.compareTo(maxLockTime) > 0) {
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException(minLockTime + "(minLockTime) > " + maxLockTime + "(maxLockTime)");
         }
         this.redis = redis;
         this.redisScriptCommands = new RedisScriptCommands(redis);
@@ -97,8 +101,8 @@ public class RedisLock implements Lock {
      */
     @Override
     public boolean tryLock() {
-        SetArgs setArgs = SetArgs.Builder.nx().px(maxLockTimeMillis);
-        return Lettuce.ok(redis.set(key.duplicate(), token.duplicate(), setArgs));
+        log.trace("SET {} [token?] PX {} NX", this, maxLockTimeMillis);
+        return Lettuce.ok(redis.set(key.duplicate(), token.duplicate(), SetArgs.Builder.nx().px(maxLockTimeMillis)));
     }
 
     /**
@@ -120,15 +124,38 @@ public class RedisLock implements Lock {
     }
 
     /**
+     * 锁续期
+     */
+    public boolean renew(Duration duration) {
+        log.trace("EVAL cas {} [token?] [token?] px {} xx", this, duration.toMillis());
+        return redisScriptCommands.eval("cas", ScriptOutputType.BOOLEAN,
+                new ByteBuffer[]{
+                        key.duplicate()
+                },
+                new ByteBuffer[]{
+                        token.duplicate(),
+                        token.duplicate(),
+                        Lettuce.px(),
+                        PrimitiveCodec.LONG.encode(duration.toMillis()),
+                        Lettuce.xx()
+                });
+    }
+
+    /**
      * 解锁
      *
      * @throws IllegalStateException unexpected token
      */
     @Override
     public void unlock() {
+        log.trace("EVAL cad {} [token?]", this);
         long n = redisScriptCommands.eval("cad", ScriptOutputType.INTEGER,
-                new ByteBuffer[]{key.duplicate()},
-                token.duplicate());
+                new ByteBuffer[]{
+                        key.duplicate()
+                },
+                new ByteBuffer[]{
+                        token.duplicate()
+                });
         if (n == 0) {
             throw new IllegalStateException();
         }
@@ -140,27 +167,23 @@ public class RedisLock implements Lock {
     }
 
     protected void await(int retryTimes) {
-        LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(getRetryWaitingTime(retryTimes)));
+        long time = getRetryWaitingTime(retryTimes);
+        log.debug("await {}ms", time);
+        LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(time));
     }
 
     /**
-     * 获取重试等待时间，默认指数退避，直到最大锁定时间的一半
+     * 获取重试等待时间，默认Fibonacci级数退避，直到最大锁定时间的一半
      */
     protected long getRetryWaitingTime(int retryTimes) {
         long base = 3_000; // ms
-        if (retryTimes <= 2) {
-            return base;
-        }
-        long max = maxLockTimeMillis / 2;
-        // Fibonacci
-        long[] table = {0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597};
-        if (retryTimes >= table.length) {
-            return max;
-        }
-        long time = table[retryTimes] * base;
-        if (time > max) {
-            return max;
-        }
-        return time;
+        long[] table = {base, base, 2 * base, 3 * base, 5 * base, 8 * base, 13 * base, 21 * base};
+        long time = retryTimes < table.length ? table[retryTimes] : table[table.length - 1];
+        return Long.min(time, maxLockTimeMillis / 2);
+    }
+
+    @Override
+    public String toString() {
+        return ByteBuffers.toString(key);
     }
 }

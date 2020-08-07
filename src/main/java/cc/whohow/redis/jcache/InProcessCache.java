@@ -16,7 +16,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
 
 /**
  * 内存缓存，基于caffeine实现
@@ -26,7 +25,7 @@ public class InProcessCache<K, V> implements Cache<K, V> {
     protected final RedisCacheConfiguration<K, V> configuration;
     protected final com.github.benmanes.caffeine.cache.Cache<K, V> cache;
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public InProcessCache(RedisCacheManager cacheManager, RedisCacheConfiguration<K, V> configuration) {
         this.cacheManager = cacheManager;
         this.configuration = configuration;
@@ -214,19 +213,20 @@ public class InProcessCache<K, V> implements Cache<K, V> {
     }
 
     @Override
-    public V get(K key, Function<? super K, ? extends V> loader) {
-        return cache.get(key, loader);
+    public V get(K key, CacheLoader<K, ? extends V> cacheLoader) {
+        return cache.get(key, cacheLoader::load);
     }
 
     @Override
     public CacheValue<V> getValue(K key) {
-        return getValue(key, ImmutableCacheValue::new);
+        V value = cache.getIfPresent(key);
+        return value == null ? null : new ImmutableCacheValue<>(value);
     }
 
     @Override
-    public CacheValue<V> getValue(K key, Function<V, ? extends CacheValue<V>> factory) {
-        V value = cache.getIfPresent(key);
-        return value == null ? null : factory.apply(value);
+    public CacheValue<V> getValue(K key, CacheLoader<K, ? extends V> cacheLoader) {
+        V value = cache.get(key, cacheLoader::load);
+        return value == null ? null : new ImmutableCacheValue<>(value);
     }
 
     @Override

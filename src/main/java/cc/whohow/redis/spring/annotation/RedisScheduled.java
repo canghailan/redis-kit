@@ -11,6 +11,4 @@ public @interface RedisScheduled {
     String min() default "PT3S";
 
     String max();
-
-//    int retry() default 0;
 }
