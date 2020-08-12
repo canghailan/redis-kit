@@ -9,12 +9,11 @@ import io.lettuce.core.api.sync.RedisCommands;
 
 import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class RedisPriorityQueue<E>
-        extends RedisSortedSetKey<E>
-        implements Queue<Map.Entry<E, Number>>, Supplier<Queue<Map.Entry<E, Number>>> {
+        extends AbstractRedisSortedSet<E>
+        implements Queue<RedisPriority<E>>, Copyable<Queue<RedisPriority<E>>> {
     public RedisPriorityQueue(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, String key) {
         this(redis, codec, ByteBuffers.fromUtf8(key));
     }
@@ -23,17 +22,17 @@ public class RedisPriorityQueue<E>
         super(redis, codec, key);
     }
 
-    protected Map.Entry<E, Number> decode(ScoredValue<ByteBuffer> scoredValue) {
-        return new AbstractMap.SimpleImmutableEntry<>(decode(scoredValue.getValue()), scoredValue.getScore());
+    protected RedisPriority<E> decode(ScoredValue<ByteBuffer> scoredValue) {
+        return new RedisPriority<>(decode(scoredValue.getValue()), scoredValue.getScore());
     }
 
-    protected Map.Entry<E, Number> toEntry(ScoredValue<E> scoredValue) {
-        return new AbstractMap.SimpleImmutableEntry<>(scoredValue.getValue(), scoredValue.getScore());
+    protected RedisPriority<E> toEntry(ScoredValue<E> scoredValue) {
+        return new RedisPriority<>(scoredValue.getValue(), scoredValue.getScore());
     }
 
     @Override
     public int size() {
-        return (int) zcard();
+        return zcard().intValue();
     }
 
     @Override
@@ -52,8 +51,8 @@ public class RedisPriorityQueue<E>
     }
 
     @Override
-    public Iterator<Map.Entry<E, Number>> iterator() {
-        return new MappingIterator<>(new RedisSortedSetIterator(redis, zsetKey.duplicate()), this::decode);
+    public Iterator<RedisPriority<E>> iterator() {
+        return new MappingIterator<>(new RedisSortedSetIterator(redis, sortedSetKey.duplicate()), this::decode);
     }
 
     @Override
@@ -72,15 +71,15 @@ public class RedisPriorityQueue<E>
     }
 
     @Override
-    public boolean add(Map.Entry<E, Number> e) {
+    public boolean add(RedisPriority<E> e) {
         return offer(e);
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public boolean remove(Object o) {
-        if (o instanceof Map.Entry) {
-            Map.Entry<E, Number> e = (Map.Entry<E, Number>) o;
+        if (o instanceof RedisPriority) {
+            RedisPriority<E> e = (RedisPriority<E>) o;
             return zrem(e.getKey()) > 0;
         }
         return false;
@@ -92,20 +91,19 @@ public class RedisPriorityQueue<E>
     }
 
     @Override
-    public boolean addAll(Collection<? extends Map.Entry<E, Number>> c) {
+    public boolean addAll(Collection<? extends RedisPriority<E>> c) {
         if (c.isEmpty()) {
             return false;
         }
-        zadd(c);
-        return true;
+        return zadd(c) > 0;
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public boolean removeAll(Collection<?> c) {
         return zrem(c.stream()
-                .map(e -> (Map.Entry<E, Number>) e)
-                .map(Map.Entry::getKey)
+                .map(e -> (RedisPriority<E>) e)
+                .map(RedisPriority::getKey)
                 .collect(Collectors.toSet())) > 0;
     }
 
@@ -120,22 +118,21 @@ public class RedisPriorityQueue<E>
     }
 
     public boolean offer(E e, Number priority) {
-        zadd(priority.doubleValue(), e);
-        return true;
+        return zadd(priority.doubleValue(), e) > 0;
     }
 
     @Override
-    public boolean offer(Map.Entry<E, Number> e) {
+    public boolean offer(RedisPriority<E> e) {
         return offer(e.getKey(), e.getValue());
     }
 
     @Override
-    public Map.Entry<E, Number> remove() {
+    public RedisPriority<E> remove() {
         return checkElement(poll());
     }
 
     @Override
-    public Map.Entry<E, Number> poll() {
+    public RedisPriority<E> poll() {
         ScoredValue<E> value = zpopminWithScores();
         if (value.hasValue()) {
             return toEntry(value);
@@ -144,26 +141,25 @@ public class RedisPriorityQueue<E>
     }
 
     @Override
-    public Map.Entry<E, Number> element() {
+    public RedisPriority<E> element() {
         return checkElement(peek());
     }
 
     @Override
-    public Map.Entry<E, Number> peek() {
+    public RedisPriority<E> peek() {
         return zrangeWithScores(0, 0)
                 .findFirst()
                 .map(this::toEntry)
                 .orElse(null);
     }
 
-    @Override
-    public Queue<Map.Entry<E, Number>> get() {
+    public Queue<RedisPriority<E>> load() {
         return zrangeWithScores(0, -1)
                 .map(this::toEntry)
                 .collect(Collectors.toCollection(LinkedList::new));
     }
 
-    protected Map.Entry<E, Number> checkElement(Map.Entry<E, Number> e) {
+    protected RedisPriority<E> checkElement(RedisPriority<E> e) {
         if (e == null) {
             throw new NoSuchElementException();
         }
@@ -171,7 +167,9 @@ public class RedisPriorityQueue<E>
     }
 
     @Override
-    public String toString() {
-        return ByteBuffers.toString(zsetKey);
+    public Queue<RedisPriority<E>> copy() {
+        return zrangeWithScores(0, -1)
+                .map(this::toEntry)
+                .collect(Collectors.toCollection(LinkedList::new));
     }
 }

@@ -23,7 +23,7 @@ public abstract class ConcurrentMapEntrySet<K, V> implements Set<Map.Entry<K, V>
     }
 
     @Override
-    @SuppressWarnings("rawtypes")
+    @SuppressWarnings({"rawtypes", "SuspiciousMethodCalls"})
     public boolean contains(Object o) {
         if (o instanceof Map.Entry) {
             Map.Entry e = (Map.Entry) o;

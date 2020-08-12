@@ -18,6 +18,7 @@ import java.nio.ByteBuffer;
  */
 public class RedisAtomicLong extends Number {
     private static final Logger log = LogManager.getLogger();
+
     protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
     protected final ByteBuffer key;
 
@@ -56,12 +57,12 @@ public class RedisAtomicLong extends Number {
     }
 
     public void set(long newValue) {
-        log.trace("set {} {}", this, newValue);
+        log.trace("SET {} {}", this, newValue);
         redis.set(key.duplicate(), encode(newValue));
     }
 
     public long getAndSet(long newValue) {
-        log.trace("getset {} {}", this, newValue);
+        log.trace("GETSET {} {}", this, newValue);
         return decode(redis.getset(key.duplicate(), encode(newValue)));
     }
 
@@ -78,17 +79,17 @@ public class RedisAtomicLong extends Number {
     }
 
     public long incrementAndGet() {
-        log.trace("incr {}", this);
+        log.trace("INCR {}", this);
         return redis.incr(key.duplicate());
     }
 
     public long decrementAndGet() {
-        log.trace("decr {}", this);
+        log.trace("DECR {}", this);
         return redis.decr(key.duplicate());
     }
 
     public long addAndGet(long delta) {
-        log.trace("incrby {} {}", this, delta);
+        log.trace("INCRBY {} {}", this, delta);
         return redis.incrby(key.duplicate(), delta);
     }
 
@@ -99,7 +100,7 @@ public class RedisAtomicLong extends Number {
         if ("/".equals(operator)) {
             operator = "//";
         }
-        log.trace("eval acc {} {} {}", this, operator, value);
+        log.trace("EVAL acc {} {} {}", this, operator, value);
         ByteBuffer r = new RedisScriptCommands(redis).eval("acc", ScriptOutputType.VALUE,
                 new ByteBuffer[]{
                         key.duplicate()
@@ -152,7 +153,7 @@ public class RedisAtomicLong extends Number {
 
     @Override
     public long longValue() {
-        log.trace("get {}", this);
+        log.trace("GET {}", this);
         return decode(redis.get(key.duplicate()));
     }
 

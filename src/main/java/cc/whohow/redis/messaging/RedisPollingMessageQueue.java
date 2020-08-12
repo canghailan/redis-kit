@@ -10,7 +10,9 @@ import java.util.function.Consumer;
 /**
  * Redis消息队列，基于键空间事件触发轮询
  */
-public class RedisPollingMessageQueue<E> extends PollingMessageQueue<E> implements RedisKeyspaceNotification.Listener, AutoCloseable {
+public class RedisPollingMessageQueue<E>
+        extends PollingMessageQueue<E>
+        implements RedisKeyspaceNotification.Listener, AutoCloseable {
     private final String name;
     private final ExecutorService executor;
     private final RedisKeyspaceNotification redisKeyspaceNotification;

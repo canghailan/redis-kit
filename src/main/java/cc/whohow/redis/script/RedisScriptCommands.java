@@ -58,11 +58,11 @@ public class RedisScriptCommands {
 
     public <T> T eval(RedisScript script, ScriptOutputType type, ByteBuffer[] keys, ByteBuffer[] args) {
         try {
-            log.trace("evalsha {} -> {}", script.getSha1(), script.getName());
+            log.trace("EVALSHA {}({})", script.getName(), script.getSha1());
             return redis.evalsha(script.getSha1(), type, keys, args);
         } catch (RedisCommandExecutionException e) {
             if (isNoScript(e)) {
-                log.trace("eval {} -> {}", script.getSha1(), script.getName());
+                log.trace("EVAL {}({})", script.getName(), script.getSha1());
                 return redis.eval(script.getScript(), type, keys, args);
             }
             throw e;
@@ -80,7 +80,7 @@ public class RedisScriptCommands {
 
     public RedisScript loadRedisScript(String name) {
         RedisScript redisScript = new RedisScript(name);
-        log.trace("script load {} -> {}", redisScript.getSha1(), redisScript.getName());
+        log.trace("SCRIPT LOAD {} -> {}", redisScript.getSha1(), redisScript.getName());
         String sha = redis.scriptLoad(StandardCharsets.UTF_8.encode(redisScript.getScript()));
         if (sha.equals(redisScript.getSha1())) {
             return redisScript;

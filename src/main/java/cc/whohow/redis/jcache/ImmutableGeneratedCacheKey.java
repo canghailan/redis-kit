@@ -23,13 +23,14 @@ public abstract class ImmutableGeneratedCacheKey implements GeneratedCacheKey {
     }
 
     public static ImmutableGeneratedCacheKey of(Object... keys) {
-        if (keys.length == 0) {
-            return empty();
+        switch (keys.length) {
+            case 0:
+                return empty();
+            case 1:
+                return of(keys[0]);
+            default:
+                return new ArrayGeneratedCacheKey(keys);
         }
-        if (keys.length == 1) {
-            return of(keys[0]);
-        }
-        return new ArrayGeneratedCacheKey(keys);
     }
 
     public abstract Object getKey(int index);
@@ -68,7 +69,7 @@ public abstract class ImmutableGeneratedCacheKey implements GeneratedCacheKey {
             }
             if (o instanceof ImmutableGeneratedCacheKey) {
                 ImmutableGeneratedCacheKey that = (ImmutableGeneratedCacheKey) o;
-                return that.size() == this.size();
+                return size() == that.size();
             }
             return false;
         }
@@ -114,7 +115,7 @@ public abstract class ImmutableGeneratedCacheKey implements GeneratedCacheKey {
             }
             if (o instanceof ImmutableGeneratedCacheKey) {
                 ImmutableGeneratedCacheKey that = (ImmutableGeneratedCacheKey) o;
-                return that.size() == this.size() && Objects.equals(that.getKey(0), this.getKey(0));
+                return size() == that.size() && Objects.equals(getKey(0), that.getKey(0));
             }
             return false;
         }
@@ -163,7 +164,7 @@ public abstract class ImmutableGeneratedCacheKey implements GeneratedCacheKey {
             }
             if (o instanceof ImmutableGeneratedCacheKey) {
                 ImmutableGeneratedCacheKey that = (ImmutableGeneratedCacheKey) o;
-                return that.size() == this.size() && Objects.equals(that.getKeys(), this.getKeys());
+                return size() == that.size() && Objects.equals(getKeys(), that.getKeys());
             }
             return false;
         }

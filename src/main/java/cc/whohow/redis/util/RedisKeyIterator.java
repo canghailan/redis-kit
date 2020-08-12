@@ -31,7 +31,7 @@ public class RedisKeyIterator extends RedisIterator<ByteBuffer, KeyScanCursor<By
 
     @Override
     protected KeyScanCursor<ByteBuffer> scan(ScanCursor scanCursor) {
-        log.trace("SCAN {} [match?] [limit?]", scanCursor.getCursor());
+        log.trace("SCAN");
         return redis.scan(scanCursor, scanArgs);
     }
 
@@ -42,7 +42,7 @@ public class RedisKeyIterator extends RedisIterator<ByteBuffer, KeyScanCursor<By
 
     @Override
     protected void remove(ByteBuffer value) {
-        log.trace("DEL [value?]");
+        log.trace("DEL");
         redis.del(value.duplicate());
     }
 }

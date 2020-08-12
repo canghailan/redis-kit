@@ -2,23 +2,21 @@ package cc.whohow.redis.util;
 
 import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.Codec;
-import cc.whohow.redis.util.impl.ConcurrentMapEntrySet;
-import cc.whohow.redis.util.impl.ConcurrentMapKeySet;
-import cc.whohow.redis.util.impl.ConcurrentMapValueCollection;
-import cc.whohow.redis.util.impl.MappingIterator;
+import cc.whohow.redis.util.impl.*;
 import io.lettuce.core.ScoredValue;
 import io.lettuce.core.api.sync.RedisCommands;
 
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.ConcurrentMap;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
  * 有序集合，按指定值排序
  */
-public class RedisSortedSet<E> extends RedisSortedSetKey<E> implements ConcurrentMap<E, Number>, Supplier<Map<E, Number>> {
+public class RedisSortedSet<E>
+        extends AbstractRedisSortedSet<E>
+        implements ConcurrentMap<E, Number>, Copyable<Map<E, Number>> {
     public RedisSortedSet(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, String key) {
         this(redis, codec, ByteBuffers.fromUtf8(key));
     }
@@ -35,9 +33,13 @@ public class RedisSortedSet<E> extends RedisSortedSetKey<E> implements Concurren
         return new AbstractMap.SimpleImmutableEntry<>(decode(scoredValue.getValue()), scoredValue.getScore());
     }
 
+    protected Map.Entry<E, Number> toEntry(ScoredValue<E> scoredValue) {
+        return new AbstractMap.SimpleImmutableEntry<>(scoredValue.getValue(), scoredValue.getScore());
+    }
+
     @Override
     public int size() {
-        return (int) zcard();
+        return zcard().intValue();
     }
 
     @Override
@@ -62,17 +64,19 @@ public class RedisSortedSet<E> extends RedisSortedSetKey<E> implements Concurren
     }
 
     /**
-     * @return null/value
+     * @return null
+     * @see AbstractRedisSortedSet#zadd(java.lang.Number, java.lang.Object)
      */
     @Override
     public Number put(E key, Number value) {
-        if (zadd(value, key) > 0) {
-            return null;
-        } else {
-            return value;
-        }
+        zadd(value, key);
+        return null;
     }
 
+    /**
+     * @return null
+     * @see AbstractRedisSortedSet#zrem(java.lang.Object)
+     */
     @Override
     @SuppressWarnings("unchecked")
     public Number remove(Object key) {
@@ -95,12 +99,15 @@ public class RedisSortedSet<E> extends RedisSortedSetKey<E> implements Concurren
         return new ConcurrentMapKeySet<E>(this) {
             @Override
             public Object[] toArray() {
-                return get().keySet().toArray();
+                return RedisSortedSet.this.zrange(0, -1)
+                        .toArray();
             }
 
             @Override
+            @SuppressWarnings("SuspiciousToArrayCall")
             public <T> T[] toArray(T[] a) {
-                return get().keySet().toArray(a);
+                return RedisSortedSet.this.zrange(0, -1)
+                        .toArray(ArrayType.of(a)::newInstance);
             }
         };
     }
@@ -110,12 +117,17 @@ public class RedisSortedSet<E> extends RedisSortedSetKey<E> implements Concurren
         return new ConcurrentMapValueCollection<Number>(this) {
             @Override
             public Object[] toArray() {
-                return get().values().toArray();
+                return RedisSortedSet.this.zrangeWithScores(0, -1)
+                        .map(ScoredValue::getScore)
+                        .toArray();
             }
 
             @Override
+            @SuppressWarnings("SuspiciousToArrayCall")
             public <T> T[] toArray(T[] a) {
-                return get().values().toArray(a);
+                return RedisSortedSet.this.zrangeWithScores(0, -1)
+                        .map(ScoredValue::getScore)
+                        .toArray(ArrayType.of(a)::newInstance);
             }
         };
     }
@@ -126,17 +138,22 @@ public class RedisSortedSet<E> extends RedisSortedSetKey<E> implements Concurren
             @Override
             public Iterator<Entry<E, Number>> iterator() {
                 return new MappingIterator<>(
-                        new RedisSortedSetIterator(redis, zsetKey.duplicate()), RedisSortedSet.this::decode);
+                        new RedisSortedSetIterator(redis, sortedSetKey.duplicate()), RedisSortedSet.this::decode);
             }
 
             @Override
             public Object[] toArray() {
-                return get().entrySet().toArray();
+                return RedisSortedSet.this.zrangeWithScores(0, -1)
+                        .map(RedisSortedSet.this::toEntry)
+                        .toArray();
             }
 
             @Override
+            @SuppressWarnings("SuspiciousToArrayCall")
             public <T> T[] toArray(T[] a) {
-                return get().entrySet().toArray(a);
+                return RedisSortedSet.this.zrangeWithScores(0, -1)
+                        .map(RedisSortedSet.this::toEntry)
+                        .toArray(ArrayType.of(a)::newInstance);
             }
         };
     }
@@ -147,6 +164,10 @@ public class RedisSortedSet<E> extends RedisSortedSetKey<E> implements Concurren
         return value == null ? defaultValue : value;
     }
 
+    /**
+     * @return null
+     * @see AbstractRedisSortedSet#zaddnx(java.lang.Number, java.lang.Object)
+     */
     @Override
     public Number putIfAbsent(E key, Number value) {
         zaddnx(value, key);
@@ -169,6 +190,10 @@ public class RedisSortedSet<E> extends RedisSortedSetKey<E> implements Concurren
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * @return null
+     * @see AbstractRedisSortedSet#zaddxx(java.lang.Number, java.lang.Object)
+     */
     @Override
     public Number replace(E key, Number value) {
         zaddxx(value, key);
@@ -176,7 +201,7 @@ public class RedisSortedSet<E> extends RedisSortedSetKey<E> implements Concurren
     }
 
     @Override
-    public Map<E, Number> get() {
+    public Map<E, Number> copy() {
         return zrangeWithScores(0, -1)
                 .collect(Collectors.toMap(
                         ScoredValue::getValue,

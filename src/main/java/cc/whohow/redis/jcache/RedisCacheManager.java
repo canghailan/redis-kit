@@ -30,7 +30,6 @@ import java.util.function.Function;
 public class RedisCacheManager implements CacheManager {
     private static final Logger log = LogManager.getLogger();
 
-    protected final URI uri;
     protected final RedisURI redisURI;
     protected final RedisClient redisClient;
     protected final RedisKeyspaceNotification redisKeyspaceNotification;
@@ -47,7 +46,6 @@ public class RedisCacheManager implements CacheManager {
         this.redisKeyspaceNotification = redisKeyspaceNotification;
         this.redisCacheConfigurationProvider = redisCacheConfigurationProvider;
         this.redisConnection = redisClient.connect(ByteBufferCodec.INSTANCE, redisURI);
-        this.uri = redisURI.toURI();
         RedisCachingProvider.getInstance().addCacheManager(this);
     }
 
@@ -74,7 +72,7 @@ public class RedisCacheManager implements CacheManager {
 
     @Override
     public URI getURI() {
-        return uri;
+        return URI.create("redis://" + redisURI.getHost() + ":" + redisURI.getPort() + "/" + redisURI.getDatabase());
     }
 
     @Override
@@ -193,7 +191,7 @@ public class RedisCacheManager implements CacheManager {
                     log.debug("close Cache: {}", cache.getName());
                     cache.close();
                 } catch (Throwable e) {
-                    log.warn("Close Cache ERROR", e);
+                    log.warn("close Cache ERROR", e);
                 }
             }
             caches.clear();
@@ -218,6 +216,6 @@ public class RedisCacheManager implements CacheManager {
 
     @Override
     public String toString() {
-        return uri.toString();
+        return getURI().toString();
     }
 }

@@ -24,6 +24,7 @@ import java.util.concurrent.locks.LockSupport;
  */
 public class RedisLock implements Lock {
     private static final Logger log = LogManager.getLogger();
+
     protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
     protected final RedisScriptCommands redisScriptCommands;
 

@@ -5,51 +5,28 @@ import cc.whohow.redis.io.Codec;
 import cc.whohow.redis.util.impl.ArrayType;
 import cc.whohow.redis.util.impl.MappingIterator;
 import io.lettuce.core.api.sync.RedisCommands;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
  * 集合、去重队列
  */
-public class RedisSet<E> implements Set<E>, Queue<E>, Supplier<Set<E>> {
-    private static final Logger log = LogManager.getLogger();
-    protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
-    protected final Codec<E> codec;
-    protected final ByteBuffer setKey;
-
+public class RedisSet<E>
+        extends AbstractRedisSet<E>
+        implements Set<E>, Queue<E>, Copyable<Set<E>> {
     public RedisSet(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, String key) {
         this(redis, codec, ByteBuffers.fromUtf8(key));
     }
 
     public RedisSet(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, ByteBuffer key) {
-        this.redis = redis;
-        this.codec = codec;
-        this.setKey = key;
-    }
-
-    protected ByteBuffer encode(E value) {
-        return codec.encode(value);
-    }
-
-    protected E decode(ByteBuffer byteBuffer) {
-        return codec.decode(byteBuffer);
+        super(redis, codec, key);
     }
 
     @Override
     public int size() {
-        return (int) scard();
-    }
-
-    public long scard() {
-        if (log.isTraceEnabled()) {
-            log.trace("SCARD {}", toString());
-        }
-        return redis.scard(setKey.duplicate());
+        return scard().intValue();
     }
 
     @Override
@@ -63,13 +40,6 @@ public class RedisSet<E> implements Set<E>, Queue<E>, Supplier<Set<E>> {
         return sismember((E) o);
     }
 
-    public boolean sismember(E e) {
-        if (log.isTraceEnabled()) {
-            log.trace("SISMEMBER {} {}", toString(), e);
-        }
-        return redis.sismember(setKey.duplicate(), encode(e));
-    }
-
     @Override
     public Iterator<E> iterator() {
         return new MappingIterator<>(new RedisSetIterator(redis, setKey.duplicate()), this::decode);
@@ -77,44 +47,26 @@ public class RedisSet<E> implements Set<E>, Queue<E>, Supplier<Set<E>> {
 
     @Override
     public Object[] toArray() {
-        if (log.isTraceEnabled()) {
-            log.trace("SMEMBERS {}", toString());
-        }
-        return redis.smembers(setKey.duplicate()).stream()
-                .map(this::decode)
+        return smembers()
                 .toArray();
     }
 
     @Override
     @SuppressWarnings("SuspiciousToArrayCall")
     public <T> T[] toArray(T[] a) {
-        if (log.isTraceEnabled()) {
-            log.trace("SMEMBERS {}", toString());
-        }
-        return redis.smembers(setKey.duplicate()).stream()
-                .map(this::decode)
+        return smembers()
                 .toArray(ArrayType.of(a)::newInstance);
     }
 
     @Override
     public boolean add(E e) {
-        if (log.isTraceEnabled()) {
-            log.trace("SADD {} {}", toString(), e);
-        }
-        return redis.sadd(setKey.duplicate(), encode(e)) > 0;
+        return sadd(e) > 0;
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public boolean remove(Object o) {
         return srem((E) o) > 0;
-    }
-
-    public long srem(E e) {
-        if (log.isTraceEnabled()) {
-            log.trace("SREM {} {}", toString(), e);
-        }
-        return redis.srem(setKey.duplicate(), encode(e));
     }
 
     /**
@@ -126,14 +78,8 @@ public class RedisSet<E> implements Set<E>, Queue<E>, Supplier<Set<E>> {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public boolean addAll(Collection<? extends E> c) {
-        if (log.isTraceEnabled()) {
-            log.trace("SADD {} {}", toString(), c);
-        }
-        return redis.sadd(setKey.duplicate(), c.stream()
-                .map(this::encode)
-                .toArray(ByteBuffer[]::new)) > 0;
+        return sadd(c) > 0;
     }
 
     /**
@@ -147,20 +93,12 @@ public class RedisSet<E> implements Set<E>, Queue<E>, Supplier<Set<E>> {
     @Override
     @SuppressWarnings("unchecked")
     public boolean removeAll(Collection<?> c) {
-        if (log.isTraceEnabled()) {
-            log.trace("SREM {} {}", toString(), c);
-        }
-        return redis.srem(setKey.duplicate(), c.stream()
-                .map(o -> encode((E) o))
-                .toArray(ByteBuffer[]::new)) > 0;
+        return srem((Collection<? extends E>) c) > 0;
     }
 
     @Override
     public void clear() {
-        if (log.isTraceEnabled()) {
-            log.trace("DEL {}", toString());
-        }
-        redis.del(setKey.duplicate());
+        del();
     }
 
     @Override
@@ -175,10 +113,7 @@ public class RedisSet<E> implements Set<E>, Queue<E>, Supplier<Set<E>> {
 
     @Override
     public E poll() {
-        if (log.isTraceEnabled()) {
-            log.trace("SPOP {}", toString());
-        }
-        return decode(redis.spop(setKey.duplicate()));
+        return spop();
     }
 
     @Override
@@ -188,10 +123,7 @@ public class RedisSet<E> implements Set<E>, Queue<E>, Supplier<Set<E>> {
 
     @Override
     public E peek() {
-        if (log.isTraceEnabled()) {
-            log.trace("SRANDMEMBER {}", toString());
-        }
-        return decode(redis.srandmember(setKey.duplicate()));
+        return srandmember();
     }
 
     protected E checkElement(E e) {
@@ -202,12 +134,8 @@ public class RedisSet<E> implements Set<E>, Queue<E>, Supplier<Set<E>> {
     }
 
     @Override
-    public Set<E> get() {
-        if (log.isTraceEnabled()) {
-            log.trace("SMEMBERS {}", toString());
-        }
-        return redis.smembers(setKey.duplicate()).stream()
-                .map(this::decode)
+    public Set<E> copy() {
+        return smembers()
                 .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 }

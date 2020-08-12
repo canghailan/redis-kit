@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -20,10 +21,10 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class TestCache {
-    private static ObjectMapper objectMapper = new ObjectMapper();
-    private static RedisClient redisClient = RedisClient.create();
+    private static final RedisClient redisClient = RedisClient.create();
 
     private static Properties properties;
     private static RedisURI redisURI;
@@ -32,6 +33,7 @@ public class TestCache {
     private static Cache<GeneratedCacheKey, Data> cache;
 
     @BeforeClass
+    @SuppressWarnings({"rawtypes", "unchecked"})
     public static void setUp() throws Exception {
         try (InputStream stream = new FileInputStream("redis.properties")) {
             properties = new Properties();
@@ -60,40 +62,36 @@ public class TestCache {
         redisClient.shutdown();
     }
 
-    @Test
-    public void testSet() {
+    protected Data random() {
         Data data = new Data();
-        data.a = "a";
-        data.b = 2;
-        data.c = 5;
+        data.a = Character.valueOf((char) ThreadLocalRandom.current().nextInt('a', 'z')).toString();
+        data.b = ThreadLocalRandom.current().nextInt(0, 100);
+        data.c = ThreadLocalRandom.current().nextLong(0, 1000);
         data.d = new Date();
-        cache.put(ImmutableGeneratedCacheKey.of("a"), data);
+        return data;
     }
 
     @Test
     public void testGet() throws Exception {
-        Object data1 = cache.get(ImmutableGeneratedCacheKey.of("a"));
-        System.out.println(data1);
-        System.out.println(objectMapper.writeValueAsString(data1));
+        GeneratedCacheKey a = ImmutableGeneratedCacheKey.of("a");
 
-        Object data2 = cache.get(ImmutableGeneratedCacheKey.of("b"));
-        System.out.println(data2);
-        System.out.println(objectMapper.writeValueAsString(data2));
+        Data randomA = random();
 
-        System.out.println(cache.getValue(ImmutableGeneratedCacheKey.of("a")));
-        System.out.println(cache.getValue(ImmutableGeneratedCacheKey.of("b")));
+        cache.put(a, randomA);
+        Data dataA = cache.get(a);
 
-        System.out.println(cache.getCacheStatistics());
+        System.out.println(dataA);
+
+        Assert.assertEquals(randomA, dataA);
     }
 
     @Test
     public void testRemove() {
-        cache.remove(ImmutableGeneratedCacheKey.of("a"));
-        cache.remove(ImmutableGeneratedCacheKey.of("b"));
-    }
+        GeneratedCacheKey a = ImmutableGeneratedCacheKey.of("a");
 
-    @Test
-    public void testPubSub() throws Exception {
-        Thread.sleep(60 * 1000 * 1000);
+        cache.put(a, random());
+        cache.remove(a);
+
+        Assert.assertNull(cache.get(a));
     }
 }

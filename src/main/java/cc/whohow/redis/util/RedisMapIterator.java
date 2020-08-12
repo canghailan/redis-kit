@@ -14,32 +14,32 @@ import java.util.Map;
 
 public class RedisMapIterator extends RedisIterator<Map.Entry<ByteBuffer, ByteBuffer>, MapScanCursor<ByteBuffer, ByteBuffer>> {
     private static final Logger log = LogManager.getLogger();
-    private final ByteBuffer key;
+    protected final ByteBuffer hashKey;
 
     public RedisMapIterator(RedisCommands<ByteBuffer, ByteBuffer> redis, ByteBuffer key) {
         super(redis);
-        this.key = key;
+        this.hashKey = key;
     }
 
     public RedisMapIterator(RedisCommands<ByteBuffer, ByteBuffer> redis, ByteBuffer key, ByteBuffer match) {
         super(redis, match);
-        this.key = key;
+        this.hashKey = key;
     }
 
     public RedisMapIterator(RedisCommands<ByteBuffer, ByteBuffer> redis, ByteBuffer key, String match) {
         super(redis, match);
-        this.key = key;
+        this.hashKey = key;
     }
 
     public RedisMapIterator(RedisCommands<ByteBuffer, ByteBuffer> redis, ByteBuffer key, ScanArgs scanArgs) {
         super(redis, scanArgs);
-        this.key = key;
+        this.hashKey = key;
     }
 
     @Override
     protected MapScanCursor<ByteBuffer, ByteBuffer> scan(ScanCursor scanCursor) {
-        log.trace("HSCAN {} {} [match?] [limit?]", this, scanCursor.getCursor());
-        return redis.hscan(key.duplicate(), scanCursor, scanArgs);
+        log.trace("HSCAN");
+        return redis.hscan(hashKey.duplicate(), scanCursor, scanArgs);
     }
 
     @Override
@@ -48,13 +48,7 @@ public class RedisMapIterator extends RedisIterator<Map.Entry<ByteBuffer, ByteBu
     }
 
     @Override
-    protected void remove(Map.Entry<ByteBuffer, ByteBuffer> value) {
-        log.trace("HDEL {} [value?]", this);
-        redis.hdel(key.duplicate(), value.getKey().duplicate());
-    }
-
-    @Override
     public String toString() {
-        return ByteBuffers.toString(key);
+        return ByteBuffers.toString(hashKey);
     }
 }

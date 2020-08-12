@@ -40,7 +40,9 @@ public abstract class RedisIterator<T, C extends ScanCursor> implements Iterator
 
     protected abstract Iterator<T> iterator(C scanCursor);
 
-    protected abstract void remove(T value);
+    protected void remove(T value) {
+        throw new UnsupportedOperationException();
+    }
 
     @Override
     public boolean hasNext() {

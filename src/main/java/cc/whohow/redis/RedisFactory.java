@@ -18,20 +18,15 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class RedisFactory implements Supplier<RedisCommands<ByteBuffer, ByteBuffer>>,
-        RedisAtomicFactory,
         RedisClockFactory,
-        RedisLockFactory, AutoCloseable {
-    private final RedisURI redisURI;
-    private final RedisClient redisClient;
+        RedisLockFactory,
+        RedisAtomicFactory,
+        AutoCloseable {
     private final StatefulRedisConnection<ByteBuffer, ByteBuffer> redisConnection;
     private final Function<Class<?>, Codec<?>> codecFactory = new DefaultCodecFactory();
-    private final RedisScriptCommands script;
 
     public RedisFactory(RedisClient redisClient, RedisURI redisURI) {
-        this.redisClient = redisClient;
-        this.redisURI = redisURI;
         this.redisConnection = redisClient.connect(ByteBufferCodec.INSTANCE, redisURI);
-        this.script = new RedisScriptCommands(redisConnection.sync());
     }
 
     @Override
@@ -40,7 +35,7 @@ public class RedisFactory implements Supplier<RedisCommands<ByteBuffer, ByteBuff
     }
 
     public RedisScriptCommands script() {
-        return script;
+        return new RedisScriptCommands(get());
     }
 
     @SuppressWarnings("unchecked")
@@ -50,22 +45,6 @@ public class RedisFactory implements Supplier<RedisCommands<ByteBuffer, ByteBuff
 
     public Clock clock(ZoneId zone) {
         return new RedisClock(get(), zone);
-    }
-
-    public <T> RedisList<T> newList(String key, Class<T> type) {
-        return new RedisList<>(get(), newCodec(type), key);
-    }
-
-    public <K, V> RedisMap<K, V> newMap(String key, Class<K> keyType, Class<V> valueType) {
-        return new RedisMap<>(get(), newCodec(keyType), newCodec(valueType), key);
-    }
-
-    public <T> RedisSet<T> newSet(String key, Class<T> type) {
-        return new RedisSet<>(get(), newCodec(type), key);
-    }
-
-    public <T> RedisSortedSet<T> newSortedSet(String key, Class<T> type) {
-        return new RedisSortedSet<>(get(), newCodec(type), key);
     }
 
     public RedisLock newLock(String key, Duration maxLockTime) {
@@ -86,16 +65,36 @@ public class RedisFactory implements Supplier<RedisCommands<ByteBuffer, ByteBuff
         return new RedisAtomicReference<>(get(), newCodec(type), name);
     }
 
-    public RedisKeyspaceNotification newRedisKeyspaceNotification() {
-        return new RedisKeyspaceNotification(redisClient, redisURI);
+    public <T> RedisList<T> newList(String key, Class<T> type) {
+        return new RedisList<>(get(), newCodec(type), key);
+    }
+
+    public <T> RedisSet<T> newSet(String key, Class<T> type) {
+        return new RedisSet<>(get(), newCodec(type), key);
+    }
+
+    public <T> RedisSortedSet<T> newSortedSet(String key, Class<T> type) {
+        return new RedisSortedSet<>(get(), newCodec(type), key);
+    }
+
+    public <K, V> RedisMap<K, V> newMap(String key, Class<K> keyType, Class<V> valueType) {
+        return new RedisMap<>(get(), newCodec(keyType), newCodec(valueType), key);
     }
 
     public <T> RedisPriorityQueue<T> newPriorityQueue(String name, Class<T> type) {
-        return new RedisPriorityQueue<T>(get(), newCodec(type), name);
+        return new RedisPriorityQueue<>(get(), newCodec(type), name);
     }
 
     public <T> RedisDelayQueue<T> newDelayQueue(String name, Class<T> type) {
-        return new RedisDelayQueue<T>(get(), newCodec(type), name);
+        return new RedisDelayQueue<>(get(), newCodec(type), name);
+    }
+
+    public <T> RedisWindowCounter<T> newWindowCounter(String name, Class<T> type) {
+        return new RedisWindowCounter<>(get(), newCodec(type), name);
+    }
+
+    public <T> RedisTimeWindowCounter newTimeWindowCounter(String name, Duration accuracy) {
+        return new RedisTimeWindowCounter(get(), name, accuracy);
     }
 
     @Override

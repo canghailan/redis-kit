@@ -2,34 +2,25 @@ package cc.whohow.redis.util;
 
 import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.Codec;
-import cc.whohow.redis.io.PrimitiveCodec;
-import cc.whohow.redis.lettuce.Lettuce;
-import cc.whohow.redis.script.RedisScriptCommands;
 import cc.whohow.redis.util.impl.ArrayType;
 import cc.whohow.redis.util.impl.MappingIterator;
 import io.lettuce.core.ScoredValue;
-import io.lettuce.core.ScriptOutputType;
 import io.lettuce.core.api.sync.RedisCommands;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * Redis延迟队列
  */
 public class RedisDelayQueue<E>
-        extends RedisSortedSetKey<E>
-        implements BlockingQueue<RedisDelayed<E>> {
-    private static final Logger log = LogManager.getLogger();
+        extends AbstractRedisSortedSet<E>
+        implements BlockingQueue<RedisDelayed<E>>, Copyable<Queue<RedisDelayed<E>>> {
     protected final Clock clock;
     protected volatile long pollInterval = 1000;
 
@@ -40,14 +31,6 @@ public class RedisDelayQueue<E>
     public RedisDelayQueue(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, String key, Clock clock) {
         super(redis, codec, ByteBuffers.fromUtf8(key));
         this.clock = clock;
-    }
-
-    protected ByteBuffer encode(E value) {
-        return codec.encode(value);
-    }
-
-    protected E decode(ByteBuffer byteBuffer) {
-        return codec.decode(byteBuffer);
     }
 
     protected RedisDelayed<E> decode(ScoredValue<ByteBuffer> scoredValue) {
@@ -76,7 +59,7 @@ public class RedisDelayQueue<E>
 
     @Override
     public int size() {
-        return (int) zcard();
+        return zcard().intValue();
     }
 
     @Override
@@ -92,13 +75,12 @@ public class RedisDelayQueue<E>
 
     @Override
     public int drainTo(Collection<? super RedisDelayed<E>> c) {
-        return drainTo(c, Integer.MAX_VALUE);
+        return drainTo(c, 1024);
     }
 
     @Override
     public int drainTo(Collection<? super RedisDelayed<E>> c, int maxElements) {
-        long time = clock.millis();
-        return (int) zremrangebyscoreWithScores(0, time, 0, maxElements)
+        return (int) zremrangebyscoreWithScores(0, clock.millis(), 0, maxElements)
                 .map(this::toDelayed)
                 .peek(c::add)
                 .count();
@@ -106,7 +88,7 @@ public class RedisDelayQueue<E>
 
     @Override
     public Iterator<RedisDelayed<E>> iterator() {
-        return new MappingIterator<>(new RedisSortedSetIterator(redis, zsetKey.duplicate()), this::decode);
+        return new MappingIterator<>(new RedisSortedSetIterator(redis, sortedSetKey.duplicate()), this::decode);
     }
 
     @Override
@@ -225,24 +207,10 @@ public class RedisDelayQueue<E>
 
     @Override
     public RedisDelayed<E> poll() {
-        long time = clock.millis();
-        log.trace("EVAL zremrangebyscore {} 0 {} withscores limit 0 1", this, time);
-        List<ByteBuffer> result = new RedisScriptCommands(redis).eval("zremrangebyscore", ScriptOutputType.MULTI,
-                new ByteBuffer[]{
-                        zsetKey.duplicate()
-                },
-                new ByteBuffer[]{
-                        Lettuce.zero(),
-                        PrimitiveCodec.LONG.encode(time),
-                        Lettuce.withscores(),
-                        Lettuce.limit(),
-                        Lettuce.zero(),
-                        Lettuce.one()
-                });
-        if (result.size() < 2) {
-            return null;
-        }
-        return new RedisDelayed<>(decode(result.get(0)), PrimitiveCodec.LONG.decode(result.get(1)));
+        return zremrangebyscoreWithScores(0, clock.millis(), 0, 1)
+                .findFirst()
+                .map(this::toDelayed)
+                .orElse(null);
     }
 
     @Override
@@ -256,9 +224,6 @@ public class RedisDelayQueue<E>
 
     @Override
     public RedisDelayed<E> peek() {
-        if (log.isTraceEnabled()) {
-            log.trace("ZRANGE {} 0 0 WITHSCORES", toString());
-        }
         return zrangeWithScores(0, 0)
                 .findFirst()
                 .filter(v -> v.getScore() < clock.millis())
@@ -271,7 +236,9 @@ public class RedisDelayQueue<E>
     }
 
     @Override
-    public String toString() {
-        return ByteBuffers.toString(zsetKey);
+    public Queue<RedisDelayed<E>> copy() {
+        return zrangeWithScores(0, -1)
+                .map(this::toDelayed)
+                .collect(Collectors.toCollection(LinkedList::new));
     }
 }

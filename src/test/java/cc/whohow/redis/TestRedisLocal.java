@@ -2,6 +2,7 @@ package cc.whohow.redis;
 
 import cc.whohow.redis.lettuce.ByteBufferCodec;
 import cc.whohow.redis.util.RedisLocal;
+import cc.whohow.redis.util.SnowflakeId;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
@@ -51,12 +52,40 @@ public class TestRedisLocal {
         System.out.println(redisLocal.getId());
         System.out.println(redisLocal.getActiveIds());
         System.out.println(redisLocal.isLeader());
-        System.out.println(redisLocal.getLocalMap().orElseThrow(IllegalStateException::new).get());
+        System.out.println(redisLocal.getLocalMap().orElseThrow(IllegalStateException::new).copy());
         Thread.sleep(10_000);
         System.out.println(redisLocal.getId());
         System.out.println(redisLocal.getActiveIds());
         System.out.println(redisLocal.isLeader());
-        System.out.println(redisLocal.getLocalMap().orElseThrow(IllegalStateException::new).get());
+        System.out.println(redisLocal.getLocalMap().orElseThrow(IllegalStateException::new).copy());
         Thread.sleep(600_000);
+    }
+
+    @Test
+    public void testSnowflakeId() {
+        SnowflakeId snowflakeId = new SnowflakeId.I52();
+        for (int i = 0; i < 10; i++) {
+            long id = snowflakeId.getAsLong();
+            System.out.println("ID:\t\t" + id);
+            System.out.println("时间:\t" + snowflakeId.extractDate(id));
+            System.out.println("机器:\t" + snowflakeId.extractWorkerId(id));
+            System.out.println("序列号:\t" + snowflakeId.extractSequence(id));
+            System.out.println();
+        }
+    }
+
+    @Test
+    public void testRedisSnowflakeId() {
+        SnowflakeId snowflakeId = new RedisSnowflakeIdFactory(
+                new RedisLocal(redis, executor, "RL")).newI52Generator();
+
+        for (int i = 0; i < 10; i++) {
+            long id = snowflakeId.getAsLong();
+            System.out.println("ID:\t\t" + id);
+            System.out.println("时间:\t" + snowflakeId.extractDate(id));
+            System.out.println("机器:\t" + snowflakeId.extractWorkerId(id));
+            System.out.println("序列号:\t" + snowflakeId.extractSequence(id));
+            System.out.println();
+        }
     }
 }

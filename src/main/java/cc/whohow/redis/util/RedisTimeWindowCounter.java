@@ -18,7 +18,8 @@ import java.util.List;
  * 时间窗口计数器（通过accuracy指定时间精度）
  */
 public class RedisTimeWindowCounter extends RedisWindowCounter<Date> {
-    private static final Logger log = LogManager.getLogger(RedisTimeWindowCounter.class);
+    private static final Logger log = LogManager.getLogger();
+
     protected final Duration accuracy;
 
     public RedisTimeWindowCounter(RedisCommands<ByteBuffer, ByteBuffer> redis, String key, Duration accuracy) {
@@ -26,7 +27,7 @@ public class RedisTimeWindowCounter extends RedisWindowCounter<Date> {
     }
 
     public RedisTimeWindowCounter(RedisCommands<ByteBuffer, ByteBuffer> redis, ByteBuffer key, Duration accuracy) {
-        super(redis, new DateCodec(accuracy.toMillis()), key);
+        super(redis, new DateAccuracyCodec(accuracy.toMillis()), key);
         this.accuracy = accuracy;
     }
 
@@ -104,10 +105,10 @@ public class RedisTimeWindowCounter extends RedisWindowCounter<Date> {
         removeIf(retain::after);
     }
 
-    public static class DateCodec implements Codec<Date> {
+    public static class DateAccuracyCodec implements Codec<Date> {
         protected final long accuracy;
 
-        public DateCodec(long accuracy) {
+        public DateAccuracyCodec(long accuracy) {
             this.accuracy = accuracy;
         }
 

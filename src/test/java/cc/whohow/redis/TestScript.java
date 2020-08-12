@@ -90,24 +90,4 @@ public class TestScript {
         Object result2 = redisScriptCommands.eval(redisScript, ScriptOutputType.MULTI);
         System.out.println(result2);
     }
-
-    @Test
-    public void testScript() {
-//        redis.set(ByteBuffers.fromUtf8("a"), ByteBuffers.fromUtf8("test"));
-
-
-        RedisScriptCommands redisScriptCommands = new RedisScriptCommands(redis);
-        Object r = redisScriptCommands.eval("lock", ScriptOutputType.BOOLEAN,
-                new ByteBuffer[]{ByteBuffers.fromUtf8("b")},
-                new ByteBuffer[]{ByteBuffers.fromUtf8("test1"),
-                        ByteBuffers.fromUtf8("ex"),
-                        PrimitiveCodec.LONG.encode(120L)});
-        System.out.println(r);
-
-//        ByteBuffer r = redisScriptCommands.eval("existkeys", ScriptOutputType.VALUE,
-//                ByteBuffers.fromUtf8("b"),
-//                ByteBuffers.fromUtf8("a"),
-//                ByteBuffers.fromUtf8("c"));
-//        System.out.println(ByteBuffers.toUtf8String(r));
-    }
 }

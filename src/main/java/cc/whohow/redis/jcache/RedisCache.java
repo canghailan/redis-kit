@@ -51,7 +51,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public V get(K key) {
-        log.trace("get {}::{}", this, key);
+        log.trace("GET {}::{}", this, key);
         ByteBuffer encodedValue = redis.get(codec.encodeKey(key));
         if (encodedValue != null) {
             cacheStats.cacheHit(1);
@@ -67,14 +67,14 @@ public class RedisCache<K, V> implements Cache<K, V> {
         if (keys.isEmpty()) {
             return Collections.emptyMap();
         }
-        log.trace("mget {}::{}", this, keys);
+        log.trace("MGET {}::{}", this, keys);
         ByteBuffer[] encodedKeys = keys.stream()
                 .map(key -> (K) key)
                 .map(codec::encodeKey)
-                .peek(Buffer::mark)
+                .peek(Buffer::mark) // MGET复用key对象问题
                 .toArray(ByteBuffer[]::new);
         return redis.mget(encodedKeys).stream()
-                .peek(kv -> kv.getKey().reset())
+                .peek(kv -> kv.getKey().reset()) // MGET复用key对象问题
                 .peek(kv -> {
                     if (kv.hasValue()) {
                         cacheStats.cacheHit(1);
@@ -89,7 +89,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public boolean containsKey(K key) {
-        log.trace("exists {}::{}", this, key);
+        log.trace("EXISTS {}::{}", this, key);
         return redis.exists(codec.encodeKey(key)) > 0;
     }
 
@@ -100,14 +100,14 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public void put(K key, V value) {
-        log.trace("set {}::{} {}", this, key, value);
+        log.trace("SET {}::{} {}", this, key, value);
         redis.set(codec.encodeKey(key), codec.encodeValue(value));
         cacheStats.cachePut(1);
     }
 
     @Override
     public V getAndPut(K key, V value) {
-        log.trace("getset {}::{} {}", this, key, value);
+        log.trace("GETSET {}::{} {}", this, key, value);
         ByteBuffer encodedValue = redis.getset(codec.encodeKey(key), codec.encodeValue(value));
         if (encodedValue != null) {
             cacheStats.cacheHit(1);
@@ -123,7 +123,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
         if (map.isEmpty()) {
             return;
         }
-        log.trace("mset {}::{}", this, map);
+        log.trace("MSET {}::{}", this, map);
         Map<ByteBuffer, ByteBuffer> encodedKeyValues = map.entrySet().stream()
                 .collect(Collectors.toMap(
                         e -> codec.encodeKey(e.getKey()),
@@ -134,7 +134,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public boolean putIfAbsent(K key, V value) {
-        log.trace("set {}::{} {} nx", this, key, value);
+        log.trace("SET {}::{} {} NX", this, key, value);
         boolean ok = Lettuce.ok(redis.set(codec.encodeKey(key), codec.encodeValue(value), Lettuce.SET_NX));
         if (ok) {
             cacheStats.cachePut(1);
@@ -144,7 +144,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public boolean remove(K key) {
-        log.trace("del {}::{}", this, key);
+        log.trace("DEL {}::{}", this, key);
         boolean ok = redis.del(codec.encodeKey(key)) > 0;
         if (ok) {
             cacheStats.cacheRemove(1);
@@ -169,7 +169,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public boolean replace(K key, V value) {
-        log.trace("set {}::{} {} xx", this, key, value);
+        log.trace("SET {}::{} {} XX", this, key, value);
         boolean ok = Lettuce.ok(redis.set(codec.encodeKey(key), codec.encodeValue(value), Lettuce.SET_XX));
         if (ok) {
             cacheStats.cachePut(1);
@@ -187,7 +187,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
         if (keys.isEmpty()) {
             return;
         }
-        log.trace("del {}::{}", this, keys);
+        log.trace("DEL {}::{}", this, keys);
         ByteBuffer[] encodedKeys = keys.stream()
                 .map(key -> (K) key)
                 .map(codec::encodeKey)
@@ -201,10 +201,10 @@ public class RedisCache<K, V> implements Cache<K, V> {
         ScanArgs scanArgs = ScanArgs.Builder.matches(configuration.getRedisKeyPattern()).limit(100);
         ScanCursor scanCursor = ScanCursor.INITIAL;
         while (!scanCursor.isFinished()) {
-            log.trace("scan {} {}", this, scanCursor.getCursor());
+            log.trace("SCAN {} {}", this, scanCursor.getCursor());
             KeyScanCursor<ByteBuffer> keyScanCursor = redis.scan(scanCursor, scanArgs);
             if (!keyScanCursor.getKeys().isEmpty()) {
-                log.trace("del {} x{}", this, keyScanCursor.getKeys().size());
+                log.trace("DEL {} {}keys", this, keyScanCursor.getKeys().size());
                 redis.del(keyScanCursor.getKeys().toArray(new ByteBuffer[0]));
                 cacheStats.cacheRemove(keyScanCursor.getKeys().size());
             }
@@ -289,7 +289,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public V get(K key, CacheLoader<K, ? extends V> cacheLoader) {
-        log.trace("get {}::{}", this, key);
+        log.trace("GET {}::{}", this, key);
         ByteBuffer encodedValue = redis.get(codec.encodeKey(key));
         if (encodedValue != null) {
             cacheStats.cacheHit(1);
@@ -297,7 +297,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
         } else {
             cacheStats.cacheMiss(1);
             V value = cacheLoader.load(key);
-            log.trace("set {}::{} {} nx", this, key, value);
+            log.trace("SET {}::{} {} NX", this, key, value);
             boolean ok = Lettuce.ok(redis.set(codec.encodeKey(key), codec.encodeValue(value), Lettuce.SET_NX));
             if (ok) {
                 cacheStats.cachePut(1);
@@ -308,7 +308,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public CacheValue<V> getValue(K key) {
-        log.trace("get {}::{}", this, key);
+        log.trace("GET {}::{}", this, key);
         ByteBuffer encodedValue = redis.get(codec.encodeKey(key));
         if (encodedValue != null) {
             cacheStats.cacheHit(1);
@@ -321,7 +321,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public CacheValue<V> getValue(K key, CacheLoader<K, ? extends V> cacheLoader) {
-        log.trace("get {}::{}", this, key);
+        log.trace("GET {}::{}", this, key);
         ByteBuffer encodedValue = redis.get(codec.encodeKey(key));
         if (encodedValue != null) {
             cacheStats.cacheHit(1);
@@ -329,7 +329,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
         } else {
             cacheStats.cacheMiss(1);
             V value = cacheLoader.load(key);
-            log.trace("set {}::{} {} nx", this, key, value);
+            log.trace("SET {}::{} {} NX", this, key, value);
             boolean ok = Lettuce.ok(redis.set(codec.encodeKey(key), codec.encodeValue(value), Lettuce.SET_NX));
             if (ok) {
                 cacheStats.cachePut(1);

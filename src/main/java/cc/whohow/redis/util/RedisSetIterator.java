@@ -12,42 +12,36 @@ import java.util.Iterator;
 
 public class RedisSetIterator extends RedisIterator<ByteBuffer, ValueScanCursor<ByteBuffer>> {
     private static final Logger log = LogManager.getLogger();
-    private final ByteBuffer key;
+    protected final ByteBuffer setKey;
 
     public RedisSetIterator(RedisCommands<ByteBuffer, ByteBuffer> redis, ByteBuffer key) {
         super(redis);
-        this.key = key;
+        this.setKey = key;
     }
 
     public RedisSetIterator(RedisCommands<ByteBuffer, ByteBuffer> redis, ByteBuffer key, ByteBuffer match) {
         super(redis, match);
-        this.key = key;
+        this.setKey = key;
     }
 
     public RedisSetIterator(RedisCommands<ByteBuffer, ByteBuffer> redis, ByteBuffer key, String match) {
         super(redis, match);
-        this.key = key;
+        this.setKey = key;
     }
 
     public RedisSetIterator(RedisCommands<ByteBuffer, ByteBuffer> redis, ByteBuffer key, ScanArgs scanArgs) {
         super(redis, scanArgs);
-        this.key = key;
+        this.setKey = key;
     }
 
     @Override
     protected ValueScanCursor<ByteBuffer> scan(ScanCursor scanCursor) {
-        log.trace("SSCAN {} {} [match?] [limit?]", this, scanCursor.getCursor());
-        return redis.sscan(key.duplicate(), scanCursor, scanArgs);
+        log.trace("SSCAN");
+        return redis.sscan(setKey.duplicate(), scanCursor, scanArgs);
     }
 
     @Override
     protected Iterator<ByteBuffer> iterator(ValueScanCursor<ByteBuffer> scanCursor) {
         return scanCursor.getValues().iterator();
-    }
-
-    @Override
-    protected void remove(ByteBuffer value) {
-        log.trace("SREM {} [value?]", this);
-        redis.srem(key.duplicate(), value.duplicate());
     }
 }

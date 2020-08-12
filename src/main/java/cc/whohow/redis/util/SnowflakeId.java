@@ -53,9 +53,6 @@ public class SnowflakeId implements LongSupplier {
         this.workerIdShift = sequenceBits;
     }
 
-    /**
-     * 1970-01-01 00:00:00+00
-     */
     public long snowflake(long timestamp, long workerId, long sequence) {
         if (timestamp < 0 || timestamp > timestampMask) {
             throw new IllegalArgumentException();
@@ -67,6 +64,13 @@ public class SnowflakeId implements LongSupplier {
             throw new IllegalArgumentException();
         }
         return (timestamp << timestampShift) | (workerId << workerIdShift) | sequence;
+    }
+
+    public long random(long timestamp) {
+        return snowflake(
+                timeUnit.convert(timestamp, TimeUnit.MILLISECONDS) - epoch,
+                workerId,
+                ThreadLocalRandom.current().nextLong(sequenceMask >> 1, sequenceMask));
     }
 
     public long getWorkerId() {
@@ -98,13 +102,6 @@ public class SnowflakeId implements LongSupplier {
             }
             return snowflake(timestamp - epoch, workerId, sequence);
         }
-    }
-
-    public long random(long timestamp) {
-        return snowflake(
-                timeUnit.convert(timestamp, TimeUnit.MILLISECONDS) - epoch,
-                workerId,
-                ThreadLocalRandom.current().nextLong(sequenceMask >> 1, sequenceMask));
     }
 
     protected long await(long timestamp) {

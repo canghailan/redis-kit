@@ -3,7 +3,6 @@ package cc.whohow.redis.util;
 import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.PrimitiveCodec;
 import cc.whohow.redis.io.StringCodec;
-import cc.whohow.redis.lettuce.Lettuce;
 import io.lettuce.core.KeyValue;
 import io.lettuce.core.api.sync.RedisCommands;
 import org.apache.logging.log4j.LogManager;
@@ -58,7 +57,11 @@ public class RedisLocal implements Runnable {
      */
     private final RedisClock clock;
     /**
-     * 当前ID
+     * 实例ID集合
+     */
+    private final RedisSortedSet<Long> idSet;
+    /**
+     * 当前实例ID
      */
     private volatile CompletableFuture<Long> id;
     /**
@@ -77,10 +80,12 @@ public class RedisLocal implements Runnable {
         this.expiresIn = Duration.ofMinutes(3); // ID有效期，3分钟，需及时续期
         this.maxId = 65535L; // 最大ID，4字节
         this.clock = new RedisClock(redis); // 时钟
-        this.id = new CompletableFuture<>(); // 待生成ID
+        this.idSet = new RedisSortedSet<>(redis, PrimitiveCodec.LONG, key);
+        this.id = new CompletableFuture<>();
 
         // 启动注册/续期任务
-        this.executor.scheduleWithFixedDelay(this, 0, expiresIn.toMillis() / 5, TimeUnit.MILLISECONDS);
+        this.executor.scheduleWithFixedDelay(this,
+                0, expiresIn.toMillis() / 5, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -147,7 +152,7 @@ public class RedisLocal implements Runnable {
      */
     protected synchronized void newId() {
         log.debug("newId");
-        Map<Long, Long> ids = getIds(); // 已注册ID
+        Map<Long, Number> ids = getIds(); // 已注册ID
         log.debug("ids: {}", ids);
         Set<Long> activeIds = getActiveIds(ids.keySet()); // 活跃ID
         log.debug("activeIds: {}", activeIds);
@@ -160,7 +165,7 @@ public class RedisLocal implements Runnable {
                 continue;
             }
             long time = clock.millis();
-            if (tryRegisterId(newId, time)) { // 尝试注册ID
+            if (idSet.zaddnx(time, newId) > 0) { // 尝试注册ID
                 log.debug("registerId ok: {} @{}", newId, time);
                 RedisLock lock = new RedisLock(redis, getLocalRedisKey(newId), expiresIn);
                 if (lock.tryLock()) { // 尝试获取实例锁
@@ -175,17 +180,13 @@ public class RedisLocal implements Runnable {
                     executor.execute(() -> {
                         Map<String, String> map = localMap;
                         if (map != null) {
-                            log.debug("clear LocalMap: {}", map);
-                            map.clear(); // 异步清空实例存储空间（回收ID存储空间可能有脏数据）
                             log.debug("synchronize LocalInfo to LocalMap");
                             map.putAll(getLocalInfo()); // 异步同步本地信息
                         } else {
                             log.debug("LocalMap state error");
                         }
                     });
-                    if (!listeners.isEmpty()) {
-                        executor.execute(this::notifyNewId); // 异步通知NewId事件
-                    }
+                    notifyNewIdAsync();
                     return;
                 } else {
                     log.debug("lockId failed: {}", newId);
@@ -198,31 +199,19 @@ public class RedisLocal implements Runnable {
     }
 
     /**
-     * 尝试注册ID
-     */
-    protected boolean tryRegisterId(Long id, long time) {
-        log.trace("ZADD {} NX {} {}", key, time, id);
-        return redis.zadd(ByteBuffers.fromUtf8(key), Lettuce.Z_ADD_NX, time, PrimitiveCodec.LONG.encode(id)) > 0;
-    }
-
-    /**
      * 续期ID
      */
     protected synchronized void renewId(Long currentId) {
         log.debug("renewId: {}", currentId);
         if (lock.renew(expiresIn)) { // 尝试续期实例锁
             log.debug("renewId ok: {}", currentId);
-            if (!listeners.isEmpty()) {
-                executor.execute(this::notifyRenewId); // 异步通知RenewId事件
-            }
+            notifyRenewIdAsync();
         } else {
             log.debug("renewId error: {}", currentId);
             this.id = new CompletableFuture<>(); // 重置ID
             this.lock = null; // 移除实例锁
             this.localMap = null; // 移除实例存储空间
-            if (!listeners.isEmpty()) {
-                executor.execute(this::notifyRenewIdError); // 异步通知RenewIdError事件
-            }
+            notifyRenewIdErrorAsync();
             newId(); // 重新注册ID
         }
     }
@@ -249,14 +238,8 @@ public class RedisLocal implements Runnable {
     /**
      * 获取所有注册ID及注册时间
      */
-    public Map<Long, Long> getIds() {
-        log.trace("ZRANGE {} 0 -1 WITHSCORES", key);
-        return redis.zrangeWithScores(ByteBuffers.fromUtf8(key), 0, -1).stream()
-                .collect(Collectors.toMap(
-                        e -> PrimitiveCodec.LONG.decode(e.getValue()),
-                        e -> (long) e.getScore(),
-                        (a, b) -> b,
-                        LinkedHashMap::new));
+    public Map<Long, Number> getIds() {
+        return idSet.copy();
     }
 
     /**
@@ -279,10 +262,10 @@ public class RedisLocal implements Runnable {
         log.trace("MGET {}", locks.keySet());
         return redis.mget(locks.keySet().stream() // 所有实例锁RedisKey
                 .map(ByteBuffers::fromUtf8)
-                .peek(ByteBuffer::mark) // 因为MGET返回值key会复用对象，所以需要提前mark
+                .peek(ByteBuffer::mark) // MGET复用key对象问题
                 .toArray(ByteBuffer[]::new)) // 确认实例锁是否存在
                 .stream()
-                .peek(kv -> kv.getKey().reset()) // 处理MGET复用对象问题
+                .peek(kv -> kv.getKey().reset()) // MGET复用key对象问题
                 .filter(KeyValue::hasValue) // 过滤实例锁不存在的实例
                 .map(KeyValue::getKey) // 获取实例RedisKey
                 .map(ByteBuffers::toUtf8String)
@@ -321,7 +304,7 @@ public class RedisLocal implements Runnable {
      * 选举领导者ID，不建议直接暴露本方法，可能返回null
      */
     private Optional<Long> tryGetLeaderId() {
-        Map<Long, Long> ids = getIds(); // 按注册时间排序好的id集合
+        Map<Long, Number> ids = getIds(); // 按注册时间排序好的id集合
         Set<Long> activeIds = getActiveIds(ids.keySet());
         for (Long id : ids.keySet()) {
             if (activeIds.contains(id)) {
@@ -340,16 +323,15 @@ public class RedisLocal implements Runnable {
             return;
         }
         log.debug("gc: {}", ids);
-        log.trace("ZREM {} {}", key, ids);
-        redis.zrem(ByteBuffers.fromUtf8(key),
-                ids.stream()
-                        .map(PrimitiveCodec.LONG::encode)
-                        .toArray(ByteBuffer[]::new));
+
+        // 回收实例存储空间
         log.trace("DEL {}:+{}", key, ids);
         redis.del(ids.stream()
                 .map(this::getLocalMapRedisKey)
                 .map(ByteBuffers::fromUtf8)
                 .toArray(ByteBuffer[]::new));
+
+        idSet.zrem(ids);
     }
 
     public void addListener(Listener listener) {
@@ -358,6 +340,13 @@ public class RedisLocal implements Runnable {
 
     public void removeListener(Listener listener) {
         this.listeners.remove(listener);
+    }
+
+    protected void notifyNewIdAsync() {
+        if (listeners.isEmpty()) {
+            return;
+        }
+        executor.execute(this::notifyRenewId);
     }
 
     protected void notifyNewId() {
@@ -371,6 +360,13 @@ public class RedisLocal implements Runnable {
         }
     }
 
+    protected void notifyRenewIdAsync() {
+        if (listeners.isEmpty()) {
+            return;
+        }
+        executor.execute(this::notifyRenewId);
+    }
+
     protected void notifyRenewId() {
         log.debug("notifyRenewId");
         for (Listener listener : listeners) {
@@ -380,6 +376,13 @@ public class RedisLocal implements Runnable {
                 log.warn("notifyRenewId error", e);
             }
         }
+    }
+
+    protected void notifyRenewIdErrorAsync() {
+        if (listeners.isEmpty()) {
+            return;
+        }
+        executor.execute(this::notifyRenewIdError);
     }
 
     protected void notifyRenewIdError() {
