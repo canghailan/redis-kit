@@ -93,12 +93,36 @@ public class RedisMap<K, V>
 
     @Override
     public Set<K> keySet() {
-        return new ConcurrentMapKeySet<>(this);
+        return new ConcurrentMapKeySet<K>(this) {
+            @Override
+            public Object[] toArray() {
+                return RedisMap.this.hgetall()
+                        .keySet().toArray();
+            }
+
+            @Override
+            public <T> T[] toArray(T[] a) {
+                return RedisMap.this.hgetall()
+                        .keySet().toArray(a);
+            }
+        };
     }
 
     @Override
     public Collection<V> values() {
-        return new ConcurrentMapValueCollection<>(this);
+        return new ConcurrentMapValueCollection<V>(this) {
+            @Override
+            public Object[] toArray() {
+                return RedisMap.this.hgetall()
+                        .values().toArray();
+            }
+
+            @Override
+            public <T> T[] toArray(T[] a) {
+                return RedisMap.this.hgetall()
+                        .values().toArray(a);
+            }
+        };
     }
 
     @Override
@@ -107,6 +131,18 @@ public class RedisMap<K, V>
             @Override
             public Iterator<Entry<K, V>> iterator() {
                 return new MappingIterator<>(new RedisMapIterator(redis, hashKey.duplicate()), RedisMap.this::decode);
+            }
+
+            @Override
+            public Object[] toArray() {
+                return RedisMap.this.hgetall()
+                        .entrySet().toArray();
+            }
+
+            @Override
+            public <T> T[] toArray(T[] a) {
+                return RedisMap.this.hgetall()
+                        .entrySet().toArray(a);
             }
         };
     }

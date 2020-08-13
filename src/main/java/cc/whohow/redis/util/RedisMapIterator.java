@@ -1,6 +1,5 @@
 package cc.whohow.redis.util;
 
-import cc.whohow.redis.io.ByteBuffers;
 import io.lettuce.core.MapScanCursor;
 import io.lettuce.core.ScanArgs;
 import io.lettuce.core.ScanCursor;
@@ -45,10 +44,5 @@ public class RedisMapIterator extends RedisIterator<Map.Entry<ByteBuffer, ByteBu
     @Override
     protected Iterator<Map.Entry<ByteBuffer, ByteBuffer>> iterator(MapScanCursor<ByteBuffer, ByteBuffer> scanCursor) {
         return scanCursor.getMap().entrySet().iterator();
-    }
-
-    @Override
-    public String toString() {
-        return ByteBuffers.toString(hashKey);
     }
 }

@@ -39,10 +39,4 @@ public class RedisKeyIterator extends RedisIterator<ByteBuffer, KeyScanCursor<By
     protected Iterator<ByteBuffer> iterator(KeyScanCursor<ByteBuffer> scanCursor) {
         return scanCursor.getKeys().iterator();
     }
-
-    @Override
-    protected void remove(ByteBuffer value) {
-        log.trace("DEL");
-        redis.del(value.duplicate());
-    }
 }

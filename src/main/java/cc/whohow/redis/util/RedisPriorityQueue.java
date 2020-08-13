@@ -11,6 +11,9 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Redis优先级队列
+ */
 public class RedisPriorityQueue<E>
         extends AbstractRedisSortedSet<E>
         implements Queue<RedisPriority<E>>, Copyable<Queue<RedisPriority<E>>> {
@@ -151,12 +154,6 @@ public class RedisPriorityQueue<E>
                 .findFirst()
                 .map(this::toEntry)
                 .orElse(null);
-    }
-
-    public Queue<RedisPriority<E>> load() {
-        return zrangeWithScores(0, -1)
-                .map(this::toEntry)
-                .collect(Collectors.toCollection(LinkedList::new));
     }
 
     protected RedisPriority<E> checkElement(RedisPriority<E> e) {

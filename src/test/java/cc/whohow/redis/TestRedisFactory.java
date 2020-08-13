@@ -84,6 +84,89 @@ public class TestRedisFactory {
     }
 
     @Test
+    public void testRedisList() {
+        RedisList<String> list = redisFactory.newList("testList", String.class);
+        list.clear();
+
+        Assert.assertEquals(0, list.size());
+
+        list.add("a");
+        list.add("b");
+        list.add("c");
+        Assert.assertEquals(3, list.size());
+        Assert.assertEquals("c", list.get(2));
+
+        list.set(2, "cc");
+        Assert.assertEquals(3, list.size());
+        Assert.assertEquals("cc", list.get(2));
+
+        List<String> temp = new ArrayList<>();
+        temp.add("c");
+        temp.add("d");
+        temp.add("e");
+        list.addAll(temp);
+        Assert.assertEquals(6, list.size());
+        Assert.assertEquals("c", list.get(3));
+
+        list.remove("c");
+        Assert.assertEquals(5, list.size());
+
+        Assert.assertEquals("a", list.peekFirst());
+        Assert.assertEquals(5, list.size());
+
+        Assert.assertEquals("e", list.peekLast());
+        Assert.assertEquals(5, list.size());
+
+        Assert.assertEquals("a", list.pollFirst());
+        Assert.assertEquals(4, list.size());
+
+        Assert.assertEquals("e", list.pollLast());
+        Assert.assertEquals(3, list.size());
+
+        list.addFirst("aa");
+        Assert.assertEquals("aa", list.peekFirst());
+
+        list.addLast("ee");
+        Assert.assertEquals("ee", list.peekLast());
+
+        System.out.println(list.copy());
+    }
+
+    @Test
+    public void testRedisSet() {
+        RedisSet<String> set = redisFactory.newSet("testSet", String.class);
+        set.clear();
+
+        Assert.assertEquals(0, set.size());
+
+        set.add("a");
+        set.add("b");
+        set.add("c");
+        Assert.assertEquals(3, set.size());
+        Assert.assertTrue(set.contains("c"));
+
+        List<String> temp = new ArrayList<>();
+        temp.add("c");
+        temp.add("d");
+        temp.add("e");
+        set.addAll(temp);
+        Assert.assertEquals(5, set.size());
+        Assert.assertTrue(set.contains("c"));
+
+        set.remove("c");
+        Assert.assertEquals(4, set.size());
+        Assert.assertFalse(set.contains("c"));
+
+        Assert.assertNotNull(set.peek());
+        Assert.assertEquals(4, set.size());
+
+        Assert.assertNotNull(set.poll());
+        Assert.assertEquals(3, set.size());
+
+        System.out.println(set.copy());
+    }
+
+    @Test
     public void testRedisSortedSet() {
         RedisSortedSet<String> sortedSet = redisFactory.newSortedSet("testSortedSet", String.class);
         sortedSet.clear();
@@ -98,6 +181,24 @@ public class TestRedisFactory {
         Assert.assertEquals(3.0, sortedSet.get("c"));
         Assert.assertTrue(sortedSet.containsValue(3.0));
         Assert.assertFalse(sortedSet.containsValue(4.0));
+
+        Map<String, Number> temp = new HashMap<>();
+        temp.put("c", 4);
+        temp.put("d", 5);
+        temp.put("e", 6);
+        sortedSet.putAll(temp);
+        Assert.assertEquals(5, sortedSet.size());
+        Assert.assertEquals(4.0, sortedSet.get("c"));
+
+        sortedSet.remove("c");
+        Assert.assertEquals(4, sortedSet.size());
+        Assert.assertNull(sortedSet.get("c"));
+
+        sortedSet.putIfAbsent("d", 6);
+        Assert.assertEquals(5.0, sortedSet.get("d"));
+
+        sortedSet.replace("e", 7);
+        Assert.assertEquals(7.0, sortedSet.get("e"));
 
         System.out.println(sortedSet.copy());
     }

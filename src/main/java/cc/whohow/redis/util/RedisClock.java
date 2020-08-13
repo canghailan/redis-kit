@@ -14,8 +14,6 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Redis时钟
- *
- * @see Clock
  */
 public class RedisClock extends Clock {
     private static final Logger log = LogManager.getLogger();

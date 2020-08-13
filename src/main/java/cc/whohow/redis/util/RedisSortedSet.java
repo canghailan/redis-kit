@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 /**
- * 有序集合，按指定值排序
+ * 有序集合
  */
 public class RedisSortedSet<E>
         extends AbstractRedisSortedSet<E>
