@@ -65,6 +65,11 @@ public class RedisFactory implements Supplier<RedisCommands<ByteBuffer, ByteBuff
         return new RedisAtomicReference<>(get(), newCodec(type), name);
     }
 
+    @Override
+    public <T> RedisAtomicReference<T> newAtomicReference(String name, Class<T> type, Duration ttl) {
+        return new RedisAtomicReference.Expire<>(get(), newCodec(type), name, ttl);
+    }
+
     public <T> RedisList<T> newList(String key, Class<T> type) {
         return new RedisList<>(get(), newCodec(type), key);
     }

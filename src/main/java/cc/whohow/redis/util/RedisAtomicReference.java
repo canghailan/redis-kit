@@ -2,14 +2,17 @@ package cc.whohow.redis.util;
 
 import cc.whohow.redis.io.ByteBuffers;
 import cc.whohow.redis.io.Codec;
+import cc.whohow.redis.io.PrimitiveCodec;
 import cc.whohow.redis.lettuce.Lettuce;
 import cc.whohow.redis.script.RedisScriptCommands;
 import io.lettuce.core.ScriptOutputType;
+import io.lettuce.core.SetArgs;
 import io.lettuce.core.api.sync.RedisCommands;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.function.BinaryOperator;
 import java.util.function.UnaryOperator;
 
@@ -149,5 +152,68 @@ public class RedisAtomicReference<V> {
     @Override
     public String toString() {
         return ByteBuffers.toString(key);
+    }
+
+    public static class Expire<V> extends RedisAtomicReference<V> {
+        private static final Logger log = LogManager.getLogger();
+
+        private final long ttl;
+
+        public Expire(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<V> codec, String key, Duration ttl) {
+            super(redis, codec, key);
+            this.ttl = ttl.toMillis();
+        }
+
+        public Expire(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<V> codec, ByteBuffer key, Duration ttl) {
+            super(redis, codec, key);
+            this.ttl = ttl.toMillis();
+        }
+
+        @Override
+        public void set(V newValue) {
+            log.trace("SET {} {} PX {}", this, newValue, ttl);
+            redis.set(key.duplicate(), encode(newValue), SetArgs.Builder.px(ttl));
+        }
+
+        @Override
+        public void setIfAbsent(V newValue) {
+            log.trace("SET {} {} PX {} NX", this, newValue, ttl);
+            redis.set(key.duplicate(), encode(newValue), SetArgs.Builder.px(ttl).nx());
+        }
+
+        @Override
+        public void setIfPresent(V newValue) {
+            log.trace("SET {} {} PX {} XX", this, newValue, ttl);
+            redis.set(key.duplicate(), encode(newValue), SetArgs.Builder.px(ttl).xx());
+        }
+
+        @Override
+        public boolean compareAndSet(V expect, V update) {
+            log.trace("EVAL cas {} {} {} PX {}", this, expect, update, ttl);
+            return new RedisScriptCommands(redis).eval("cas", ScriptOutputType.STATUS,
+                    new ByteBuffer[]{
+                            key.duplicate()
+                    },
+                    new ByteBuffer[]{
+                            encode(expect),
+                            encode(update),
+                            Lettuce.px(),
+                            PrimitiveCodec.LONG.encode(ttl)
+                    });
+        }
+
+        @Override
+        public V getAndSet(V newValue) {
+            log.trace("EVAL getset {} {} PX {}", this, newValue, ttl);
+            return new RedisScriptCommands(redis).eval("getset", ScriptOutputType.VALUE,
+                    new ByteBuffer[]{
+                            key.duplicate()
+                    },
+                    new ByteBuffer[]{
+                            encode(newValue),
+                            Lettuce.px(),
+                            PrimitiveCodec.LONG.encode(ttl)
+                    });
+        }
     }
 }
