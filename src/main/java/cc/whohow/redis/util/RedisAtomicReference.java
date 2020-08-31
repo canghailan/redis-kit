@@ -70,14 +70,14 @@ public class RedisAtomicReference<V> {
         redis.set(key.duplicate(), encode(newValue));
     }
 
-    public void setIfAbsent(V newValue) {
+    public boolean setIfAbsent(V newValue) {
         log.trace("SET {} {} NX", this, newValue);
-        redis.set(key.duplicate(), encode(newValue), Lettuce.SET_NX);
+        return Lettuce.ok(redis.set(key.duplicate(), encode(newValue), Lettuce.SET_NX));
     }
 
-    public void setIfPresent(V newValue) {
+    public boolean setIfPresent(V newValue) {
         log.trace("SET {} {} XX", this, newValue);
-        redis.set(key.duplicate(), encode(newValue), Lettuce.SET_XX);
+        return Lettuce.ok(redis.set(key.duplicate(), encode(newValue), Lettuce.SET_XX));
     }
 
     public boolean compareAndSet(V expect, V update) {
@@ -176,15 +176,15 @@ public class RedisAtomicReference<V> {
         }
 
         @Override
-        public void setIfAbsent(V newValue) {
+        public boolean setIfAbsent(V newValue) {
             log.trace("SET {} {} PX {} NX", this, newValue, ttl);
-            redis.set(key.duplicate(), encode(newValue), SetArgs.Builder.px(ttl).nx());
+            return Lettuce.ok(redis.set(key.duplicate(), encode(newValue), SetArgs.Builder.px(ttl).nx()));
         }
 
         @Override
-        public void setIfPresent(V newValue) {
+        public boolean setIfPresent(V newValue) {
             log.trace("SET {} {} PX {} XX", this, newValue, ttl);
-            redis.set(key.duplicate(), encode(newValue), SetArgs.Builder.px(ttl).xx());
+            return Lettuce.ok(redis.set(key.duplicate(), encode(newValue), SetArgs.Builder.px(ttl).xx()));
         }
 
         @Override
