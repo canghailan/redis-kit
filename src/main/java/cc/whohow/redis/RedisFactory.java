@@ -2,40 +2,28 @@ package cc.whohow.redis;
 
 import cc.whohow.redis.io.Codec;
 import cc.whohow.redis.io.DefaultCodecFactory;
-import cc.whohow.redis.lettuce.ByteBufferCodec;
-import cc.whohow.redis.script.RedisScriptCommands;
 import cc.whohow.redis.util.*;
-import io.lettuce.core.RedisClient;
-import io.lettuce.core.RedisURI;
-import io.lettuce.core.api.StatefulRedisConnection;
-import io.lettuce.core.api.sync.RedisCommands;
 
-import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.ZoneId;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
-public class RedisFactory implements Supplier<RedisCommands<ByteBuffer, ByteBuffer>>,
+public class RedisFactory implements
         RedisClockFactory,
         RedisLockFactory,
         RedisAtomicFactory,
         AutoCloseable {
-    private final StatefulRedisConnection<ByteBuffer, ByteBuffer> redisConnection;
-    private final Function<Class<?>, Codec<?>> codecFactory = new DefaultCodecFactory();
+    protected final Redis redis;
+    protected final Function<Class<?>, Codec<?>> codecFactory;
 
-    public RedisFactory(RedisClient redisClient, RedisURI redisURI) {
-        this.redisConnection = redisClient.connect(ByteBufferCodec.INSTANCE, redisURI);
+    public RedisFactory(Redis redis) {
+        this(redis, new DefaultCodecFactory());
     }
 
-    @Override
-    public RedisCommands<ByteBuffer, ByteBuffer> get() {
-        return redisConnection.sync();
-    }
-
-    public RedisScriptCommands script() {
-        return new RedisScriptCommands(get());
+    public RedisFactory(Redis redis, Function<Class<?>, Codec<?>> codecFactory) {
+        this.redis = redis;
+        this.codecFactory = codecFactory;
     }
 
     @SuppressWarnings("unchecked")
@@ -44,66 +32,65 @@ public class RedisFactory implements Supplier<RedisCommands<ByteBuffer, ByteBuff
     }
 
     public Clock clock(ZoneId zone) {
-        return new RedisClock(get(), zone);
+        return new RedisClock(redis, zone);
     }
 
     public RedisLock newLock(String key, Duration maxLockTime) {
-        return new RedisLock(get(), key, maxLockTime);
+        return new RedisLock(redis, key, maxLockTime);
     }
 
     public RedisLock newLock(String key, Duration minLockTime, Duration maxLockTime) {
-        return new RedisLock(get(), key, minLockTime, maxLockTime);
+        return new RedisLock(redis, key, minLockTime, maxLockTime);
     }
 
     @Override
     public RedisAtomicLong newAtomicLong(String key) {
-        return new RedisAtomicLong(get(), key);
+        return new RedisAtomicLong(redis, key);
     }
 
     @Override
     public <T> RedisAtomicReference<T> newAtomicReference(String name, Class<T> type) {
-        return new RedisAtomicReference<>(get(), newCodec(type), name);
+        return new RedisAtomicReference<>(redis, newCodec(type), name);
     }
 
     @Override
     public <T> RedisAtomicReference<T> newAtomicReference(String name, Class<T> type, Duration ttl) {
-        return new RedisAtomicReference.Expire<>(get(), newCodec(type), name, ttl);
+        return new RedisAtomicReference.Expire<>(redis, newCodec(type), name, ttl);
     }
 
     public <T> RedisList<T> newList(String key, Class<T> type) {
-        return new RedisList<>(get(), newCodec(type), key);
+        return new RedisList<>(redis, newCodec(type), key);
     }
 
     public <T> RedisSet<T> newSet(String key, Class<T> type) {
-        return new RedisSet<>(get(), newCodec(type), key);
+        return new RedisSet<>(redis, newCodec(type), key);
     }
 
     public <T> RedisSortedSet<T> newSortedSet(String key, Class<T> type) {
-        return new RedisSortedSet<>(get(), newCodec(type), key);
+        return new RedisSortedSet<>(redis, newCodec(type), key);
     }
 
     public <K, V> RedisMap<K, V> newMap(String key, Class<K> keyType, Class<V> valueType) {
-        return new RedisMap<>(get(), newCodec(keyType), newCodec(valueType), key);
+        return new RedisMap<>(redis, newCodec(keyType), newCodec(valueType), key);
     }
 
     public <T> RedisPriorityQueue<T> newPriorityQueue(String name, Class<T> type) {
-        return new RedisPriorityQueue<>(get(), newCodec(type), name);
+        return new RedisPriorityQueue<>(redis, newCodec(type), name);
     }
 
     public <T> RedisDelayQueue<T> newDelayQueue(String name, Class<T> type) {
-        return new RedisDelayQueue<>(get(), newCodec(type), name);
+        return new RedisDelayQueue<>(redis, newCodec(type), name);
     }
 
     public <T> RedisWindowCounter<T> newWindowCounter(String name, Class<T> type) {
-        return new RedisWindowCounter<>(get(), newCodec(type), name);
+        return new RedisWindowCounter<>(redis, newCodec(type), name);
     }
 
     public <T> RedisTimeWindowCounter newTimeWindowCounter(String name, Duration accuracy) {
-        return new RedisTimeWindowCounter(get(), name, accuracy);
+        return new RedisTimeWindowCounter(redis, name, accuracy);
     }
 
     @Override
     public void close() throws Exception {
-        redisConnection.close();
     }
 }

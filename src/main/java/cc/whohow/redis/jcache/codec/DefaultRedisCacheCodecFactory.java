@@ -2,17 +2,18 @@ package cc.whohow.redis.jcache.codec;
 
 import cc.whohow.redis.io.Codec;
 import cc.whohow.redis.io.JacksonCodec;
+import cc.whohow.redis.io.PrefixCodec;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 
-public class DefaultRedisCacheCodecFactory extends AbstractRedisCacheCodecFactory {
+public class DefaultRedisCacheCodecFactory implements RedisCacheCodecFactory {
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
-    protected <K, V> Codec<K> newKeyCodec(RedisCacheConfiguration<K, V> configuration) {
-        return (Codec) ImmutableGeneratedCacheKeyCodec.create(configuration.getKeyTypeCanonicalName());
+    public <K, V> Codec<K> newKeyCodec(RedisCacheConfiguration<K, V> configuration) {
+        return new PrefixCodec<K>((Codec) ImmutableGeneratedCacheKeyCodec.create(configuration.getKeyTypeCanonicalName()), configuration.getRedisKeyPrefix());
     }
 
     @Override
-    protected <K, V> Codec<V> newValueCodec(RedisCacheConfiguration<K, V> configuration) {
+    public <K, V> Codec<V> newValueCodec(RedisCacheConfiguration<K, V> configuration) {
         return new JacksonCodec<>(configuration.getValueTypeCanonicalName());
     }
 }

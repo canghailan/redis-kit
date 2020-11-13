@@ -1,5 +1,6 @@
 package cc.whohow.redis.jcache.codec;
 
+import cc.whohow.redis.buffer.ByteSequence;
 import cc.whohow.redis.io.*;
 import cc.whohow.redis.jcache.ImmutableGeneratedCacheKey;
 import com.fasterxml.jackson.databind.JavaType;
@@ -31,7 +32,7 @@ public abstract class ImmutableGeneratedCacheKeyCodec implements Codec<Immutable
             case 1: {
                 switch (cacheKeyTypeCanonicalNames[0]) {
                     case "java.lang.String": {
-                        return new SingletonKeyCodec(StringCodec.defaultInstance());
+                        return new SingletonKeyCodec(UTF8Codec.get());
                     }
                     case "java.lang.Integer": {
                         return SingletonKeyCodec.INTEGER_KEY_CODEC;
@@ -57,8 +58,18 @@ public abstract class ImmutableGeneratedCacheKeyCodec implements Codec<Immutable
         static final NoKeyCodec INSTANCE = new NoKeyCodec();
 
         @Override
-        public ByteBuffer encode(ImmutableGeneratedCacheKey value) {
-            return ByteBuffers.empty();
+        public ByteSequence encode(ImmutableGeneratedCacheKey value) {
+            return ByteSequence.empty();
+        }
+
+        @Override
+        public ImmutableGeneratedCacheKey decode(ByteSequence buffer) {
+            return ImmutableGeneratedCacheKey.empty();
+        }
+
+        @Override
+        public ImmutableGeneratedCacheKey decode(byte... buffer) {
+            return ImmutableGeneratedCacheKey.empty();
         }
 
         @Override
@@ -79,8 +90,18 @@ public abstract class ImmutableGeneratedCacheKeyCodec implements Codec<Immutable
         }
 
         @Override
-        public ByteBuffer encode(ImmutableGeneratedCacheKey value) {
+        public ByteSequence encode(ImmutableGeneratedCacheKey value) {
             return keyCodec.encode(value.getKey(0));
+        }
+
+        @Override
+        public ImmutableGeneratedCacheKey decode(ByteSequence buffer) {
+            return ImmutableGeneratedCacheKey.of(keyCodec.decode(buffer));
+        }
+
+        @Override
+        public ImmutableGeneratedCacheKey decode(byte... buffer) {
+            return ImmutableGeneratedCacheKey.of(keyCodec.decode(buffer));
         }
 
         @Override

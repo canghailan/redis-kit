@@ -1,5 +1,8 @@
 package cc.whohow.redis.io;
 
+import cc.whohow.redis.buffer.ByteSequence;
+import cc.whohow.redis.buffer.ConcatByteSequence;
+
 import java.nio.ByteBuffer;
 
 /**
@@ -7,28 +10,46 @@ import java.nio.ByteBuffer;
  */
 public class PrefixCodec<T> implements Codec<T> {
     private final Codec<T> codec;
-    private final ByteBuffer prefix;
+    private final ByteSequence prefix;
 
-    public PrefixCodec(Codec<T> codec, ByteBuffer prefix) {
+    public PrefixCodec(Codec<T> codec, ByteSequence prefix) {
         this.codec = codec;
         this.prefix = prefix;
     }
 
     public PrefixCodec(Codec<T> codec, String prefix) {
-        this(codec, ByteBuffers.fromUtf8(prefix));
+        this(codec, ByteSequence.utf8(prefix));
     }
 
     public Codec<T> getCodec() {
         return codec;
     }
 
-    public ByteBuffer getPrefix() {
-        return prefix.duplicate();
+    public ByteSequence getPrefix() {
+        return prefix;
     }
 
     @Override
-    public ByteBuffer encode(T value) {
-        return ByteBuffers.concat(prefix, codec.encode(value));
+    public ByteSequence encode(T value) {
+        return new ConcatByteSequence(prefix, codec.encode(value));
+    }
+
+    @Override
+    public T decode(ByteSequence buffer) {
+        if (buffer == null) {
+            return null;
+        }
+        // skip check prefix
+        return codec.decode(buffer.subSequence(prefix.length(), buffer.length()));
+    }
+
+    @Override
+    public T decode(byte... buffer) {
+        if (buffer == null) {
+            return null;
+        }
+        // skip check prefix
+        return codec.decode(ByteSequence.of(buffer).subSequence(prefix.length(), buffer.length));
     }
 
     @Override
@@ -36,23 +57,8 @@ public class PrefixCodec<T> implements Codec<T> {
         if (buffer == null) {
             return null;
         }
-        if (skipPrefix(buffer)) {
-            return codec.decode(buffer);
-        }
-        throw new IllegalArgumentException();
-    }
-
-    protected boolean skipPrefix(ByteBuffer buffer) {
-        buffer.position(buffer.position() + prefix.remaining());
-        return true;
-    }
-
-    protected boolean checkAndSkipPrefix(ByteBuffer buffer) {
-        for (int i = 0; i < prefix.remaining(); i++) {
-            if (buffer.get() != prefix.get(i)) {
-                return false;
-            }
-        }
-        return true;
+        // skip check prefix
+        buffer.position(buffer.position() + prefix.length());
+        return codec.decode(buffer);
     }
 }

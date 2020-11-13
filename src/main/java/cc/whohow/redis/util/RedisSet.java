@@ -1,14 +1,10 @@
 package cc.whohow.redis.util;
 
-import cc.whohow.redis.io.ByteBuffers;
+import cc.whohow.redis.Redis;
+import cc.whohow.redis.buffer.ByteSequence;
 import cc.whohow.redis.io.Codec;
-import cc.whohow.redis.util.impl.ArrayType;
-import cc.whohow.redis.util.impl.MappingIterator;
-import io.lettuce.core.api.sync.RedisCommands;
 
-import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 集合、去重队列
@@ -16,11 +12,11 @@ import java.util.stream.Collectors;
 public class RedisSet<E>
         extends AbstractRedisSet<E>
         implements Set<E>, Queue<E>, Copyable<Set<E>> {
-    public RedisSet(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, String key) {
-        this(redis, codec, ByteBuffers.fromUtf8(key));
+    public RedisSet(Redis redis, Codec<E> codec, String key) {
+        this(redis, codec, ByteSequence.utf8(key));
     }
 
-    public RedisSet(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, ByteBuffer key) {
+    public RedisSet(Redis redis, Codec<E> codec, ByteSequence key) {
         super(redis, codec, key);
     }
 
@@ -37,25 +33,23 @@ public class RedisSet<E>
     @Override
     @SuppressWarnings("unchecked")
     public boolean contains(Object o) {
-        return sismember((E) o);
+        return sismember((E) o) > 0;
     }
 
     @Override
     public Iterator<E> iterator() {
-        return new MappingIterator<>(new RedisSetIterator(redis, setKey.duplicate()), this::decode);
+        return new RedisIterator<>(new RedisSetScanIterator<>(redis, codec::decode, setKey));
     }
 
     @Override
     public Object[] toArray() {
-        return smembers()
-                .toArray();
+        return smembers().toArray();
     }
 
     @Override
     @SuppressWarnings("SuspiciousToArrayCall")
     public <T> T[] toArray(T[] a) {
-        return smembers()
-                .toArray(ArrayType.of(a)::newInstance);
+        return smembers().toArray(a);
     }
 
     @Override
@@ -135,7 +129,6 @@ public class RedisSet<E>
 
     @Override
     public Set<E> copy() {
-        return smembers()
-                .collect(Collectors.toCollection(LinkedHashSet::new));
+        return smembers();
     }
 }

@@ -1,14 +1,10 @@
 package cc.whohow.redis.util;
 
-import cc.whohow.redis.io.ByteBuffers;
+import cc.whohow.redis.Redis;
+import cc.whohow.redis.buffer.ByteSequence;
 import cc.whohow.redis.io.Codec;
 import cc.whohow.redis.io.PrimitiveCodec;
-import cc.whohow.redis.util.impl.MappingIterator;
-import io.lettuce.core.api.sync.RedisCommands;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
-import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.function.Predicate;
 
@@ -18,18 +14,12 @@ import java.util.function.Predicate;
 public class RedisWindowCounter<W>
         extends AbstractRedisHash<W, Long>
         implements Iterable<Map.Entry<W, Long>>, Copyable<Map<W, Long>> {
-    private static final Logger log = LogManager.getLogger();
-
-    public RedisWindowCounter(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<W> codec, String key) {
-        this(redis, codec, ByteBuffers.fromUtf8(key));
+    public RedisWindowCounter(Redis redis, Codec<W> codec, String key) {
+        this(redis, codec, ByteSequence.utf8(key));
     }
 
-    public RedisWindowCounter(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<W> codec, ByteBuffer key) {
+    public RedisWindowCounter(Redis redis, Codec<W> codec, ByteSequence key) {
         super(redis, codec, PrimitiveCodec.LONG, key);
-    }
-
-    protected Map.Entry<W, Long> decode(Map.Entry<ByteBuffer, ByteBuffer> entry) {
-        return new AbstractMap.SimpleImmutableEntry<>(decodeKey(entry.getKey()), decodeValue(entry.getValue()));
     }
 
     /**
@@ -50,8 +40,9 @@ public class RedisWindowCounter<W>
      * 获取窗口计数总数
      */
     public long sum(Collection<? extends W> window) {
-        return hmget(window)
-                .mapToLong(kv -> kv.getValueOrElse(0L))
+        return hmget(window).stream()
+                .filter(Objects::nonNull)
+                .mapToLong(Long::longValue)
                 .sum();
     }
 
@@ -93,31 +84,25 @@ public class RedisWindowCounter<W>
     }
 
     public long addAndGet(W window, long delta) {
-        log.trace("HINCRBY {} {} {}", this, window, delta);
-        return redis.hincrby(hashKey.duplicate(), encodeKey(window), delta);
+        return hincrby(window, delta);
     }
 
     /**
      * 移除窗口计数
      */
     public void removeIf(Predicate<W> predicate) {
-        int n = 0;
-        ByteBuffer[] batch = new ByteBuffer[100];
-        RedisMapIterator iterator = new RedisMapIterator(redis, hashKey.duplicate());
-        while (iterator.hasNext()) {
-            Map.Entry<ByteBuffer, ByteBuffer> next = iterator.next();
-            W window = decodeKey(next.getKey().duplicate());
-            if (predicate.test(window)) {
-                log.trace("HDEL {} {}", this, window);
-                batch[n++] = next.getKey().duplicate();
+        int batchSize = 100;
+        List<W> removeKeys = new ArrayList<>(batchSize);
+        for (Map.Entry<W, Long> next : this) {
+            if (predicate.test(next.getKey())) {
+                removeKeys.add(next.getKey());
             }
-            if (n == batch.length) {
-                redis.hdel(hashKey.duplicate(), batch);
-                n = 0;
+            if (removeKeys.size() == batchSize) {
+                hdel(removeKeys);
             }
         }
-        if (n > 0) {
-            redis.hdel(hashKey.duplicate(), Arrays.copyOf(batch, n));
+        if (!removeKeys.isEmpty()) {
+            hdel(removeKeys);
         }
     }
 
@@ -127,7 +112,7 @@ public class RedisWindowCounter<W>
 
     @Override
     public Iterator<Map.Entry<W, Long>> iterator() {
-        return new MappingIterator<>(new RedisMapIterator(redis, hashKey.duplicate()), this::decode);
+        return new RedisIterator<>(new RedisHashScanIterator<>(redis, keyCodec::decode, valueCodec::decode, hashKey));
     }
 
     /**

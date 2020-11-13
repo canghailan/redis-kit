@@ -1,8 +1,8 @@
 package cc.whohow.redis.messaging;
 
+import cc.whohow.redis.buffer.ByteSequence;
 import cc.whohow.redis.util.RedisKeyspaceNotification;
 
-import java.nio.ByteBuffer;
 import java.util.Queue;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
@@ -43,14 +43,20 @@ public class RedisPollingMessageQueue<E>
         }
     }
 
-    @Override
-    public void onKeyEvent(ByteBuffer key) {
-        // 接收事件通知，触发轮询
-        start();
-    }
+//    @Override
+//    public void onKeyEvent(ByteBuffer key) {
+//        // 接收事件通知，触发轮询
+//        start();
+//    }
+//
+//    @Override
+//    public void subscribed() {
+//        // 断线重连，触发轮询
+//        start();
+//    }
 
     @Override
-    public void subscribed() {
+    public void onInvalidate(ByteSequence key) {
         // 断线重连，触发轮询
         start();
     }

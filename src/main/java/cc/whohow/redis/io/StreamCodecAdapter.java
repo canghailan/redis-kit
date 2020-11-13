@@ -1,5 +1,7 @@
 package cc.whohow.redis.io;
 
+import cc.whohow.redis.buffer.ByteSequence;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -19,8 +21,18 @@ public class StreamCodecAdapter<T> implements Codec<T>, StreamCodec<T> {
     }
 
     @Override
-    public ByteBuffer encode(T value) {
+    public ByteSequence encode(T value) {
         return codec.encode(value);
+    }
+
+    @Override
+    public T decode(ByteSequence buffer) {
+        return codec.decode(buffer);
+    }
+
+    @Override
+    public T decode(byte... buffer) {
+        return codec.decode(buffer);
     }
 
     @Override
@@ -30,11 +42,13 @@ public class StreamCodecAdapter<T> implements Codec<T>, StreamCodec<T> {
 
     @Override
     public void encode(T value, OutputStream stream) throws IOException {
-        ByteBuffer buffer = encode(value);
+        ByteSequence buffer = encode(value);
         if (buffer == null) {
             return;
         }
-        IO.write(stream, buffer);
+        for (ByteBuffer byteBuffer : buffer) {
+            IO.write(stream, byteBuffer);
+        }
     }
 
     @Override

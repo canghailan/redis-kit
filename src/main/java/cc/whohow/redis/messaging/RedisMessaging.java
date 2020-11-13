@@ -1,10 +1,9 @@
 package cc.whohow.redis.messaging;
 
+import cc.whohow.redis.Redis;
 import cc.whohow.redis.io.Codec;
 import cc.whohow.redis.util.*;
-import io.lettuce.core.api.sync.RedisCommands;
 
-import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 
@@ -12,11 +11,11 @@ import java.util.function.Consumer;
  * 消息队列工厂
  */
 public class RedisMessaging {
-    private final RedisCommands<ByteBuffer, ByteBuffer> redis;
+    private final Redis redis;
     private final RedisKeyspaceNotification redisKeyspaceNotification;
     private final ExecutorService executor;
 
-    public RedisMessaging(RedisCommands<ByteBuffer, ByteBuffer> redis,
+    public RedisMessaging(Redis redis,
                           RedisKeyspaceNotification redisKeyspaceNotification,
                           ExecutorService executor) {
         this.redis = redis;

@@ -1,17 +1,16 @@
 package cc.whohow.redis.util;
 
-import cc.whohow.redis.io.ByteBuffers;
-import cc.whohow.redis.io.PrimitiveCodec;
-import cc.whohow.redis.lettuce.Lettuce;
-import cc.whohow.redis.script.RedisScriptCommands;
-import io.lettuce.core.ScriptOutputType;
-import io.lettuce.core.SetArgs;
-import io.lettuce.core.api.sync.RedisCommands;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import cc.whohow.redis.RESP;
+import cc.whohow.redis.Redis;
+import cc.whohow.redis.RedisScript;
+import cc.whohow.redis.buffer.ByteSequence;
+import cc.whohow.redis.lettuce.IntegerOutput;
+import cc.whohow.redis.lettuce.StatusOutput;
+import io.lettuce.core.protocol.CommandType;
 
-import java.nio.ByteBuffer;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
@@ -23,15 +22,12 @@ import java.util.concurrent.locks.LockSupport;
  * https://redis.io/topics/distlock
  */
 public class RedisLock implements Lock {
-    private static final Logger log = LogManager.getLogger();
-
-    protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
-    protected final RedisScriptCommands redisScriptCommands;
+    protected final Redis redis;
 
     /**
      * 锁ID
      */
-    protected final ByteBuffer key;
+    protected final ByteSequence key;
     /**
      * 最小锁定时间，用于排除服务器时间误差，网络延时带来的影响，建议根据实际网络及服务器情况设置（大于网络延时及服务器时间差）
      */
@@ -43,30 +39,29 @@ public class RedisLock implements Lock {
     /**
      * 锁秘钥，用于处理误解除非自己持有的锁
      */
-    protected final ByteBuffer token;
+    protected final ByteSequence token;
 
-    public RedisLock(RedisCommands<ByteBuffer, ByteBuffer> redis, String key, Duration maxLockTime) {
+    public RedisLock(Redis redis, String key, Duration maxLockTime) {
         this(redis, key, Duration.ZERO, maxLockTime);
     }
 
-    public RedisLock(RedisCommands<ByteBuffer, ByteBuffer> redis, String key, Duration maxLockTime, String token) {
+    public RedisLock(Redis redis, String key, Duration maxLockTime, String token) {
         this(redis, key, Duration.ZERO, maxLockTime, token);
     }
 
-    public RedisLock(RedisCommands<ByteBuffer, ByteBuffer> redis, String key, Duration minLockTime, Duration maxLockTime) {
+    public RedisLock(Redis redis, String key, Duration minLockTime, Duration maxLockTime) {
         this(redis, key, minLockTime, maxLockTime, UUID.randomUUID().toString());
     }
 
-    public RedisLock(RedisCommands<ByteBuffer, ByteBuffer> redis, String key, Duration minLockTime, Duration maxLockTime, String token) {
+    public RedisLock(Redis redis, String key, Duration minLockTime, Duration maxLockTime, String token) {
         if (minLockTime.compareTo(maxLockTime) > 0) {
             throw new IllegalArgumentException(minLockTime + "(minLockTime) > " + maxLockTime + "(maxLockTime)");
         }
         this.redis = redis;
-        this.redisScriptCommands = new RedisScriptCommands(redis);
-        this.key = ByteBuffers.fromUtf8(key);
+        this.key = ByteSequence.utf8(key);
         this.minLockTimeMillis = minLockTime.toMillis();
         this.maxLockTimeMillis = maxLockTime.toMillis();
-        this.token = ByteBuffers.fromUtf8(token);
+        this.token = ByteSequence.utf8(token);
     }
 
     /**
@@ -102,8 +97,7 @@ public class RedisLock implements Lock {
      */
     @Override
     public boolean tryLock() {
-        log.trace("SET {} [token?] PX {} NX", this, maxLockTimeMillis);
-        return Lettuce.ok(redis.set(key.duplicate(), token.duplicate(), SetArgs.Builder.nx().px(maxLockTimeMillis)));
+        return RESP.ok(redis.send(new StatusOutput(), CommandType.SET, token, RESP.px(), RESP.b(maxLockTimeMillis), RESP.nx()));
     }
 
     /**
@@ -128,18 +122,10 @@ public class RedisLock implements Lock {
      * 锁续期
      */
     public boolean renew(Duration duration) {
-        log.trace("EVAL cas {} [token?] [token?] px {} xx", this, duration.toMillis());
-        return redisScriptCommands.eval("cas", ScriptOutputType.BOOLEAN,
-                new ByteBuffer[]{
-                        key.duplicate()
-                },
-                new ByteBuffer[]{
-                        token.duplicate(),
-                        token.duplicate(),
-                        Lettuce.px(),
-                        PrimitiveCodec.LONG.encode(duration.toMillis()),
-                        Lettuce.xx()
-                });
+        return RESP.ok(redis.eval(new StatusOutput(),
+                RedisScript.get("cas"),
+                Collections.singletonList(key),
+                Arrays.asList(token, token, RESP.px(), RESP.b(duration.toMillis()), RESP.xx())));
     }
 
     /**
@@ -149,14 +135,10 @@ public class RedisLock implements Lock {
      */
     @Override
     public void unlock() {
-        log.trace("EVAL cad {} [token?]", this);
-        long n = redisScriptCommands.eval("cad", ScriptOutputType.INTEGER,
-                new ByteBuffer[]{
-                        key.duplicate()
-                },
-                new ByteBuffer[]{
-                        token.duplicate()
-                });
+        long n = redis.eval(new IntegerOutput(),
+                RedisScript.get("cad"),
+                Collections.singletonList(key),
+                Collections.singletonList(token));
         if (n == 0) {
             throw new IllegalStateException();
         }
@@ -169,7 +151,6 @@ public class RedisLock implements Lock {
 
     protected void await(int retryTimes) {
         long time = getRetryWaitingTime(retryTimes);
-        log.debug("await {}ms", time);
         LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(time));
     }
 
@@ -185,6 +166,6 @@ public class RedisLock implements Lock {
 
     @Override
     public String toString() {
-        return ByteBuffers.toString(key);
+        return key.toString();
     }
 }

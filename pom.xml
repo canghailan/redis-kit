@@ -6,7 +6,7 @@
 
     <groupId>cc.whohow</groupId>
     <artifactId>redis-kit</artifactId>
-    <version>3.0.1</version>
+    <version>4.0.0-alpha</version>
 
     <build>
         <plugins>

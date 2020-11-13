@@ -1,134 +1,93 @@
 package cc.whohow.redis.util;
 
-import cc.whohow.redis.io.ByteBuffers;
+import cc.whohow.redis.RESP;
+import cc.whohow.redis.Redis;
+import cc.whohow.redis.buffer.ByteSequence;
 import cc.whohow.redis.io.Codec;
-import io.lettuce.core.api.sync.RedisCommands;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import cc.whohow.redis.lettuce.DecodeOutput;
+import cc.whohow.redis.lettuce.IntegerOutput;
+import cc.whohow.redis.lettuce.ListOutput;
+import cc.whohow.redis.lettuce.VoidOutput;
+import io.lettuce.core.protocol.CommandType;
 
-import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.stream.Stream;
+import java.util.List;
 
 public class AbstractRedisList<E> {
-    private static final Logger log = LogManager.getLogger();
-    protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
+    protected final Redis redis;
     protected final Codec<E> codec;
-    protected final ByteBuffer listKey;
+    protected final ByteSequence listKey;
 
-    public AbstractRedisList(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, ByteBuffer key) {
+    public AbstractRedisList(Redis redis, Codec<E> codec, ByteSequence key) {
         this.redis = redis;
         this.codec = codec;
         this.listKey = key;
     }
 
-    protected ByteBuffer encode(E value) {
-        return codec.encode(value);
-    }
-
-    protected E decode(ByteBuffer byteBuffer) {
-        return codec.decode(byteBuffer);
-    }
-
     public Long llen() {
-        if (log.isTraceEnabled()) {
-            log.trace("LLEN {}", toString());
-        }
-        return redis.llen(listKey.duplicate());
+        return redis.send(new IntegerOutput(), CommandType.LLEN, listKey);
     }
 
     public E lindex(long index) {
-        if (log.isTraceEnabled()) {
-            log.trace("LINDEX {} {}", toString(), index);
-        }
-        return decode(redis.lindex(listKey.duplicate(), index));
+        return redis.send(new DecodeOutput<>(codec::decode), CommandType.LINDEX, listKey, RESP.b(index));
     }
 
     public void lset(long index, E element) {
-        if (log.isTraceEnabled()) {
-            log.trace("LSET {} {} {}", toString(), index, element);
-        }
-        redis.lset(listKey.duplicate(), index, encode(element));
+        redis.send(new VoidOutput(), CommandType.LSET, listKey, RESP.b(index), codec.encode(element));
     }
 
-    public Stream<E> lrange(long start, long stop) {
-        if (log.isTraceEnabled()) {
-            log.trace("LRANGE {} {} {}", toString(), start, stop);
-        }
-        return redis.lrange(listKey.duplicate(), start, stop).stream()
-                .map(this::decode);
+    public List<E> lrange(long start, long stop) {
+        return redis.send(new ListOutput<>(codec::decode), CommandType.LRANGE, listKey, RESP.b(start), RESP.b(stop));
     }
 
     public Long lpush(E e) {
-        if (log.isTraceEnabled()) {
-            log.trace("LPUSH {} {}", toString(), e);
-        }
-        return redis.lpush(listKey.duplicate(), encode(e));
+        return redis.send(new IntegerOutput(), CommandType.LPUSH, listKey, codec.encode(e));
     }
 
     public Long rpush(E e) {
-        if (log.isTraceEnabled()) {
-            log.trace("RPUSH {} {}", toString(), e);
-        }
-        return redis.rpush(listKey.duplicate(), encode(e));
+        return redis.send(new IntegerOutput(), CommandType.RPUSH, listKey, codec.encode(e));
     }
 
     public Long rpush(Collection<? extends E> c) {
         if (c.isEmpty()) {
             return 0L;
         }
-        if (log.isTraceEnabled()) {
-            log.trace("RPUSH {} {}", toString(), c);
+
+        List<ByteSequence> args = new ArrayList<>(1 + c.size());
+        args.add(listKey);
+        for (E e : c) {
+            args.add(codec.encode(e));
         }
-        return redis.rpush(listKey.duplicate(), c.stream()
-                .map(this::encode)
-                .toArray(ByteBuffer[]::new));
+        return redis.send(new IntegerOutput(), CommandType.RPUSH, args);
     }
 
     public E lpop() {
-        if (log.isTraceEnabled()) {
-            log.trace("LPOP {}", toString());
-        }
-        return decode(redis.lpop(listKey.duplicate()));
+        return redis.send(new DecodeOutput<>(codec::decode), CommandType.LPOP, listKey);
     }
 
     public E rpop() {
-        if (log.isTraceEnabled()) {
-            log.trace("LPOP {}", toString());
-        }
-        return decode(redis.rpop(listKey.duplicate()));
+        return redis.send(new DecodeOutput<>(codec::decode), CommandType.RPOP, listKey);
     }
 
     public E blpop(long timeout) {
-        if (log.isTraceEnabled()) {
-            log.trace("BLPOP {} {}", toString(), timeout);
-        }
-        return decode(redis.blpop(timeout, listKey.duplicate()).getValueOrElse(null));
+        return redis.send(new DecodeOutput<>(codec::decode), CommandType.BLPOP, listKey, RESP.b(timeout));
     }
 
     public E brpop(long timeout) {
-        if (log.isTraceEnabled()) {
-            log.trace("BRPOP {} {}", toString(), timeout);
-        }
-        return decode(redis.brpop(0, listKey.duplicate()).getValueOrElse(null));
+        return redis.send(new DecodeOutput<>(codec::decode), CommandType.BRPOP, listKey, RESP.b(timeout));
     }
 
     public Long lrem(int count, E e) {
-        if (log.isTraceEnabled()) {
-            log.trace("LREM {} {} {}", toString(), count, e);
-        }
-        return redis.lrem(listKey.duplicate(), count, encode(e));
+        return redis.send(new IntegerOutput(), CommandType.LREM, listKey, RESP.b(count), codec.encode(e));
     }
 
     public Long del() {
-        if (log.isTraceEnabled()) {
-            log.trace("DEL {}", toString());
-        }
-        return redis.del(listKey.duplicate());
+        return redis.send(new IntegerOutput(), CommandType.DEL, listKey);
     }
 
     @Override
     public String toString() {
-        return ByteBuffers.toString(listKey);
+        return listKey.toString();
     }
 }

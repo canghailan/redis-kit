@@ -1,13 +1,9 @@
 package cc.whohow.redis.jcache;
 
+import cc.whohow.redis.Redis;
+import cc.whohow.redis.RedisTracking;
+import cc.whohow.redis.jcache.codec.RedisCacheCodecFactory;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
-import cc.whohow.redis.lettuce.ByteBufferCodec;
-import cc.whohow.redis.util.RedisKeyspaceNotification;
-import io.lettuce.core.RedisClient;
-import io.lettuce.core.RedisURI;
-import io.lettuce.core.api.StatefulRedisConnection;
-import io.lettuce.core.api.sync.RedisCommands;
-import io.lettuce.core.codec.RedisCodec;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -17,7 +13,6 @@ import javax.cache.configuration.Configuration;
 import javax.cache.management.CacheStatisticsMXBean;
 import javax.cache.spi.CachingProvider;
 import java.net.URI;
-import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -30,39 +25,27 @@ import java.util.function.Function;
 public class RedisCacheManager implements CacheManager {
     private static final Logger log = LogManager.getLogger();
 
-    protected final RedisURI redisURI;
-    protected final RedisClient redisClient;
-    protected final RedisKeyspaceNotification redisKeyspaceNotification;
-    protected final StatefulRedisConnection<ByteBuffer, ByteBuffer> redisConnection;
+    protected final Redis redis;
+    protected final RedisTracking redisTracking;
     protected final Function<String, RedisCacheConfiguration<?, ?>> redisCacheConfigurationProvider;
     protected final ConcurrentMap<String, Cache> caches = new ConcurrentHashMap<>();
+    protected volatile boolean open = true;
 
-    public RedisCacheManager(RedisClient redisClient,
-                             RedisURI redisURI,
-                             RedisKeyspaceNotification redisKeyspaceNotification,
+    public RedisCacheManager(Redis redis,
+                             RedisTracking redisTracking,
                              Function<String, RedisCacheConfiguration<?, ?>> redisCacheConfigurationProvider) {
-        this.redisURI = redisURI;
-        this.redisClient = redisClient;
-        this.redisKeyspaceNotification = redisKeyspaceNotification;
+        this.redis = redis;
+        this.redisTracking = redisTracking;
         this.redisCacheConfigurationProvider = redisCacheConfigurationProvider;
-        this.redisConnection = redisClient.connect(ByteBufferCodec.INSTANCE, redisURI);
         RedisCachingProvider.getInstance().addCacheManager(this);
     }
 
-    public RedisURI getRedisURI() {
-        return redisURI;
+    public Redis getRedis() {
+        return redis;
     }
 
-    public RedisClient getRedisClient() {
-        return redisClient;
-    }
-
-    public RedisCommands<ByteBuffer, ByteBuffer> getRedisCommands() {
-        return redisConnection.sync();
-    }
-
-    public RedisKeyspaceNotification getRedisKeyspaceNotification() {
-        return redisKeyspaceNotification;
+    public RedisTracking getRedisTracking() {
+        return redisTracking;
     }
 
     @Override
@@ -72,7 +55,7 @@ public class RedisCacheManager implements CacheManager {
 
     @Override
     public URI getURI() {
-        return URI.create("redis://" + redisURI.getHost() + ":" + redisURI.getPort() + "/" + redisURI.getDatabase());
+        return redis.getURI();
     }
 
     @Override
@@ -97,9 +80,9 @@ public class RedisCacheManager implements CacheManager {
         return cache;
     }
 
-    public <K, V> RedisCodec<K, V> newRedisCacheCodec(RedisCacheConfiguration<K, V> configuration) {
+    public <K, V> RedisCacheCodecFactory newRedisCacheCodecFactory(RedisCacheConfiguration<K, V> configuration) {
         try {
-            return configuration.getRedisCacheCodecFactory().newInstance().getCodec(configuration);
+            return configuration.getRedisCacheCodecFactory().newInstance();
         } catch (InstantiationException | IllegalAccessException e) {
             throw new CacheException(e);
         }
@@ -196,14 +179,14 @@ public class RedisCacheManager implements CacheManager {
             }
             caches.clear();
         } finally {
+            open = false;
             log.debug("close RedisConnection");
-            redisConnection.close();
         }
     }
 
     @Override
     public boolean isClosed() {
-        return !redisConnection.isOpen();
+        return !open;
     }
 
     @Override

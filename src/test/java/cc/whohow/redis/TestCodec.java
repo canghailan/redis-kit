@@ -1,5 +1,6 @@
 package cc.whohow.redis;
 
+import cc.whohow.redis.buffer.ByteSequence;
 import cc.whohow.redis.io.*;
 import cc.whohow.redis.jcache.ImmutableGeneratedCacheKey;
 import cc.whohow.redis.jcache.codec.ImmutableGeneratedCacheKeyCodec;
@@ -15,7 +16,6 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Random;
@@ -45,54 +45,54 @@ public class TestCodec {
     public void testPrimitiveCodec() {
         Random random = new Random();
 
-        ByteBuffer b1 = PrimitiveCodec.BOOLEAN.encode(random.nextBoolean());
-        System.out.println(ByteBuffers.toString(b1));
-        System.out.println(PrimitiveCodec.BOOLEAN.decode(b1.duplicate()));
+        ByteSequence b1 = PrimitiveCodec.BOOLEAN.encode(random.nextBoolean());
+        System.out.println(b1.toString());
+        System.out.println(PrimitiveCodec.BOOLEAN.decode(b1));
 
-        ByteBuffer b2 = PrimitiveCodec.BYTE.encode((byte) random.nextInt(Byte.MAX_VALUE));
-        System.out.println(ByteBuffers.toString(b2));
-        System.out.println(PrimitiveCodec.BYTE.decode(b2.duplicate()));
+        ByteSequence b2 = PrimitiveCodec.BYTE.encode((byte) random.nextInt(Byte.MAX_VALUE));
+        System.out.println(b2.toString());
+        System.out.println(PrimitiveCodec.BYTE.decode(b2));
 
-        ByteBuffer b3 = PrimitiveCodec.SHORT.encode((short) random.nextInt(Short.MAX_VALUE));
-        System.out.println(ByteBuffers.toString(b3));
-        System.out.println(PrimitiveCodec.SHORT.decode(b3.duplicate()));
+        ByteSequence b3 = PrimitiveCodec.SHORT.encode((short) random.nextInt(Short.MAX_VALUE));
+        System.out.println(b3.toString());
+        System.out.println(PrimitiveCodec.SHORT.decode(b3));
 
-        ByteBuffer b4 = PrimitiveCodec.INTEGER.encode(random.nextInt());
-        System.out.println(ByteBuffers.toString(b4));
-        System.out.println(PrimitiveCodec.INTEGER.decode(b4.duplicate()));
+        ByteSequence b4 = PrimitiveCodec.INTEGER.encode(random.nextInt());
+        System.out.println(b4.toString());
+        System.out.println(PrimitiveCodec.INTEGER.decode(b4));
 
-        ByteBuffer b5 = PrimitiveCodec.LONG.encode(random.nextLong());
-        System.out.println(ByteBuffers.toString(b5));
-        System.out.println(PrimitiveCodec.LONG.decode(b5.duplicate()));
+        ByteSequence b5 = PrimitiveCodec.LONG.encode(random.nextLong());
+        System.out.println(b5.toString());
+        System.out.println(PrimitiveCodec.LONG.decode(b5));
 
-        ByteBuffer b6 = PrimitiveCodec.FLOAT.encode(random.nextFloat());
-        System.out.println(ByteBuffers.toString(b6));
-        System.out.println(PrimitiveCodec.FLOAT.decode(b6.duplicate()));
+        ByteSequence b6 = PrimitiveCodec.FLOAT.encode(random.nextFloat());
+        System.out.println(b6.toString());
+        System.out.println(PrimitiveCodec.FLOAT.decode(b6));
 
-        ByteBuffer b7 = PrimitiveCodec.DOUBLE.encode(random.nextDouble());
-        System.out.println(ByteBuffers.toString(b7));
-        System.out.println(PrimitiveCodec.DOUBLE.decode(b7.duplicate()));
+        ByteSequence b7 = PrimitiveCodec.DOUBLE.encode(random.nextDouble());
+        System.out.println(b7.toString());
+        System.out.println(PrimitiveCodec.DOUBLE.decode(b7));
 
-        ByteBuffer b8 = PrimitiveCodec.INTEGER.encode(null);
-        System.out.println(ByteBuffers.toString(b8));
-        System.out.println(PrimitiveCodec.INTEGER.decode(b8.duplicate()));
+        ByteSequence b8 = PrimitiveCodec.INTEGER.encode(null);
+        System.out.println(b8.toString());
+        System.out.println(PrimitiveCodec.INTEGER.decode(b8));
     }
 
     @Test
     public void testStringCodec() {
-        StringCodec stringCodec = new StringCodec();
+        Codec<String> stringCodec = new UTF8Codec();
 
-        ByteBuffer b1 = stringCodec.encode("abc中文");
-        System.out.println(ByteBuffers.toString(b1));
-        System.out.println(stringCodec.decode(b1.duplicate()));
+        ByteSequence b1 = stringCodec.encode("abc中文");
+        System.out.println(b1.toString());
+        System.out.println(stringCodec.decode(b1));
 
-        ByteBuffer b2 = stringCodec.encode("");
-        System.out.println(ByteBuffers.toString(b2));
-        System.out.println(stringCodec.decode(b2.duplicate()));
+        ByteSequence b2 = stringCodec.encode("");
+        System.out.println(b2.toString());
+        System.out.println(stringCodec.decode(b2));
 
-        ByteBuffer b3 = stringCodec.encode(null);
-        System.out.println(ByteBuffers.toString(b3));
-        System.out.println(stringCodec.decode(b3.duplicate()));
+        ByteSequence b3 = stringCodec.encode(null);
+        System.out.println(b3.toString());
+        System.out.println(stringCodec.decode(b3));
     }
 
     @Test
@@ -100,15 +100,15 @@ public class TestCodec {
         Random random = new Random();
         String string = random.ints(100000).mapToObj(Integer::toString).collect(Collectors.joining());
 
-        Codec<String> stringCodec = new StringCodec();
-        Codec<String> lz4Codec = new GzipCodec<>(stringCodec);
+        Codec<String> stringCodec = new UTF8Codec();
+        Codec<String> gzipCodec = new GzipCodec<>(stringCodec);
 
-        ByteBuffer b1 = stringCodec.encode(string);
-        ByteBuffer b2 = lz4Codec.encode(string);
-        String decoded = lz4Codec.decode(b2.duplicate());
+        ByteSequence b1 = stringCodec.encode(string);
+        ByteSequence b2 = gzipCodec.encode(string);
+        String decoded = gzipCodec.decode(b2);
 
-        System.out.println(b1.remaining());
-        System.out.println(b2.remaining());
+        System.out.println(b1.length());
+        System.out.println(b2.length());
 //        System.out.println(string);
 //        System.out.println(decoded);
 
@@ -120,16 +120,16 @@ public class TestCodec {
         Random random = new Random();
         String string = random.ints(100000).mapToObj(Integer::toString).collect(Collectors.joining());
 
-        Codec<String> stringCodec = new StringCodec();
+        Codec<String> stringCodec = new UTF8Codec();
         Codec<String> compressCodec = new CompressCodec<>(CompressorStreamFactory.getGzip(), stringCodec);
 
-        ByteBuffer b1 = stringCodec.encode(string);
-        ByteBuffer b2 = compressCodec.encode(string);
+        ByteSequence b1 = stringCodec.encode(string);
+        ByteSequence b2 = compressCodec.encode(string);
 
-        String decoded = compressCodec.decode(b2.duplicate());
+        String decoded = compressCodec.decode(b2);
 
-        System.out.println(b1.remaining());
-        System.out.println(b2.remaining());
+        System.out.println(b1.length());
+        System.out.println(b2.length());
 //        System.out.println(string);
 //        System.out.println(decoded);
 
@@ -147,10 +147,10 @@ public class TestCodec {
         );
 
         Object[] objectArray = {"a", 1, 3, 5L, 7L};
-        ByteBuffer encoded = codec.encode(ImmutableGeneratedCacheKey.of(objectArray));
+        ByteSequence encoded = codec.encode(ImmutableGeneratedCacheKey.of(objectArray));
 
-        System.out.println(StandardCharsets.UTF_8.decode(encoded.duplicate()));
-        for (Object key : codec.decode(encoded.duplicate()).getKeys()) {
+        System.out.println(encoded.toString());
+        for (Object key : codec.decode(encoded).getKeys()) {
             System.out.println(key.getClass());
         }
     }

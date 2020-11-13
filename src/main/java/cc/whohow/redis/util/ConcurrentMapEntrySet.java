@@ -1,4 +1,4 @@
-package cc.whohow.redis.util.impl;
+package cc.whohow.redis.util;
 
 import java.util.Collection;
 import java.util.Map;

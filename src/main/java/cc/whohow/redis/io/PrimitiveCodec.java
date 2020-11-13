@@ -1,5 +1,7 @@
 package cc.whohow.redis.io;
 
+import cc.whohow.redis.buffer.ByteSequence;
+
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
@@ -27,8 +29,43 @@ public class PrimitiveCodec<T> implements Codec<T> {
     }
 
     @Override
-    public ByteBuffer encode(T value) {
-        return (value == null) ? ByteBuffers.empty() : ByteBuffers.from(value.toString(), StandardCharsets.US_ASCII);
+    public ByteSequence encode(T value) {
+        return (value == null) ? ByteSequence.empty() : ByteSequence.ascii(value.toString());
+    }
+
+    public T decode(String buffer) {
+        return decode(buffer, null);
+    }
+
+    public T decode(String buffer, T defaultValue) {
+        if (buffer == null || buffer.isEmpty()) {
+            return defaultValue;
+        }
+        return parse.apply(buffer);
+    }
+
+    @Override
+    public T decode(ByteSequence buffer) {
+        return decode(buffer, null);
+    }
+
+    public T decode(ByteSequence buffer, T defaultValue) {
+        if (buffer == null || buffer.isEmpty()) {
+            return defaultValue;
+        }
+        return parse.apply(buffer.toString(StandardCharsets.US_ASCII));
+    }
+
+    @Override
+    public T decode(byte... buffer) {
+        return decode(buffer);
+    }
+
+    public T decode(byte[] buffer, T defaultValue) {
+        if (buffer == null || buffer.length == 0) {
+            return defaultValue;
+        }
+        return parse.apply(new String(buffer, StandardCharsets.US_ASCII));
     }
 
     @Override
@@ -37,6 +74,9 @@ public class PrimitiveCodec<T> implements Codec<T> {
     }
 
     public T decode(ByteBuffer buffer, T defaultValue) {
-        return ByteBuffers.isEmpty(buffer) ? defaultValue : parse.apply(ByteBuffers.toString(buffer, StandardCharsets.US_ASCII));
+        if (buffer == null || !buffer.hasRemaining()) {
+            return defaultValue;
+        }
+        return parse.apply(StandardCharsets.US_ASCII.decode(buffer).toString());
     }
 }

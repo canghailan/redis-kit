@@ -1,4 +1,4 @@
-package cc.whohow.redis.util.impl;
+package cc.whohow.redis.util;
 
 import java.lang.reflect.Array;
 
@@ -11,6 +11,10 @@ public class ArrayType<T> {
 
     public static <T> ArrayType<T> of(T[] example) {
         return new ArrayType<>(example.getClass().getComponentType());
+    }
+
+    public Class<?> getComponentType() {
+        return componentType;
     }
 
     @SuppressWarnings("unchecked")

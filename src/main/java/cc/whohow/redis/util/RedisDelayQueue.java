@@ -1,11 +1,9 @@
 package cc.whohow.redis.util;
 
-import cc.whohow.redis.io.ByteBuffers;
+import cc.whohow.redis.Redis;
+import cc.whohow.redis.buffer.ByteSequence;
 import cc.whohow.redis.io.Codec;
-import cc.whohow.redis.util.impl.ArrayType;
-import cc.whohow.redis.util.impl.MappingIterator;
 import io.lettuce.core.ScoredValue;
-import io.lettuce.core.api.sync.RedisCommands;
 
 import java.nio.ByteBuffer;
 import java.time.Clock;
@@ -24,17 +22,17 @@ public class RedisDelayQueue<E>
     protected final Clock clock;
     protected volatile long pollInterval = 1000;
 
-    public RedisDelayQueue(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, String key) {
+    public RedisDelayQueue(Redis redis, Codec<E> codec, String key) {
         this(redis, codec, key, new RedisClock(redis));
     }
 
-    public RedisDelayQueue(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, String key, Clock clock) {
-        super(redis, codec, ByteBuffers.fromUtf8(key));
+    public RedisDelayQueue(Redis redis, Codec<E> codec, String key, Clock clock) {
+        super(redis, codec, ByteSequence.utf8(key));
         this.clock = clock;
     }
 
     protected RedisDelayed<E> decode(ScoredValue<ByteBuffer> scoredValue) {
-        return new RedisDelayed<>(decode(scoredValue.getValue()), (long) scoredValue.getScore());
+        return new RedisDelayed<>(codec.decode(scoredValue.getValue()), (long) scoredValue.getScore());
     }
 
     protected RedisDelayed<E> toDelayed(ScoredValue<E> scoredValue) {
@@ -81,6 +79,7 @@ public class RedisDelayQueue<E>
     @Override
     public int drainTo(Collection<? super RedisDelayed<E>> c, int maxElements) {
         return (int) zremrangebyscoreWithScores(0, clock.millis(), 0, maxElements)
+                .stream()
                 .map(this::toDelayed)
                 .peek(c::add)
                 .count();
@@ -88,12 +87,13 @@ public class RedisDelayQueue<E>
 
     @Override
     public Iterator<RedisDelayed<E>> iterator() {
-        return new MappingIterator<>(new RedisSortedSetIterator(redis, sortedSetKey.duplicate()), this::decode);
+        return new MappingIterator<>(new RedisIterator<>(new RedisSortedSetScanIterator<>(redis, codec::decode, sortedSetKey)), this::toDelayed);
     }
 
     @Override
     public Object[] toArray() {
         return zrangeWithScores(0, -1)
+                .stream()
                 .map(this::toDelayed)
                 .toArray();
     }
@@ -102,6 +102,7 @@ public class RedisDelayQueue<E>
     @SuppressWarnings("SuspiciousToArrayCall")
     public <T> T[] toArray(T[] a) {
         return zrangeWithScores(0, -1)
+                .stream()
                 .map(this::toDelayed)
                 .toArray(ArrayType.of(a)::newInstance);
     }
@@ -208,6 +209,7 @@ public class RedisDelayQueue<E>
     @Override
     public RedisDelayed<E> poll() {
         return zremrangebyscoreWithScores(0, clock.millis(), 0, 1)
+                .stream()
                 .findFirst()
                 .map(this::toDelayed)
                 .orElse(null);
@@ -225,6 +227,7 @@ public class RedisDelayQueue<E>
     @Override
     public RedisDelayed<E> peek() {
         return zrangeWithScores(0, 0)
+                .stream()
                 .findFirst()
                 .filter(v -> v.getScore() < clock.millis())
                 .map(this::toDelayed)
@@ -238,6 +241,7 @@ public class RedisDelayQueue<E>
     @Override
     public Queue<RedisDelayed<E>> copy() {
         return zrangeWithScores(0, -1)
+                .stream()
                 .map(this::toDelayed)
                 .collect(Collectors.toCollection(LinkedList::new));
     }

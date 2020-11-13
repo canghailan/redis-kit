@@ -27,8 +27,8 @@ public class DefaultCodecFactory implements Function<Class<?>, Codec<?>> {
         DEFAULTS.put(Double.class, PrimitiveCodec.DOUBLE);
         DEFAULTS.put(BigDecimal.class, PrimitiveCodec.NUMBER);
         DEFAULTS.put(BigInteger.class, PrimitiveCodec.BIGINT);
-        DEFAULTS.put(String.class, StringCodec.defaultInstance());
-        DEFAULTS.put(ByteBuffer.class, ByteBufferCodec.getInstance());
+        DEFAULTS.put(String.class, UTF8Codec.get());
+        DEFAULTS.put(ByteBuffer.class, ByteBufferCodec.get());
     }
 
     @Override

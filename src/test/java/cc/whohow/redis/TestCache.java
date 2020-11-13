@@ -6,7 +6,6 @@ import cc.whohow.redis.jcache.RedisCacheManager;
 import cc.whohow.redis.jcache.configuration.MutableRedisCacheConfiguration;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import cc.whohow.redis.util.RedisKeyspaceNotification;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import org.junit.AfterClass;
@@ -28,7 +27,8 @@ public class TestCache {
 
     private static Properties properties;
     private static RedisURI redisURI;
-    private static RedisKeyspaceNotification redisKeyspaceNotification;
+    private static Redis redis;
+    private static RedisTracking redisTracking;
     private static RedisCacheManager cacheManager;
     private static Cache<GeneratedCacheKey, Data> cache;
 
@@ -39,8 +39,9 @@ public class TestCache {
             properties = new Properties();
             properties.load(stream);
             redisURI = RedisURI.create(properties.getProperty("uri"));
+            redis = new SingleRedis(redisClient, redisURI);
 
-            redisKeyspaceNotification = new RedisKeyspaceNotification(redisClient, redisURI);
+            redisTracking = new RedisKeyspaceNotification(redisClient, redisURI);
 
             MutableRedisCacheConfiguration configuration = new MutableRedisCacheConfiguration<>();
             configuration.setName("c.w.Test");
@@ -50,15 +51,17 @@ public class TestCache {
             Map<String, RedisCacheConfiguration> cacheConfigurationMap = new HashMap<>();
             cacheConfigurationMap.put(configuration.getName(), configuration);
 
-            cacheManager = new RedisCacheManager(redisClient, redisURI, redisKeyspaceNotification, cacheConfigurationMap::get);
+            cacheManager = new RedisCacheManager(redis, redisTracking, cacheConfigurationMap::get);
 
             cache = cacheManager.createCache(configuration.getName(), configuration);
         }
     }
 
     @AfterClass
-    public static void tearDown() {
+    public static void tearDown() throws Exception {
         cacheManager.close();
+        redisTracking.close();
+        redis.close();
         redisClient.shutdown();
     }
 

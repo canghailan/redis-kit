@@ -1,13 +1,10 @@
 package cc.whohow.redis.util;
 
-import cc.whohow.redis.io.ByteBuffers;
+import cc.whohow.redis.Redis;
+import cc.whohow.redis.buffer.ByteSequence;
 import cc.whohow.redis.io.Codec;
-import cc.whohow.redis.util.impl.ArrayType;
-import cc.whohow.redis.util.impl.MappingIterator;
 import io.lettuce.core.ScoredValue;
-import io.lettuce.core.api.sync.RedisCommands;
 
-import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -17,16 +14,12 @@ import java.util.stream.Collectors;
 public class RedisPriorityQueue<E>
         extends AbstractRedisSortedSet<E>
         implements Queue<RedisPriority<E>>, Copyable<Queue<RedisPriority<E>>> {
-    public RedisPriorityQueue(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, String key) {
-        this(redis, codec, ByteBuffers.fromUtf8(key));
+    public RedisPriorityQueue(Redis redis, Codec<E> codec, String key) {
+        this(redis, codec, ByteSequence.utf8(key));
     }
 
-    public RedisPriorityQueue(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, ByteBuffer key) {
+    public RedisPriorityQueue(Redis redis, Codec<E> codec, ByteSequence key) {
         super(redis, codec, key);
-    }
-
-    protected RedisPriority<E> decode(ScoredValue<ByteBuffer> scoredValue) {
-        return new RedisPriority<>(decode(scoredValue.getValue()), scoredValue.getScore());
     }
 
     protected RedisPriority<E> toEntry(ScoredValue<E> scoredValue) {
@@ -55,12 +48,13 @@ public class RedisPriorityQueue<E>
 
     @Override
     public Iterator<RedisPriority<E>> iterator() {
-        return new MappingIterator<>(new RedisSortedSetIterator(redis, sortedSetKey.duplicate()), this::decode);
+        return new MappingIterator<>(new RedisIterator<>(new RedisSortedSetScanIterator<>(redis, codec::decode, sortedSetKey)), this::toEntry);
     }
 
     @Override
     public Object[] toArray() {
         return zrangeWithScores(0, -1)
+                .stream()
                 .map(this::toEntry)
                 .toArray();
     }
@@ -69,6 +63,7 @@ public class RedisPriorityQueue<E>
     @SuppressWarnings("SuspiciousToArrayCall")
     public <T> T[] toArray(T[] a) {
         return zrangeWithScores(0, -1)
+                .stream()
                 .map(this::toEntry)
                 .toArray(ArrayType.of(a)::newInstance);
     }
@@ -151,6 +146,7 @@ public class RedisPriorityQueue<E>
     @Override
     public RedisPriority<E> peek() {
         return zrangeWithScores(0, 0)
+                .stream()
                 .findFirst()
                 .map(this::toEntry)
                 .orElse(null);
@@ -166,6 +162,7 @@ public class RedisPriorityQueue<E>
     @Override
     public Queue<RedisPriority<E>> copy() {
         return zrangeWithScores(0, -1)
+                .stream()
                 .map(this::toEntry)
                 .collect(Collectors.toCollection(LinkedList::new));
     }

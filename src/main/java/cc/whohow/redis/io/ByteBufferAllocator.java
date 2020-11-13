@@ -3,7 +3,6 @@ package cc.whohow.redis.io;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.DoubleAdder;
 import java.util.concurrent.atomic.LongAccumulator;
 import java.util.concurrent.atomic.LongAdder;
@@ -50,12 +49,6 @@ public class ByteBufferAllocator {
         // ignore concurrency
         int avgBufferSize = getAvg();
         return avgBufferSize + (Integer.min(maxBufferSize - avgBufferSize, avgBufferSize) * 3 / 4);
-    }
-
-    public ByteBuffer allocate() {
-        int bufferSize = guess();
-        log.trace("allocate: {}", bufferSize);
-        return ByteBuffer.allocate(bufferSize);
     }
 
     protected long getCount() {

@@ -1,5 +1,10 @@
 package cc.whohow.redis.io;
 
+import cc.whohow.redis.buffer.ByteSequence;
+import cc.whohow.redis.buffer.ByteSequenceInputStream;
+import cc.whohow.redis.buffer.ByteSequenceOutputStream;
+
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
@@ -15,13 +20,36 @@ public abstract class AbstractStreamCodec<T> implements Codec<T>, StreamCodec<T>
     }
 
     @Override
-    public ByteBuffer encode(T value) {
-        try (ByteBufferOutputStream stream = new ByteBufferOutputStream(byteBufferAllocator.allocate())) {
+    public ByteSequence encode(T value) {
+        try (ByteSequenceOutputStream stream = new ByteSequenceOutputStream(byteBufferAllocator.guess())) {
             encode(value, stream);
-            ByteBuffer byteBuffer = stream.getByteBuffer();
-            byteBuffer.flip();
-            byteBufferAllocator.record(byteBuffer.remaining());
-            return byteBuffer;
+            ByteSequence buffer = stream.getByteSequence();
+            byteBufferAllocator.record(buffer.length());
+            return buffer;
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    @Override
+    public T decode(ByteSequence buffer) {
+        if (buffer == null) {
+            return null;
+        }
+        try (ByteSequenceInputStream stream = new ByteSequenceInputStream(buffer)) {
+            return decode(stream);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    @Override
+    public T decode(byte... buffer) {
+        if (buffer == null) {
+            return null;
+        }
+        try (ByteArrayInputStream stream = new ByteArrayInputStream(buffer)) {
+            return decode(stream);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

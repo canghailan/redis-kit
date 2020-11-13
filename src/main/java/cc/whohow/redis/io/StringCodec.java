@@ -1,50 +1,73 @@
 package cc.whohow.redis.io;
 
+import cc.whohow.redis.buffer.ByteSequence;
+
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 
 /**
  * 字符串编码器
  */
 public class StringCodec implements Codec<String> {
-    private static final StringCodec DEFAULT_INSTANCE = new StringCodec();
     /**
      * NULL字符串占位符
      */
     private static final byte NULL_PLACEHOLDER = 127;
-    private static final ByteBuffer NULL = ByteBuffer.wrap(new byte[]{NULL_PLACEHOLDER});
+    private static final ByteSequence NULL = ByteSequence.of(NULL_PLACEHOLDER);
     private final Charset charset;
-
-    public StringCodec() {
-        this(StandardCharsets.UTF_8);
-    }
 
     public StringCodec(Charset charset) {
         this.charset = charset;
     }
 
-    public static StringCodec defaultInstance() {
-        return DEFAULT_INSTANCE;
+    public static ByteSequence encodeNull() {
+        return NULL;
     }
 
-    private static boolean isNull(ByteBuffer buffer) {
-        return (buffer == null) || (buffer.remaining() == 1 && buffer.get(0) == NULL_PLACEHOLDER);
+    public static boolean isEncodedNull(ByteSequence bytes) {
+        return bytes.length() == 1 && bytes.get(0) == NULL_PLACEHOLDER;
+    }
+
+    public static boolean isEncodedNull(ByteBuffer bytes) {
+        return bytes.remaining() == 1 && bytes.get(0) == NULL_PLACEHOLDER;
+    }
+
+    public static boolean isEncodedNull(byte... bytes) {
+        return bytes.length == 1 && bytes[0] == NULL_PLACEHOLDER;
     }
 
     @Override
-    public ByteBuffer encode(String value) {
-        return (value == null) ? NULL.duplicate() : charset.encode(value);
+    public ByteSequence encode(String value) {
+        if (value == null) {
+            return encodeNull();
+        }
+        return ByteSequence.of(value, charset);
+    }
+
+    @Override
+    public String decode(ByteSequence buffer) {
+        if (buffer == null || isEncodedNull(buffer)) {
+            return null;
+        }
+        return buffer.toString(charset);
     }
 
     @Override
     public String decode(ByteBuffer buffer) {
-        if (isNull(buffer)) {
+        if (buffer == null || isEncodedNull(buffer)) {
             return null;
         }
         if (buffer.hasArray()) {
             return new String(buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.remaining(), charset);
         }
         return charset.decode(buffer).toString();
+    }
+
+    @Override
+    public String decode(byte... buffer) {
+        if (buffer == null || isEncodedNull(buffer)) {
+            return null;
+        }
+        return new String(buffer, charset);
     }
 }

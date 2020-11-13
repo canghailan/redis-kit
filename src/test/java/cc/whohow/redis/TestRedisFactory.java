@@ -1,12 +1,8 @@
 package cc.whohow.redis;
 
-import cc.whohow.redis.io.ByteBuffers;
-import cc.whohow.redis.lettuce.ByteBufferCodec;
 import cc.whohow.redis.util.*;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
-import io.lettuce.core.api.StatefulRedisConnection;
-import io.lettuce.core.api.sync.RedisCommands;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -14,19 +10,17 @@ import org.junit.Test;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
-import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class TestRedisFactory {
-    private static RedisClient redisClient = RedisClient.create();
+    private static final RedisClient redisClient = RedisClient.create();
 
     private static Properties properties;
     private static RedisURI redisURI;
-    private static StatefulRedisConnection<ByteBuffer, ByteBuffer> connection;
-    private static RedisCommands<ByteBuffer, ByteBuffer> redis;
+    private static Redis redis;
     private static RedisFactory redisFactory;
 
     @BeforeClass
@@ -35,16 +29,15 @@ public class TestRedisFactory {
             properties = new Properties();
             properties.load(stream);
             redisURI = RedisURI.create(properties.getProperty("uri"));
-            connection = redisClient.connect(ByteBufferCodec.INSTANCE, redisURI);
-            redis = connection.sync();
-            redisFactory = new RedisFactory(redisClient, redisURI);
+            redis = new SingleRedis(redisClient, redisURI);
+            redisFactory = new RedisFactory(redis);
         }
     }
 
     @AfterClass
     public static void tearDown() throws Exception {
         redisFactory.close();
-        connection.close();
+        redis.close();
         redisClient.shutdown();
     }
 
@@ -75,9 +68,9 @@ public class TestRedisFactory {
         c3.incrementAndGet();
         c4.set(0);
 
-        RedisKeyIterator iterator = new RedisKeyIterator(redis, "c:*");
+        Iterator<String> iterator = new RedisIterator<>(new RedisKeyScanIterator<>(redis, RESP::ascii, "c:*", 0));
         while (iterator.hasNext()) {
-            String key = ByteBuffers.toUtf8String(iterator.next().duplicate());
+            String key = iterator.next();
             RedisAtomicLong c = new RedisAtomicLong(redis, key);
             System.out.println(key + " = " + c.get());
         }
@@ -241,7 +234,8 @@ public class TestRedisFactory {
 
     @Test
     public void testTimeWindowCounter() throws Exception {
-        RedisTimeWindowCounter counter = new RedisTimeWindowCounter(redis, "testTimeWindowCounter", Duration.ofSeconds(2));
+//        RedisTimeWindowCounter counter = new RedisTimeWindowCounter(redis, "testTimeWindowCounter", Duration.ofSeconds(2));
+        RedisTimeWindowCounter counter = null;
         counter.reset();
 
         Random random = new Random();

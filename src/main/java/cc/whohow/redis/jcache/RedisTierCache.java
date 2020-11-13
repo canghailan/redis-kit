@@ -1,7 +1,8 @@
 package cc.whohow.redis.jcache;
 
+import cc.whohow.redis.RedisTracking;
+import cc.whohow.redis.buffer.ByteSequence;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
-import cc.whohow.redis.util.RedisKeyspaceNotification;
 import io.lettuce.core.RedisChannelHandler;
 import io.lettuce.core.RedisConnectionStateListener;
 import org.apache.logging.log4j.LogManager;
@@ -16,7 +17,6 @@ import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
 import java.net.SocketAddress;
-import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -27,7 +27,7 @@ import java.util.Set;
 public class RedisTierCache<K, V> implements
         Cache<K, V>,
         RedisConnectionStateListener,
-        RedisKeyspaceNotification.Listener {
+        RedisTracking.Listener {
     private static final Logger log = LogManager.getLogger();
     protected final RedisCacheManager cacheManager;
     protected final RedisCacheConfiguration<K, V> configuration;
@@ -40,8 +40,8 @@ public class RedisTierCache<K, V> implements
         this.configuration = configuration;
         this.redisCache = cacheManager.newRedisCache(configuration);
         this.inProcessCache = cacheManager.newInProcessCache(configuration);
-        cacheManager.getRedisClient().addListener(this);
-        cacheManager.getRedisKeyspaceNotification().addListener(configuration.getRedisKeyPattern(), this);
+        cacheManager.getRedis().addListener(this);
+        cacheManager.getRedisTracking().addListener(ByteSequence.utf8(configuration.getRedisKeyPattern()), this);
     }
 
     @Override
@@ -203,7 +203,7 @@ public class RedisTierCache<K, V> implements
             redisCache.close();
         } finally {
             inProcessCache.close();
-            cacheManager.getRedisClient().removeListener(this);
+            cacheManager.getRedis().removeListener(this);
         }
     }
 
@@ -269,7 +269,7 @@ public class RedisTierCache<K, V> implements
 
     @Override
     public void onRedisDisconnected(RedisChannelHandler<?, ?> connection) {
-        log.warn("RedisConnected");
+        log.warn("RedisDisconnected");
         inProcessCache.removeAll();
     }
 
@@ -279,9 +279,9 @@ public class RedisTierCache<K, V> implements
     }
 
     @Override
-    public void onKeyEvent(ByteBuffer key) {
-        K k = redisCache.getCodec().decodeKey(key);
-        log.trace("onKeyEvent: {}", k);
+    public void onInvalidate(ByteSequence key) {
+        K k = redisCache.getKeyCodec().decode(key);
+        log.trace("Tracking: {}", k);
         inProcessCache.remove(k);
     }
 

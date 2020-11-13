@@ -1,9 +1,9 @@
 package cc.whohow.redis.util;
 
-import cc.whohow.redis.io.ByteBuffers;
+import cc.whohow.redis.Redis;
+import cc.whohow.redis.buffer.ByteSequence;
 import cc.whohow.redis.io.Codec;
 import cc.whohow.redis.io.PrimitiveCodec;
-import io.lettuce.core.api.sync.RedisCommands;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -22,11 +22,7 @@ public class RedisTimeWindowCounter extends RedisWindowCounter<Date> {
 
     protected final Duration accuracy;
 
-    public RedisTimeWindowCounter(RedisCommands<ByteBuffer, ByteBuffer> redis, String key, Duration accuracy) {
-        this(redis, ByteBuffers.fromUtf8(key), accuracy);
-    }
-
-    public RedisTimeWindowCounter(RedisCommands<ByteBuffer, ByteBuffer> redis, ByteBuffer key, Duration accuracy) {
+    public RedisTimeWindowCounter(Redis redis, String key, Duration accuracy) {
         super(redis, new DateAccuracyCodec(accuracy.toMillis()), key);
         this.accuracy = accuracy;
     }
@@ -113,11 +109,29 @@ public class RedisTimeWindowCounter extends RedisWindowCounter<Date> {
         }
 
         @Override
-        public ByteBuffer encode(Date value) {
+        public ByteSequence encode(Date value) {
             if (value == null) {
-                return ByteBuffers.empty();
+                return ByteSequence.empty();
             }
             return PrimitiveCodec.LONG.encode(reduceAccuracy(value.getTime()));
+        }
+
+        @Override
+        public Date decode(ByteSequence buffer) {
+            Long timestamp = PrimitiveCodec.LONG.decode(buffer);
+            if (timestamp == null) {
+                return null;
+            }
+            return new Date(timestamp);
+        }
+
+        @Override
+        public Date decode(byte... buffer) {
+            Long timestamp = PrimitiveCodec.LONG.decode(buffer);
+            if (timestamp == null) {
+                return null;
+            }
+            return new Date(timestamp);
         }
 
         @Override

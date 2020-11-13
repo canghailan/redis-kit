@@ -1,10 +1,10 @@
 package cc.whohow.redis.jcache;
 
+import cc.whohow.redis.RESP;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
-import cc.whohow.redis.lettuce.Lettuce;
-import io.lettuce.core.SetArgs;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import cc.whohow.redis.lettuce.StatusOutput;
+import cc.whohow.redis.lettuce.VoidOutput;
+import io.lettuce.core.protocol.CommandType;
 
 import java.util.Map;
 
@@ -12,24 +12,16 @@ import java.util.Map;
  * Redis缓存，支持过期时间
  */
 public class RedisExpireCache<K, V> extends RedisCache<K, V> {
-    private static final Logger log = LogManager.getLogger();
     protected final long ttl;
-    protected final SetArgs px;
-    protected final SetArgs pxNx;
-    protected final SetArgs pxXx;
 
     public RedisExpireCache(RedisCacheManager cacheManager, RedisCacheConfiguration<K, V> configuration) {
         super(cacheManager, configuration);
         this.ttl = configuration.getExpiryForUpdateTimeUnit().toMillis(configuration.getExpiryForUpdate());
-        this.px = SetArgs.Builder.px(ttl);
-        this.pxNx = SetArgs.Builder.px(ttl).nx();
-        this.pxXx = SetArgs.Builder.px(ttl).xx();
     }
 
     @Override
     public void put(K key, V value) {
-        log.trace("SET {}::{} {} PX {}", this, key, value, ttl);
-        redis.set(codec.encodeKey(key), codec.encodeValue(value), px);
+        redis.send(new VoidOutput(), CommandType.SET, encodeKey(key), encodeValue(value), RESP.px(), RESP.b(ttl));
         cacheStats.cachePut(1);
     }
 
@@ -45,8 +37,7 @@ public class RedisExpireCache<K, V> extends RedisCache<K, V> {
 
     @Override
     public boolean putIfAbsent(K key, V value) {
-        log.trace("SET {}::{} {} PX {} NX", this, key, value, ttl);
-        boolean ok = Lettuce.ok(redis.set(codec.encodeKey(key), codec.encodeValue(value), pxNx));
+        boolean ok = RESP.ok(redis.send(new StatusOutput(), CommandType.SET, encodeKey(key), encodeValue(value), RESP.px(), RESP.b(ttl), RESP.nx()));
         if (ok) {
             cacheStats.cachePut(1);
         }
@@ -60,8 +51,7 @@ public class RedisExpireCache<K, V> extends RedisCache<K, V> {
 
     @Override
     public boolean replace(K key, V value) {
-        log.trace("SET {}::{} {} PX {} XX", this, key, value, ttl);
-        boolean ok = Lettuce.ok(redis.set(codec.encodeKey(key), codec.encodeValue(value), pxXx));
+        boolean ok = RESP.ok(redis.send(new StatusOutput(), CommandType.SET, encodeKey(key), encodeValue(value), RESP.px(), RESP.b(ttl), RESP.xx()));
         if (ok) {
             cacheStats.cachePut(1);
         }

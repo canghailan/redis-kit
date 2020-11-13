@@ -33,7 +33,7 @@ public class RedisCachingProvider implements CachingProvider {
 
     @Override
     public URI getDefaultURI() {
-        return URI.create("RedisClient://");
+        return URI.create("redis://");
     }
 
     @Override

@@ -1,56 +1,29 @@
 package cc.whohow.redis.io;
 
-import java.io.OutputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 
-public class ByteBufferOutputStream extends OutputStream implements WritableByteChannel {
-    protected ByteBuffer byteBuffer;
-
+public class ByteBufferOutputStream extends ByteArrayOutputStream implements WritableByteChannel {
     public ByteBufferOutputStream() {
-        this(32);
+        super();
     }
 
     public ByteBufferOutputStream(int size) {
-        this(ByteBuffer.allocate(size));
-    }
-
-    public ByteBufferOutputStream(ByteBuffer byteBuffer) {
-        this.byteBuffer = byteBuffer;
+        super(size);
     }
 
     public ByteBuffer getByteBuffer() {
-        return byteBuffer;
+        return ByteBuffer.wrap(buf, 0, count);
     }
 
     public synchronized int position() {
-        return byteBuffer.position();
+        return count;
     }
 
-    protected synchronized void ensureCapacity(int minCapacity) {
-        if (byteBuffer.capacity() < minCapacity) {
-            int newCapacity = Integer.max(minCapacity, byteBuffer.capacity() * 2);
-            byteBuffer = ByteBuffers.resize(byteBuffer, newCapacity);
-        }
-    }
-
-    public synchronized int write(ByteBuffer b) {
-        int bytes = b.remaining();
-        ensureCapacity(position() + bytes);
-        byteBuffer.put(b);
-        return bytes;
-    }
-
-    @Override
-    public synchronized void write(byte[] b, int off, int len) {
-        ensureCapacity(position() + len);
-        byteBuffer.put(b, off, len);
-    }
-
-    @Override
-    public synchronized void write(int b) {
-        ensureCapacity(position() + 1);
-        byteBuffer.put((byte) b);
+    public synchronized int write(ByteBuffer b) throws IOException {
+        return IO.write(this, b);
     }
 
     @Override

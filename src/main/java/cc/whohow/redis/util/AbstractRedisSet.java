@@ -1,112 +1,81 @@
 package cc.whohow.redis.util;
 
-import cc.whohow.redis.io.ByteBuffers;
+import cc.whohow.redis.Redis;
+import cc.whohow.redis.buffer.ByteSequence;
 import cc.whohow.redis.io.Codec;
-import io.lettuce.core.api.sync.RedisCommands;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import cc.whohow.redis.lettuce.DecodeOutput;
+import cc.whohow.redis.lettuce.IntegerOutput;
+import cc.whohow.redis.lettuce.SetOutput;
+import io.lettuce.core.protocol.CommandType;
 
-import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.stream.Stream;
+import java.util.List;
+import java.util.Set;
 
 public class AbstractRedisSet<E> {
-    private static final Logger log = LogManager.getLogger();
-    protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
+    protected final Redis redis;
     protected final Codec<E> codec;
-    protected final ByteBuffer setKey;
+    protected final ByteSequence setKey;
 
-    public AbstractRedisSet(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, ByteBuffer key) {
+    public AbstractRedisSet(Redis redis, Codec<E> codec, ByteSequence key) {
         this.redis = redis;
         this.codec = codec;
         this.setKey = key;
     }
 
-    protected ByteBuffer encode(E value) {
-        return codec.encode(value);
-    }
-
-    protected E decode(ByteBuffer byteBuffer) {
-        return codec.decode(byteBuffer);
-    }
-
     public Long scard() {
-        if (log.isTraceEnabled()) {
-            log.trace("SCARD {}", toString());
-        }
-        return redis.scard(setKey.duplicate());
+        return redis.send(new IntegerOutput(), CommandType.SCARD, setKey);
     }
 
-    public boolean sismember(E e) {
-        if (log.isTraceEnabled()) {
-            log.trace("SISMEMBER {} {}", toString(), e);
-        }
-        return redis.sismember(setKey.duplicate(), encode(e));
+    public Long sismember(E e) {
+        return redis.send(new IntegerOutput(), CommandType.SISMEMBER, setKey, codec.encode(e));
     }
 
-    public Stream<E> smembers() {
-        if (log.isTraceEnabled()) {
-            log.trace("SMEMBERS {}", toString());
-        }
-        return redis.smembers(setKey.duplicate()).stream()
-                .map(this::decode);
+    public Set<E> smembers() {
+        return redis.send(new SetOutput<>(codec::decode), CommandType.SMEMBERS, setKey);
     }
 
     public E srandmember() {
-        if (log.isTraceEnabled()) {
-            log.trace("SRANDMEMBER {}", toString());
-        }
-        return decode(redis.srandmember(setKey.duplicate()));
+        return redis.send(new DecodeOutput<>(codec::decode), CommandType.SRANDMEMBER, setKey);
     }
 
     public Long sadd(E e) {
-        if (log.isTraceEnabled()) {
-            log.trace("SADD {} {}", toString(), e);
-        }
-        return redis.sadd(setKey.duplicate(), encode(e));
+        return redis.send(new IntegerOutput(), CommandType.SADD, setKey, codec.encode(e));
     }
 
     public Long sadd(Collection<? extends E> c) {
-        if (log.isTraceEnabled()) {
-            log.trace("SADD {} {}", toString(), c);
+        List<ByteSequence> args = new ArrayList<>(1 + c.size());
+        args.add(setKey);
+        for (E e : c) {
+            args.add(codec.encode(e));
         }
-        return redis.sadd(setKey.duplicate(), c.stream()
-                .map(this::encode)
-                .toArray(ByteBuffer[]::new));
+        return redis.send(new IntegerOutput(), CommandType.SADD, args);
     }
 
     public Long srem(E e) {
-        if (log.isTraceEnabled()) {
-            log.trace("SREM {} {}", toString(), e);
-        }
-        return redis.srem(setKey.duplicate(), encode(e));
+        return redis.send(new IntegerOutput(), CommandType.SREM, setKey, codec.encode(e));
     }
 
     public Long srem(Collection<? extends E> c) {
-        if (log.isTraceEnabled()) {
-            log.trace("SREM {} {}", toString(), c);
+        List<ByteSequence> args = new ArrayList<>(1 + c.size());
+        args.add(setKey);
+        for (E e : c) {
+            args.add(codec.encode(e));
         }
-        return redis.srem(setKey.duplicate(), c.stream()
-                .map(this::encode)
-                .toArray(ByteBuffer[]::new));
+        return redis.send(new IntegerOutput(), CommandType.SREM, args);
     }
 
     public E spop() {
-        if (log.isTraceEnabled()) {
-            log.trace("SPOP {}", toString());
-        }
-        return decode(redis.spop(setKey.duplicate()));
+        return redis.send(new DecodeOutput<>(codec::decode), CommandType.SPOP, setKey);
     }
 
     public Long del() {
-        if (log.isTraceEnabled()) {
-            log.trace("DEL {}", toString());
-        }
-        return redis.del(setKey.duplicate());
+        return redis.send(new IntegerOutput(), CommandType.DEL, setKey);
     }
 
     @Override
     public String toString() {
-        return ByteBuffers.toString(setKey);
+        return setKey.toString();
     }
 }

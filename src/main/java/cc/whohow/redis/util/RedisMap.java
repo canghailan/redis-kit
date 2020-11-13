@@ -1,15 +1,13 @@
 package cc.whohow.redis.util;
 
-import cc.whohow.redis.io.ByteBuffers;
+import cc.whohow.redis.Redis;
+import cc.whohow.redis.buffer.ByteSequence;
 import cc.whohow.redis.io.Codec;
-import cc.whohow.redis.util.impl.ConcurrentMapEntrySet;
-import cc.whohow.redis.util.impl.ConcurrentMapKeySet;
-import cc.whohow.redis.util.impl.ConcurrentMapValueCollection;
-import cc.whohow.redis.util.impl.MappingIterator;
-import io.lettuce.core.api.sync.RedisCommands;
 
-import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -20,16 +18,12 @@ import java.util.function.Function;
 public class RedisMap<K, V>
         extends AbstractRedisHash<K, V>
         implements ConcurrentMap<K, V>, Copyable<Map<K, V>> {
-    public RedisMap(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<K> keyCodec, Codec<V> valueCodec, String key) {
-        this(redis, keyCodec, valueCodec, ByteBuffers.fromUtf8(key));
+    public RedisMap(Redis redis, Codec<K> keyCodec, Codec<V> valueCodec, String key) {
+        this(redis, keyCodec, valueCodec, ByteSequence.utf8(key));
     }
 
-    public RedisMap(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<K> keyCodec, Codec<V> valueCodec, ByteBuffer key) {
+    public RedisMap(Redis redis, Codec<K> keyCodec, Codec<V> valueCodec, ByteSequence key) {
         super(redis, keyCodec, valueCodec, key);
-    }
-
-    public Map.Entry<K, V> decode(Map.Entry<ByteBuffer, ByteBuffer> buffer) {
-        return new AbstractMap.SimpleImmutableEntry<>(decodeKey(buffer.getKey()), decodeValue(buffer.getValue()));
     }
 
     @Override
@@ -45,7 +39,7 @@ public class RedisMap<K, V>
     @Override
     @SuppressWarnings("unchecked")
     public boolean containsKey(Object key) {
-        return hexists((K) key);
+        return hexists((K) key) > 0;
     }
 
     /**
@@ -96,14 +90,12 @@ public class RedisMap<K, V>
         return new ConcurrentMapKeySet<K>(this) {
             @Override
             public Object[] toArray() {
-                return RedisMap.this.hgetall()
-                        .keySet().toArray();
+                return RedisMap.this.hgetall().keySet().toArray();
             }
 
             @Override
             public <T> T[] toArray(T[] a) {
-                return RedisMap.this.hgetall()
-                        .keySet().toArray(a);
+                return RedisMap.this.hgetall().keySet().toArray(a);
             }
         };
     }
@@ -113,14 +105,12 @@ public class RedisMap<K, V>
         return new ConcurrentMapValueCollection<V>(this) {
             @Override
             public Object[] toArray() {
-                return RedisMap.this.hgetall()
-                        .values().toArray();
+                return RedisMap.this.hgetall().values().toArray();
             }
 
             @Override
             public <T> T[] toArray(T[] a) {
-                return RedisMap.this.hgetall()
-                        .values().toArray(a);
+                return RedisMap.this.hgetall().values().toArray(a);
             }
         };
     }
@@ -130,19 +120,17 @@ public class RedisMap<K, V>
         return new ConcurrentMapEntrySet<K, V>(this) {
             @Override
             public Iterator<Entry<K, V>> iterator() {
-                return new MappingIterator<>(new RedisMapIterator(redis, hashKey.duplicate()), RedisMap.this::decode);
+                return new RedisIterator<>(new RedisHashScanIterator<>(redis, keyCodec::decode, valueCodec::decode, hashKey));
             }
 
             @Override
             public Object[] toArray() {
-                return RedisMap.this.hgetall()
-                        .entrySet().toArray();
+                return RedisMap.this.hgetall().entrySet().toArray();
             }
 
             @Override
             public <T> T[] toArray(T[] a) {
-                return RedisMap.this.hgetall()
-                        .entrySet().toArray(a);
+                return RedisMap.this.hgetall().entrySet().toArray(a);
             }
         };
     }

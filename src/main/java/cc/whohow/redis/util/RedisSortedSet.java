@@ -1,15 +1,12 @@
 package cc.whohow.redis.util;
 
-import cc.whohow.redis.io.ByteBuffers;
+import cc.whohow.redis.Redis;
+import cc.whohow.redis.buffer.ByteSequence;
 import cc.whohow.redis.io.Codec;
-import cc.whohow.redis.util.impl.*;
 import io.lettuce.core.ScoredValue;
-import io.lettuce.core.api.sync.RedisCommands;
 
-import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.ConcurrentMap;
-import java.util.stream.Collectors;
 
 /**
  * 有序集合
@@ -17,20 +14,12 @@ import java.util.stream.Collectors;
 public class RedisSortedSet<E>
         extends AbstractRedisSortedSet<E>
         implements ConcurrentMap<E, Number>, Copyable<Map<E, Number>> {
-    public RedisSortedSet(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, String key) {
-        this(redis, codec, ByteBuffers.fromUtf8(key));
+    public RedisSortedSet(Redis redis, Codec<E> codec, String key) {
+        this(redis, codec, ByteSequence.utf8(key));
     }
 
-    public RedisSortedSet(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, ByteBuffer key) {
+    public RedisSortedSet(Redis redis, Codec<E> codec, ByteSequence key) {
         super(redis, codec, key);
-    }
-
-    public ScoredValue<ByteBuffer> encode(Map.Entry<E, Number> entry) {
-        return ScoredValue.fromNullable(entry.getValue().doubleValue(), encode(entry.getKey()));
-    }
-
-    protected Map.Entry<E, Number> decode(ScoredValue<ByteBuffer> scoredValue) {
-        return new AbstractMap.SimpleImmutableEntry<>(decode(scoredValue.getValue()), scoredValue.getScore());
     }
 
     protected Map.Entry<E, Number> toEntry(ScoredValue<E> scoredValue) {
@@ -98,6 +87,11 @@ public class RedisSortedSet<E>
     public Set<E> keySet() {
         return new ConcurrentMapKeySet<E>(this) {
             @Override
+            public Iterator<E> iterator() {
+                return new MappingIterator<>(new RedisIterator<>(new RedisSortedSetScanIterator<>(redis, codec::decode, sortedSetKey)), ScoredValue::getValue);
+            }
+
+            @Override
             public Object[] toArray() {
                 return RedisSortedSet.this.zrange(0, -1)
                         .toArray();
@@ -107,7 +101,7 @@ public class RedisSortedSet<E>
             @SuppressWarnings("SuspiciousToArrayCall")
             public <T> T[] toArray(T[] a) {
                 return RedisSortedSet.this.zrange(0, -1)
-                        .toArray(ArrayType.of(a)::newInstance);
+                        .toArray(a);
             }
         };
     }
@@ -116,18 +110,23 @@ public class RedisSortedSet<E>
     public Collection<Number> values() {
         return new ConcurrentMapValueCollection<Number>(this) {
             @Override
+            public Iterator<Number> iterator() {
+                return new MappingIterator<>(new RedisIterator<>(new RedisSortedSetScanIterator<>(redis, codec::decode, sortedSetKey)), ScoredValue::getScore);
+            }
+
+            @Override
             public Object[] toArray() {
-                return RedisSortedSet.this.zrangeWithScores(0, -1)
-                        .map(ScoredValue::getScore)
+                return RedisSortedSet.this.zrangeWithScoresAsMap(0, -1)
+                        .values()
                         .toArray();
             }
 
             @Override
             @SuppressWarnings("SuspiciousToArrayCall")
             public <T> T[] toArray(T[] a) {
-                return RedisSortedSet.this.zrangeWithScores(0, -1)
-                        .map(ScoredValue::getScore)
-                        .toArray(ArrayType.of(a)::newInstance);
+                return RedisSortedSet.this.zrangeWithScoresAsMap(0, -1)
+                        .values()
+                        .toArray(a);
             }
         };
     }
@@ -137,23 +136,22 @@ public class RedisSortedSet<E>
         return new ConcurrentMapEntrySet<E, Number>(this) {
             @Override
             public Iterator<Entry<E, Number>> iterator() {
-                return new MappingIterator<>(
-                        new RedisSortedSetIterator(redis, sortedSetKey.duplicate()), RedisSortedSet.this::decode);
+                return new MappingIterator<>(new RedisIterator<>(new RedisSortedSetScanIterator<>(redis, codec::decode, sortedSetKey)), RedisSortedSet.this::toEntry);
             }
 
             @Override
             public Object[] toArray() {
-                return RedisSortedSet.this.zrangeWithScores(0, -1)
-                        .map(RedisSortedSet.this::toEntry)
+                return RedisSortedSet.this.zrangeWithScoresAsMap(0, -1)
+                        .entrySet()
                         .toArray();
             }
 
             @Override
             @SuppressWarnings("SuspiciousToArrayCall")
             public <T> T[] toArray(T[] a) {
-                return RedisSortedSet.this.zrangeWithScores(0, -1)
-                        .map(RedisSortedSet.this::toEntry)
-                        .toArray(ArrayType.of(a)::newInstance);
+                return RedisSortedSet.this.zrangeWithScoresAsMap(0, -1)
+                        .entrySet()
+                        .toArray(a);
             }
         };
     }
@@ -202,11 +200,6 @@ public class RedisSortedSet<E>
 
     @Override
     public Map<E, Number> copy() {
-        return zrangeWithScores(0, -1)
-                .collect(Collectors.toMap(
-                        ScoredValue::getValue,
-                        ScoredValue::getScore,
-                        (a, b) -> b,
-                        LinkedHashMap::new));
+        return zrangeWithScoresAsMap(0, -1);
     }
 }

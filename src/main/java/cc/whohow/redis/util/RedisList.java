@@ -1,15 +1,12 @@
 package cc.whohow.redis.util;
 
-import cc.whohow.redis.io.ByteBuffers;
+import cc.whohow.redis.Redis;
+import cc.whohow.redis.buffer.ByteSequence;
 import cc.whohow.redis.io.Codec;
-import cc.whohow.redis.util.impl.ArrayType;
-import io.lettuce.core.api.sync.RedisCommands;
 
-import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 /**
  * 链表、双向阻塞队列
@@ -17,11 +14,11 @@ import java.util.stream.Collectors;
 public class RedisList<E>
         extends AbstractRedisList<E>
         implements List<E>, Deque<E>, BlockingDeque<E>, Copyable<List<E>> {
-    public RedisList(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, String key) {
-        this(redis, codec, ByteBuffers.fromUtf8(key));
+    public RedisList(Redis redis, Codec<E> codec, String key) {
+        this(redis, codec, ByteSequence.utf8(key));
     }
 
-    public RedisList(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<E> codec, ByteBuffer key) {
+    public RedisList(Redis redis, Codec<E> codec, ByteSequence key) {
         super(redis, codec, key);
     }
 
@@ -178,7 +175,7 @@ public class RedisList<E>
     @SuppressWarnings("SuspiciousToArrayCall")
     public <T> T[] toArray(T[] a) {
         return lrange(0, -1)
-                .toArray(ArrayType.of(a)::newInstance);
+                .toArray(a);
     }
 
     @Override
@@ -396,7 +393,6 @@ public class RedisList<E>
     }
 
     public List<E> copy(int fromIndex, int toIndex) {
-        return lrange(fromIndex, toIndex)
-                .collect(Collectors.toList());
+        return lrange(fromIndex, toIndex);
     }
 }

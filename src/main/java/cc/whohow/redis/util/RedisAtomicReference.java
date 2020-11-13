@@ -1,18 +1,22 @@
 package cc.whohow.redis.util;
 
-import cc.whohow.redis.io.ByteBuffers;
+import cc.whohow.redis.RESP;
+import cc.whohow.redis.Redis;
+import cc.whohow.redis.RedisScript;
+import cc.whohow.redis.buffer.ByteSequence;
 import cc.whohow.redis.io.Codec;
-import cc.whohow.redis.io.PrimitiveCodec;
-import cc.whohow.redis.lettuce.Lettuce;
-import cc.whohow.redis.script.RedisScriptCommands;
-import io.lettuce.core.ScriptOutputType;
-import io.lettuce.core.SetArgs;
-import io.lettuce.core.api.sync.RedisCommands;
+import cc.whohow.redis.lettuce.DecodeOutput;
+import cc.whohow.redis.lettuce.IntegerOutput;
+import cc.whohow.redis.lettuce.StatusOutput;
+import cc.whohow.redis.lettuce.VoidOutput;
+import io.lettuce.core.protocol.CommandType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.nio.ByteBuffer;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.function.BinaryOperator;
 import java.util.function.UnaryOperator;
 
@@ -22,17 +26,15 @@ import java.util.function.UnaryOperator;
  * @see java.util.concurrent.atomic.AtomicReference
  */
 public class RedisAtomicReference<V> {
-    private static final Logger log = LogManager.getLogger();
-
-    protected final RedisCommands<ByteBuffer, ByteBuffer> redis;
+    protected final Redis redis;
     protected final Codec<V> codec;
-    protected final ByteBuffer key;
+    protected final ByteSequence key;
 
-    public RedisAtomicReference(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<V> codec, String key) {
-        this(redis, codec, ByteBuffers.fromUtf8(key));
+    public RedisAtomicReference(Redis redis, Codec<V> codec, String key) {
+        this(redis, codec, ByteSequence.utf8(key));
     }
 
-    public RedisAtomicReference(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<V> codec, ByteBuffer key) {
+    public RedisAtomicReference(Redis redis, Codec<V> codec, ByteSequence key) {
         this.redis = redis;
         this.codec = codec;
         this.key = key;
@@ -42,13 +44,12 @@ public class RedisAtomicReference<V> {
         return codec.decode(buffer);
     }
 
-    protected ByteBuffer encode(V value) {
+    protected ByteSequence encode(V value) {
         return codec.encode(value);
     }
 
     public boolean exists() {
-        log.trace("EXISTS {}", this);
-        return redis.exists(key.duplicate()) > 0;
+        return redis.send(new IntegerOutput(), CommandType.EXISTS, key) > 0;
     }
 
     public V get() {
@@ -56,61 +57,41 @@ public class RedisAtomicReference<V> {
     }
 
     public V get(V defaultValue) {
-        log.trace("GET {}", this);
-        ByteBuffer encodedValue = redis.get(key.duplicate());
-        if (encodedValue == null) {
-            return defaultValue;
-        } else {
-            return decode(encodedValue);
-        }
+        return redis.send(new DecodeOutput<>(this::decode, defaultValue), CommandType.GET, key);
     }
 
     public void set(V newValue) {
-        log.trace("SET {} {}", this, newValue);
-        redis.set(key.duplicate(), encode(newValue));
+        redis.send(new VoidOutput(), CommandType.SET, key, encode(newValue));
     }
 
     public boolean setIfAbsent(V newValue) {
-        log.trace("SET {} {} NX", this, newValue);
-        return Lettuce.ok(redis.set(key.duplicate(), encode(newValue), Lettuce.SET_NX));
+        return RESP.ok(redis.send(new StatusOutput(), CommandType.SET, key, encode(newValue), RESP.nx()));
     }
 
     public boolean setIfPresent(V newValue) {
-        log.trace("SET {} {} XX", this, newValue);
-        return Lettuce.ok(redis.set(key.duplicate(), encode(newValue), Lettuce.SET_XX));
+        return RESP.ok(redis.send(new StatusOutput(), CommandType.SET, key, encode(newValue), RESP.xx()));
     }
 
     public boolean compareAndSet(V expect, V update) {
-        log.trace("EVAL cas {} {} {}", this, expect, update);
-        return new RedisScriptCommands(redis).eval("cas", ScriptOutputType.STATUS,
-                new ByteBuffer[]{
-                        key.duplicate()
-                },
-                new ByteBuffer[]{
-                        encode(expect),
-                        encode(update)
-                });
+        return RESP.ok(redis.eval(new StatusOutput(),
+                RedisScript.get("cas"),
+                Collections.singletonList(key),
+                Arrays.asList(encode(expect), encode(update))));
     }
 
     public boolean compareAndReset(V expect) {
-        log.trace("EVAL cad {} {}", this, expect);
-        return new RedisScriptCommands(redis).eval("cad", ScriptOutputType.STATUS,
-                new ByteBuffer[]{
-                        key.duplicate()
-                },
-                new ByteBuffer[]{
-                        encode(expect)
-                });
+        return RESP.ok(redis.eval(new StatusOutput(),
+                RedisScript.get("cad"),
+                Collections.singletonList(key),
+                Collections.singletonList(encode(expect))));
     }
 
     public void reset() {
-        log.trace("DEL {}", this);
-        redis.del(key.duplicate());
+        redis.send(new IntegerOutput(), CommandType.DEL, key);
     }
 
     public V getAndSet(V newValue) {
-        log.trace("GETSET {} {}", this, newValue);
-        return decode(redis.getset(key.duplicate(), encode(newValue)));
+        return redis.send(new DecodeOutput<>(this::decode), CommandType.GETSET, key, encode(newValue));
     }
 
     public final V getAndUpdate(UnaryOperator<V> updateFunction) {
@@ -151,7 +132,7 @@ public class RedisAtomicReference<V> {
 
     @Override
     public String toString() {
-        return ByteBuffers.toString(key);
+        return key.toString();
     }
 
     public static class Expire<V> extends RedisAtomicReference<V> {
@@ -159,61 +140,45 @@ public class RedisAtomicReference<V> {
 
         private final long ttl;
 
-        public Expire(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<V> codec, String key, Duration ttl) {
+        public Expire(Redis redis, Codec<V> codec, String key, Duration ttl) {
             super(redis, codec, key);
             this.ttl = ttl.toMillis();
         }
 
-        public Expire(RedisCommands<ByteBuffer, ByteBuffer> redis, Codec<V> codec, ByteBuffer key, Duration ttl) {
+        public Expire(Redis redis, Codec<V> codec, ByteSequence key, Duration ttl) {
             super(redis, codec, key);
             this.ttl = ttl.toMillis();
         }
 
         @Override
         public void set(V newValue) {
-            log.trace("SET {} {} PX {}", this, newValue, ttl);
-            redis.set(key.duplicate(), encode(newValue), SetArgs.Builder.px(ttl));
+            redis.send(new VoidOutput(), CommandType.SET, key, encode(newValue), RESP.px(), RESP.b(ttl));
         }
 
         @Override
         public boolean setIfAbsent(V newValue) {
-            log.trace("SET {} {} PX {} NX", this, newValue, ttl);
-            return Lettuce.ok(redis.set(key.duplicate(), encode(newValue), SetArgs.Builder.px(ttl).nx()));
+            return RESP.ok(redis.send(new StatusOutput(), CommandType.SET, key, encode(newValue), RESP.px(), RESP.b(ttl), RESP.nx()));
         }
 
         @Override
         public boolean setIfPresent(V newValue) {
-            log.trace("SET {} {} PX {} XX", this, newValue, ttl);
-            return Lettuce.ok(redis.set(key.duplicate(), encode(newValue), SetArgs.Builder.px(ttl).xx()));
+            return RESP.ok(redis.send(new StatusOutput(), CommandType.SET, key, encode(newValue), RESP.px(), RESP.b(ttl), RESP.xx()));
         }
 
         @Override
         public boolean compareAndSet(V expect, V update) {
-            log.trace("EVAL cas {} {} {} PX {}", this, expect, update, ttl);
-            return new RedisScriptCommands(redis).eval("cas", ScriptOutputType.STATUS,
-                    new ByteBuffer[]{
-                            key.duplicate()
-                    },
-                    new ByteBuffer[]{
-                            encode(expect),
-                            encode(update),
-                            Lettuce.px(),
-                            PrimitiveCodec.LONG.encode(ttl)
-                    });
+            return RESP.ok(redis.eval(new StatusOutput(),
+                    RedisScript.get("cas"),
+                    Collections.singletonList(key),
+                    Arrays.asList(encode(expect), encode(update), RESP.px(), RESP.b(ttl))));
         }
 
         @Override
         public V getAndSet(V newValue) {
-            log.trace("EVAL getset {} {} PX {}", this, newValue, ttl);
-            return new RedisScriptCommands(redis).eval("getset", ScriptOutputType.VALUE,
-                    new ByteBuffer[]{
-                            key.duplicate()
-                    },
-                    new ByteBuffer[]{
-                            encode(newValue),
-                            Lettuce.px(),
-                            PrimitiveCodec.LONG.encode(ttl)
-                    });
+            return redis.eval(new DecodeOutput<>(this::decode),
+                    RedisScript.get("getset"),
+                    Collections.singletonList(key),
+                    Arrays.asList(encode(newValue), RESP.px(), RESP.b(ttl)));
         }
     }
 }

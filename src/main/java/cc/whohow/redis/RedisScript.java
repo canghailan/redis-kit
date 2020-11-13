@@ -1,6 +1,8 @@
-package cc.whohow.redis.script;
+package cc.whohow.redis;
 
 import cc.whohow.redis.io.IO;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -14,6 +16,10 @@ import java.security.NoSuchAlgorithmException;
  * Redis脚本
  */
 public class RedisScript {
+    private static final Cache<String, RedisScript> CACHE = Caffeine.newBuilder()
+            .maximumSize(1024)
+            .build();
+
     private final String name;
     private final String sha1;
     private final String script;
@@ -30,6 +36,10 @@ public class RedisScript {
         this.name = name;
         this.sha1 = sha1Hex(script);
         this.script = script;
+    }
+
+    public static RedisScript get(String script) {
+        return CACHE.get(script, RedisScript::new);
     }
 
     private static String load(URL url) {

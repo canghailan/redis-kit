@@ -1,16 +1,18 @@
 package cc.whohow.redis.util;
 
-import cc.whohow.redis.io.ByteBuffers;
+import cc.whohow.redis.RESP;
+import cc.whohow.redis.Redis;
+import cc.whohow.redis.buffer.ByteSequence;
 import cc.whohow.redis.io.PrimitiveCodec;
-import cc.whohow.redis.io.StringCodec;
-import io.lettuce.core.KeyValue;
-import io.lettuce.core.api.sync.RedisCommands;
+import cc.whohow.redis.io.UTF8Codec;
+import cc.whohow.redis.lettuce.ListOutput;
+import cc.whohow.redis.lettuce.VoidOutput;
+import io.lettuce.core.protocol.CommandType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.net.InetAddress;
 import java.net.NetworkInterface;
-import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -43,7 +45,7 @@ public class RedisLocal implements Runnable {
     /**
      * Redis连接
      */
-    private final RedisCommands<ByteBuffer, ByteBuffer> redis;
+    private final Redis redis;
     /**
      * 定时任务线程池
      */
@@ -73,13 +75,13 @@ public class RedisLocal implements Runnable {
      */
     private volatile RedisMap<String, String> localMap;
 
-    public RedisLocal(RedisCommands<ByteBuffer, ByteBuffer> redis, ScheduledExecutorService executor, String key) {
+    public RedisLocal(Redis redis, ScheduledExecutorService executor, String key) {
         this.redis = redis;
         this.executor = executor;
         this.key = key;
         this.expiresIn = Duration.ofMinutes(3); // ID有效期，3分钟，需及时续期
         this.maxId = 65535L; // 最大ID，4字节
-        this.clock = new RedisClock(redis); // 时钟
+        this.clock = new RedisClock(null); // 时钟
         this.idSet = new RedisSortedSet<>(redis, PrimitiveCodec.LONG, key);
         this.id = new CompletableFuture<>();
 
@@ -173,10 +175,8 @@ public class RedisLocal implements Runnable {
                     this.id.complete(newId); // 注册ID成功
                     log.debug("newId ok: {} @{}", newId, time);
                     this.lock = lock; // 更新实例锁
-                    this.localMap = new RedisMap<>(redis,
-                            StringCodec.defaultInstance(),
-                            StringCodec.defaultInstance(),
-                            getLocalMapRedisKey(newId)); // 创建实例存储空间
+                    this.localMap = new RedisMap<>(
+                            redis, UTF8Codec.get(), UTF8Codec.get(), getLocalMapRedisKey(newId)); // 创建实例存储空间
                     executor.execute(() -> {
                         Map<String, String> map = localMap;
                         if (map != null) {
@@ -257,20 +257,23 @@ public class RedisLocal implements Runnable {
             return Collections.emptySet();
         }
 
+        // 所有实例锁RedisKey与ID映射关系
         Map<String, Long> locks = ids.stream()
                 .collect(Collectors.toMap(this::getLocalRedisKey, Function.identity()));
-        log.trace("MGET {}", locks.keySet());
-        return redis.mget(locks.keySet().stream() // 所有实例锁RedisKey
-                .map(ByteBuffers::fromUtf8)
-                .peek(ByteBuffer::mark) // MGET复用key对象问题
-                .toArray(ByteBuffer[]::new)) // 确认实例锁是否存在
-                .stream()
-                .peek(kv -> kv.getKey().reset()) // MGET复用key对象问题
-                .filter(KeyValue::hasValue) // 过滤实例锁不存在的实例
-                .map(KeyValue::getKey) // 获取实例RedisKey
-                .map(ByteBuffers::toUtf8String)
-                .map(locks::get) // 将实例RedisKey转为实例ID
-                .collect(Collectors.toCollection(LinkedHashSet::new));
+        // 读取实例锁token
+        List<ByteSequence> tokens = redis.send(new ListOutput<>(ByteSequence::of),
+                CommandType.MGET,
+                locks.keySet().stream().map(ByteSequence::utf8).collect(Collectors.toList()));
+
+        LinkedHashSet<Long> activeIds = new LinkedHashSet<>(ids.size());
+        int i = 0;
+        for (Long id : locks.values()) {
+            // 实例锁存在，则为活跃ID
+            if (tokens.get(i++) != null) {
+                activeIds.add(id);
+            }
+        }
+        return activeIds;
     }
 
     /**
@@ -325,12 +328,7 @@ public class RedisLocal implements Runnable {
         log.debug("gc: {}", ids);
 
         // 回收实例存储空间
-        log.trace("DEL {}:+{}", key, ids);
-        redis.del(ids.stream()
-                .map(this::getLocalMapRedisKey)
-                .map(ByteBuffers::fromUtf8)
-                .toArray(ByteBuffer[]::new));
-
+        redis.send(new VoidOutput(), CommandType.DEL, ids.stream().map(RESP::b).collect(Collectors.toList()));
         idSet.zrem(ids);
     }
 
