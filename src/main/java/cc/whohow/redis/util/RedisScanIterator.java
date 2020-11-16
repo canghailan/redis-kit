@@ -1,7 +1,7 @@
 package cc.whohow.redis.util;
 
 import cc.whohow.redis.Redis;
-import cc.whohow.redis.buffer.ByteSequence;
+import cc.whohow.redis.bytes.ByteSequence;
 
 import java.util.Iterator;
 

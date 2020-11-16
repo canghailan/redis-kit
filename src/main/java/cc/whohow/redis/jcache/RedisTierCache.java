@@ -1,7 +1,7 @@
 package cc.whohow.redis.jcache;
 
 import cc.whohow.redis.RedisTracking;
-import cc.whohow.redis.buffer.ByteSequence;
+import cc.whohow.redis.bytes.ByteSequence;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import io.lettuce.core.RedisChannelHandler;
 import io.lettuce.core.RedisConnectionStateListener;

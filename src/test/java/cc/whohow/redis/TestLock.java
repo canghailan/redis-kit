@@ -30,7 +30,7 @@ public class TestLock {
             properties = new Properties();
             properties.load(stream);
             redisURI = RedisURI.create(properties.getProperty("uri"));
-            redis = new SingleRedis(redisClient, redisURI);
+            redis = new StandaloneRedis(redisClient, redisURI);
 
             executor = Executors.newFixedThreadPool(20);
         }

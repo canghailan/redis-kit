@@ -1,4 +1,4 @@
-package cc.whohow.redis.buffer;
+package cc.whohow.redis.bytes;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;

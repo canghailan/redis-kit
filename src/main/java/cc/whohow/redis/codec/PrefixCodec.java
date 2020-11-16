@@ -1,7 +1,7 @@
-package cc.whohow.redis.io;
+package cc.whohow.redis.codec;
 
-import cc.whohow.redis.buffer.ByteSequence;
-import cc.whohow.redis.buffer.ConcatByteSequence;
+import cc.whohow.redis.bytes.ByteSequence;
+import cc.whohow.redis.bytes.ConcatByteSequence;
 
 import java.nio.ByteBuffer;
 

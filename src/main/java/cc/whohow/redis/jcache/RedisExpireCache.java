@@ -1,6 +1,7 @@
 package cc.whohow.redis.jcache;
 
 import cc.whohow.redis.RESP;
+import cc.whohow.redis.bytes.ByteSequence;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import cc.whohow.redis.lettuce.StatusOutput;
 import cc.whohow.redis.lettuce.VoidOutput;
@@ -12,16 +13,16 @@ import java.util.Map;
  * Redis缓存，支持过期时间
  */
 public class RedisExpireCache<K, V> extends RedisCache<K, V> {
-    protected final long ttl;
+    protected final ByteSequence ttl;
 
     public RedisExpireCache(RedisCacheManager cacheManager, RedisCacheConfiguration<K, V> configuration) {
         super(cacheManager, configuration);
-        this.ttl = configuration.getExpiryForUpdateTimeUnit().toMillis(configuration.getExpiryForUpdate());
+        this.ttl = RESP.b(configuration.getExpiryForUpdateTimeUnit().toMillis(configuration.getExpiryForUpdate()));
     }
 
     @Override
     public void put(K key, V value) {
-        redis.send(new VoidOutput(), CommandType.SET, encodeKey(key), encodeValue(value), RESP.px(), RESP.b(ttl));
+        redis.send(new VoidOutput(), CommandType.SET, keyCodec.encode(key), valueCodec.encode(value), RESP.px(), ttl);
         cacheStats.cachePut(1);
     }
 
@@ -37,7 +38,7 @@ public class RedisExpireCache<K, V> extends RedisCache<K, V> {
 
     @Override
     public boolean putIfAbsent(K key, V value) {
-        boolean ok = RESP.ok(redis.send(new StatusOutput(), CommandType.SET, encodeKey(key), encodeValue(value), RESP.px(), RESP.b(ttl), RESP.nx()));
+        boolean ok = RESP.ok(redis.send(new StatusOutput(), CommandType.SET, keyCodec.encode(key), valueCodec.encode(value), RESP.px(), ttl, RESP.nx()));
         if (ok) {
             cacheStats.cachePut(1);
         }
@@ -51,7 +52,7 @@ public class RedisExpireCache<K, V> extends RedisCache<K, V> {
 
     @Override
     public boolean replace(K key, V value) {
-        boolean ok = RESP.ok(redis.send(new StatusOutput(), CommandType.SET, encodeKey(key), encodeValue(value), RESP.px(), RESP.b(ttl), RESP.xx()));
+        boolean ok = RESP.ok(redis.send(new StatusOutput(), CommandType.SET, keyCodec.encode(key), valueCodec.encode(value), RESP.px(), ttl, RESP.xx()));
         if (ok) {
             cacheStats.cachePut(1);
         }

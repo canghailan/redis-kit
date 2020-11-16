@@ -1,7 +1,7 @@
 package cc.whohow.redis;
 
-import cc.whohow.redis.io.JacksonCodec;
-import cc.whohow.redis.io.UTF8Codec;
+import cc.whohow.redis.codec.JacksonCodec;
+import cc.whohow.redis.codec.StringCodec;
 import cc.whohow.redis.lettuce.TimeOutput;
 import cc.whohow.redis.util.RedisMap;
 import io.lettuce.core.RedisClient;
@@ -30,7 +30,7 @@ public class TestAsyncRedis {
             properties = new Properties();
             properties.load(stream);
             redisURI = RedisURI.create(properties.getProperty("uri"));
-            redis = new SingleRedis(redisClient, redisURI);
+            redis = new StandaloneRedis(redisClient, redisURI);
         }
     }
 
@@ -50,7 +50,7 @@ public class TestAsyncRedis {
     @Test
     public void testMap() {
         RedisMap<String, String> map = new RedisMap<>(redis,
-                UTF8Codec.get(), new JacksonCodec<>(String.class), "test:map");
+                StringCodec.UTF8.get(), new JacksonCodec<>(String.class), "test:map");
 
         map.clear();
 

@@ -1,6 +1,6 @@
 package cc.whohow.redis;
 
-import cc.whohow.redis.buffer.ByteSequence;
+import cc.whohow.redis.bytes.ByteSequence;
 
 public interface RedisTracking extends AutoCloseable {
     void addListener(ByteSequence pattern, Listener listener);

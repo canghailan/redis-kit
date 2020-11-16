@@ -1,8 +1,11 @@
-package cc.whohow.redis.io;
+package cc.whohow.redis.codec;
 
-import cc.whohow.redis.buffer.ByteSequence;
-import cc.whohow.redis.buffer.ByteSequenceInputStream;
-import cc.whohow.redis.buffer.ByteSequenceOutputStream;
+import cc.whohow.redis.bytes.ByteSequence;
+import cc.whohow.redis.bytes.ByteSequenceInputStream;
+import cc.whohow.redis.bytes.ByteSequenceOutputStream;
+import cc.whohow.redis.bytes.ByteStatistics;
+import cc.whohow.redis.io.ByteBufferInputStream;
+import cc.whohow.redis.io.IO;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -13,18 +16,20 @@ import java.nio.ByteBuffer;
  * 自适应缓冲区编码器
  */
 public abstract class AbstractStreamCodec<T> implements Codec<T>, StreamCodec<T> {
-    protected final ByteBufferAllocator byteBufferAllocator;
-
-    protected AbstractStreamCodec(ByteBufferAllocator byteBufferAllocator) {
-        this.byteBufferAllocator = byteBufferAllocator;
-    }
+    protected final ByteStatistics byteStatistics = new ByteStatistics();
 
     @Override
     public ByteSequence encode(T value) {
-        try (ByteSequenceOutputStream stream = new ByteSequenceOutputStream(byteBufferAllocator.guess())) {
+        int bufferSize = byteStatistics.getAvg();
+        if (bufferSize > 0) {
+            bufferSize = ByteStatistics.ceilingNextPowerOfTwo(bufferSize);
+        } else {
+            bufferSize = IO.BUFFER_SIZE;
+        }
+        try (ByteSequenceOutputStream stream = new ByteSequenceOutputStream(bufferSize)) {
             encode(value, stream);
             ByteSequence buffer = stream.getByteSequence();
-            byteBufferAllocator.record(buffer.length());
+            byteStatistics.accept(buffer.length());
             return buffer;
         } catch (IOException e) {
             throw new UncheckedIOException(e);

@@ -29,7 +29,7 @@ public class TestRedisFactory {
             properties = new Properties();
             properties.load(stream);
             redisURI = RedisURI.create(properties.getProperty("uri"));
-            redis = new SingleRedis(redisClient, redisURI);
+            redis = new StandaloneRedis(redisClient, redisURI);
             redisFactory = new RedisFactory(redis);
         }
     }

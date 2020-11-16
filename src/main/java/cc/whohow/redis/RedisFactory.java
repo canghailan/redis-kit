@@ -1,7 +1,7 @@
 package cc.whohow.redis;
 
-import cc.whohow.redis.io.Codec;
-import cc.whohow.redis.io.DefaultCodecFactory;
+import cc.whohow.redis.codec.Codec;
+import cc.whohow.redis.codec.DefaultCodecFactory;
 import cc.whohow.redis.util.*;
 
 import java.time.Clock;

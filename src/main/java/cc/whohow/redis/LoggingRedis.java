@@ -1,6 +1,6 @@
 package cc.whohow.redis;
 
-import cc.whohow.redis.buffer.ByteSequence;
+import cc.whohow.redis.bytes.ByteSequence;
 import io.lettuce.core.RedisConnectionStateListener;
 import io.lettuce.core.output.CommandOutput;
 import io.lettuce.core.protocol.CommandArgs;

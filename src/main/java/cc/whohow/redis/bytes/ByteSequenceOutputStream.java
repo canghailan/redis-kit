@@ -1,4 +1,4 @@
-package cc.whohow.redis.buffer;
+package cc.whohow.redis.bytes;
 
 import java.io.ByteArrayOutputStream;
 

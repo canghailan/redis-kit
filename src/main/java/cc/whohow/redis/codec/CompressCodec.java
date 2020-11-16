@@ -1,4 +1,4 @@
-package cc.whohow.redis.io;
+package cc.whohow.redis.codec;
 
 import org.apache.commons.compress.compressors.CompressorException;
 import org.apache.commons.compress.compressors.CompressorInputStream;
@@ -16,19 +16,13 @@ public class CompressCodec<T> extends AbstractStreamCodec<T> {
     private final CompressorStreamFactory factory = CompressorStreamFactory.getSingleton();
 
     public CompressCodec(String name, StreamCodec<T> codec) {
-        super(new ByteBufferAllocator(1024, 8 * 1024));
         this.name = name;
         this.codec = codec;
     }
 
     public CompressCodec(String name, Codec<T> codec) {
-        this(name, codec, new ByteBufferAllocator(1024, 8 * 1024));
-    }
-
-    public CompressCodec(String name, Codec<T> codec, ByteBufferAllocator byteBufferAllocator) {
-        super(byteBufferAllocator);
         this.name = name;
-        this.codec = new StreamCodecAdapter<>(codec, byteBufferAllocator);
+        this.codec = new StreamCodecAdapter<>(codec);
     }
 
     @Override

@@ -1,8 +1,8 @@
 package cc.whohow.redis.jcache.codec;
 
-import cc.whohow.redis.io.Codec;
-import cc.whohow.redis.io.JacksonCodec;
-import cc.whohow.redis.io.PrefixCodec;
+import cc.whohow.redis.codec.Codec;
+import cc.whohow.redis.codec.JacksonCodec;
+import cc.whohow.redis.codec.PrefixCodec;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 
 public class DefaultRedisCacheCodecFactory implements RedisCacheCodecFactory {

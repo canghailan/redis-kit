@@ -1,9 +1,9 @@
 package cc.whohow.redis.util;
 
 import cc.whohow.redis.Redis;
-import cc.whohow.redis.buffer.ByteSequence;
-import cc.whohow.redis.io.Codec;
-import cc.whohow.redis.io.PrimitiveCodec;
+import cc.whohow.redis.bytes.ByteSequence;
+import cc.whohow.redis.codec.Codec;
+import cc.whohow.redis.codec.PrimitiveCodec;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 

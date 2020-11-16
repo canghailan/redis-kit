@@ -2,9 +2,9 @@ package cc.whohow.redis.util;
 
 import cc.whohow.redis.RESP;
 import cc.whohow.redis.Redis;
-import cc.whohow.redis.buffer.ByteSequence;
-import cc.whohow.redis.io.PrimitiveCodec;
-import cc.whohow.redis.io.UTF8Codec;
+import cc.whohow.redis.bytes.ByteSequence;
+import cc.whohow.redis.codec.PrimitiveCodec;
+import cc.whohow.redis.codec.StringCodec;
 import cc.whohow.redis.lettuce.ListOutput;
 import cc.whohow.redis.lettuce.VoidOutput;
 import io.lettuce.core.protocol.CommandType;
@@ -176,7 +176,7 @@ public class RedisLocal implements Runnable {
                     log.debug("newId ok: {} @{}", newId, time);
                     this.lock = lock; // 更新实例锁
                     this.localMap = new RedisMap<>(
-                            redis, UTF8Codec.get(), UTF8Codec.get(), getLocalMapRedisKey(newId)); // 创建实例存储空间
+                            redis, StringCodec.UTF8.get(), StringCodec.UTF8.get(), getLocalMapRedisKey(newId)); // 创建实例存储空间
                     executor.execute(() -> {
                         Map<String, String> map = localMap;
                         if (map != null) {

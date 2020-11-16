@@ -22,7 +22,7 @@ public class TestRedisMessaging {
             properties = new Properties();
             properties.load(stream);
             redisURI = RedisURI.create(properties.getProperty("uri"));
-            redis = new SingleRedis(redisClient, redisURI);
+            redis = new StandaloneRedis(redisClient, redisURI);
         }
     }
 

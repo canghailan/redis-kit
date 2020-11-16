@@ -1,6 +1,8 @@
-package cc.whohow.redis.io;
+package cc.whohow.redis.codec;
 
-import cc.whohow.redis.buffer.ByteSequence;
+import cc.whohow.redis.bytes.ByteSequence;
+import cc.whohow.redis.bytes.ByteStatistics;
+import cc.whohow.redis.io.IO;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -9,15 +11,10 @@ import java.nio.ByteBuffer;
 
 public class StreamCodecAdapter<T> implements Codec<T>, StreamCodec<T> {
     protected final Codec<T> codec;
-    protected final ByteBufferAllocator byteBufferAllocator;
+    protected final ByteStatistics byteStatistics = new ByteStatistics();
 
     public StreamCodecAdapter(Codec<T> codec) {
-        this(codec, new ByteBufferAllocator());
-    }
-
-    public StreamCodecAdapter(Codec<T> codec, ByteBufferAllocator byteBufferAllocator) {
         this.codec = codec;
-        this.byteBufferAllocator = byteBufferAllocator;
     }
 
     @Override
@@ -53,8 +50,19 @@ public class StreamCodecAdapter<T> implements Codec<T>, StreamCodec<T> {
 
     @Override
     public T decode(InputStream stream) throws IOException {
-        ByteBuffer buffer = IO.read(stream, byteBufferAllocator.guess());
-        byteBufferAllocator.record(buffer.remaining());
+        int bufferSize = byteStatistics.getAvg();
+        if (bufferSize > 0) {
+            bufferSize = ByteStatistics.ceilingNextPowerOfTwo(bufferSize);
+        } else {
+            bufferSize = stream.available();
+            if (bufferSize > 0) {
+                bufferSize = ByteStatistics.ceilingNextPowerOfTwo(bufferSize);
+            } else {
+                bufferSize = IO.BUFFER_SIZE;
+            }
+        }
+        ByteBuffer buffer = IO.read(stream, bufferSize);
+        byteStatistics.accept(buffer.remaining());
         return decode(buffer);
     }
 }

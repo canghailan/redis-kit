@@ -1,7 +1,8 @@
 package cc.whohow.redis;
 
-import cc.whohow.redis.buffer.ByteSequence;
-import cc.whohow.redis.io.*;
+import cc.whohow.redis.bytes.ByteSequence;
+import cc.whohow.redis.bytes.ByteStatistics;
+import cc.whohow.redis.codec.*;
 import cc.whohow.redis.jcache.ImmutableGeneratedCacheKey;
 import cc.whohow.redis.jcache.codec.ImmutableGeneratedCacheKeyCodec;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,6 +23,17 @@ import java.util.Random;
 import java.util.stream.Collectors;
 
 public class TestCodec {
+    @Test
+    public void testCeilingNextPowerOfTwo() {
+        System.out.println(ByteStatistics.ceilingNextPowerOfTwo(0));
+        System.out.println(ByteStatistics.ceilingNextPowerOfTwo(1));
+        System.out.println(ByteStatistics.ceilingNextPowerOfTwo(2));
+        System.out.println(ByteStatistics.ceilingNextPowerOfTwo(3));
+        System.out.println(ByteStatistics.ceilingNextPowerOfTwo(65));
+        System.out.println(ByteStatistics.ceilingNextPowerOfTwo(127));
+        System.out.println(ByteStatistics.ceilingNextPowerOfTwo(128));
+    }
+
     @Test
     public void testTypeCanonicalName() {
         System.out.println(String.class.getCanonicalName());
@@ -80,7 +92,7 @@ public class TestCodec {
 
     @Test
     public void testStringCodec() {
-        Codec<String> stringCodec = new UTF8Codec();
+        Codec<String> stringCodec = new StringCodec.UTF8();
 
         ByteSequence b1 = stringCodec.encode("abc中文");
         System.out.println(b1.toString());
@@ -100,7 +112,7 @@ public class TestCodec {
         Random random = new Random();
         String string = random.ints(100000).mapToObj(Integer::toString).collect(Collectors.joining());
 
-        Codec<String> stringCodec = new UTF8Codec();
+        Codec<String> stringCodec = new StringCodec.UTF8();
         Codec<String> gzipCodec = new GzipCodec<>(stringCodec);
 
         ByteSequence b1 = stringCodec.encode(string);
@@ -120,7 +132,7 @@ public class TestCodec {
         Random random = new Random();
         String string = random.ints(100000).mapToObj(Integer::toString).collect(Collectors.joining());
 
-        Codec<String> stringCodec = new UTF8Codec();
+        Codec<String> stringCodec = new StringCodec.UTF8();
         Codec<String> compressCodec = new CompressCodec<>(CompressorStreamFactory.getGzip(), stringCodec);
 
         ByteSequence b1 = stringCodec.encode(string);

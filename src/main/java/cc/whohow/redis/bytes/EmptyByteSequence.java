@@ -1,4 +1,4 @@
-package cc.whohow.redis.buffer;
+package cc.whohow.redis.bytes;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -31,7 +31,7 @@ class EmptyByteSequence implements ByteSequence {
 
     @Override
     public ByteSequence subSequence(int start, int end) {
-        return null;
+        throw new IndexOutOfBoundsException();
     }
 
     @Override
@@ -41,7 +41,7 @@ class EmptyByteSequence implements ByteSequence {
 
     @Override
     public IntStream bytes() {
-        return null;
+        return IntStream.empty();
     }
 
     @Override
@@ -51,12 +51,12 @@ class EmptyByteSequence implements ByteSequence {
 
     @Override
     public ByteBuffer toByteBuffer() {
-        return null;
+        return ByteBuffer.allocate(0);
     }
 
     @Override
     public ByteSequence copy() {
-        return null;
+        return this;
     }
 
     @Override
@@ -66,7 +66,7 @@ class EmptyByteSequence implements ByteSequence {
 
     @Override
     public ByteBuffer copyToByteBuffer() {
-        return null;
+        return ByteBuffer.allocate(0);
     }
 
     @Override

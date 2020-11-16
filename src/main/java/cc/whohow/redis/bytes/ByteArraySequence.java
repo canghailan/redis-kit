@@ -1,9 +1,10 @@
-package cc.whohow.redis.buffer;
+package cc.whohow.redis.bytes;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.PrimitiveIterator;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
@@ -71,7 +72,12 @@ class ByteArraySequence implements ByteSequence {
 
     @Override
     public IntStream bytes() {
-        return ByteIterator.stream(array, offset, length);
+        return ByteStream.of(array, offset, length);
+    }
+
+    @Override
+    public PrimitiveIterator.OfInt byteIterator() {
+        return new ByteIterator(array, offset, length);
     }
 
     @Override

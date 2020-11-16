@@ -1,7 +1,7 @@
 package cc.whohow.redis.lettuce;
 
 import cc.whohow.redis.RESP;
-import cc.whohow.redis.buffer.ByteSequence;
+import cc.whohow.redis.bytes.ByteSequence;
 import io.lettuce.core.ScoredValue;
 import io.lettuce.core.output.CommandOutput;
 

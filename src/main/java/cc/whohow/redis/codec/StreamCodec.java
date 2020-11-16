@@ -1,4 +1,4 @@
-package cc.whohow.redis.io;
+package cc.whohow.redis.codec;
 
 import java.io.IOException;
 import java.io.InputStream;

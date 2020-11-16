@@ -1,6 +1,6 @@
 package cc.whohow.redis;
 
-import cc.whohow.redis.buffer.ByteSequence;
+import cc.whohow.redis.bytes.ByteSequence;
 import cc.whohow.redis.lettuce.ByteSequenceRedisCodec;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisConnectionStateListener;
@@ -12,12 +12,12 @@ import io.lettuce.core.protocol.RedisCommand;
 import java.net.URI;
 import java.util.concurrent.CompletableFuture;
 
-public class SingleRedis implements Redis {
+public class StandaloneRedis implements Redis {
     protected final RedisClient client;
     protected final RedisURI uri;
     protected volatile StatefulConnection<ByteSequence, ByteSequence> connection;
 
-    public SingleRedis(RedisClient client, RedisURI uri) {
+    public StandaloneRedis(RedisClient client, RedisURI uri) {
         this.client = client;
         this.uri = uri;
         this.connection = client.connect(ByteSequenceRedisCodec.get(), uri);

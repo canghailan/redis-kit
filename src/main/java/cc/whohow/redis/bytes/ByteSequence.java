@@ -1,14 +1,14 @@
-package cc.whohow.redis.buffer;
+package cc.whohow.redis.bytes;
 
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.PrimitiveIterator;
 import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 
-public interface ByteSequence extends Iterable<ByteBuffer> {
+public interface ByteSequence extends Iterable<ByteBuffer>, Comparable<ByteSequence> {
     static ByteSequence empty() {
         return EmptyByteSequence.get();
     }
@@ -38,27 +38,27 @@ public interface ByteSequence extends Iterable<ByteBuffer> {
     }
 
     static ByteSequence ascii(String string) {
-        return new ByteArraySequence(string.getBytes(StandardCharsets.US_ASCII));
+        return new StringByteSequence.ASCII(string);
     }
 
     static ByteSequence ascii(CharSequence charSequence) {
-        return new ByteArraySequence(StandardCharsets.US_ASCII.encode(CharBuffer.wrap(charSequence)));
+        return new StringByteSequence.ASCII(charSequence);
     }
 
     static ByteSequence ascii(CharBuffer charBuffer) {
-        return new ByteArraySequence(StandardCharsets.US_ASCII.encode(charBuffer));
+        return new StringByteSequence.ASCII(charBuffer);
     }
 
     static ByteSequence utf8(String string) {
-        return new UTF8ByteSequence(string);
+        return new StringByteSequence.UTF8(string);
     }
 
     static ByteSequence utf8(CharSequence charSequence) {
-        return new UTF8ByteSequence(charSequence);
+        return new StringByteSequence.UTF8(charSequence);
     }
 
     static ByteSequence utf8(CharBuffer charBuffer) {
-        return new UTF8ByteSequence(charBuffer);
+        return new StringByteSequence.UTF8(charBuffer);
     }
 
     static ByteSequence copy(byte... byteArray) {
@@ -67,6 +67,22 @@ public interface ByteSequence extends Iterable<ByteBuffer> {
 
     static ByteSequence copy(ByteBuffer byteBuffer) {
         return of(byteBuffer).copy();
+    }
+
+    /**
+     * @see Arrays#hashCode(byte[])
+     * @see ByteSequence#contentEquals(cc.whohow.redis.bytes.ByteSequence)
+     */
+    static int hashCode(ByteSequence bytes) {
+        if (bytes == null) {
+            return 0;
+        }
+        PrimitiveIterator.OfInt iterator = bytes.byteIterator();
+        int result = 1;
+        while (iterator.hasNext()) {
+            result = 31 * result + iterator.nextInt();
+        }
+        return result;
     }
 
     /**
@@ -156,7 +172,14 @@ public interface ByteSequence extends Iterable<ByteBuffer> {
      */
     default IntStream bytes() {
         return StreamSupport.stream(spliterator(), false)
-                .flatMapToInt(ByteIterator::stream);
+                .flatMapToInt(ByteStream::of);
+    }
+
+    /**
+     * 字节迭代器
+     */
+    default PrimitiveIterator.OfInt byteIterator() {
+        return bytes().iterator();
     }
 
     /**
@@ -229,6 +252,28 @@ public interface ByteSequence extends Iterable<ByteBuffer> {
         return ByteBuffer.wrap(copyToByteArray());
     }
 
+    @Override
+    default int compareTo(ByteSequence that) {
+        PrimitiveIterator.OfInt thisBytes = byteIterator();
+        PrimitiveIterator.OfInt thatBytes = that.byteIterator();
+        while (thisBytes.hasNext()) {
+            if (thatBytes.hasNext()) {
+                int c = Integer.compare(thisBytes.nextInt(), thatBytes.nextInt());
+                if (c == 0) {
+                    continue;
+                }
+                return c;
+            } else {
+                return -1;
+            }
+        }
+        if (thatBytes.hasNext()) {
+            return 1;
+        } else {
+            return 0;
+        }
+    }
+
     /**
      * 检查字节序列内容是否相同
      */
@@ -236,8 +281,8 @@ public interface ByteSequence extends Iterable<ByteBuffer> {
         if (length() != that.length()) {
             return false;
         }
-        PrimitiveIterator.OfInt thisBytes = bytes().iterator();
-        PrimitiveIterator.OfInt thatBytes = that.bytes().iterator();
+        PrimitiveIterator.OfInt thisBytes = byteIterator();
+        PrimitiveIterator.OfInt thatBytes = that.byteIterator();
         while (thisBytes.hasNext()) {
             if (thatBytes.hasNext()) {
                 if (thisBytes.nextInt() != thatBytes.nextInt()) {
@@ -257,8 +302,8 @@ public interface ByteSequence extends Iterable<ByteBuffer> {
         if (length() > that.length()) {
             return false;
         }
-        PrimitiveIterator.OfInt thisBytes = bytes().iterator();
-        PrimitiveIterator.OfInt thatBytes = that.bytes().iterator();
+        PrimitiveIterator.OfInt thisBytes = byteIterator();
+        PrimitiveIterator.OfInt thatBytes = that.byteIterator();
         while (thisBytes.hasNext()) {
             if (thatBytes.hasNext()) {
                 if (thisBytes.nextInt() != thatBytes.nextInt()) {

@@ -1,7 +1,7 @@
 package cc.whohow.redis.messaging;
 
 import cc.whohow.redis.Redis;
-import cc.whohow.redis.io.Codec;
+import cc.whohow.redis.codec.Codec;
 import cc.whohow.redis.util.*;
 
 import java.util.concurrent.ExecutorService;

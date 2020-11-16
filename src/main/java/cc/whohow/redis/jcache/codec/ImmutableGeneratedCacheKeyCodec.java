@@ -1,7 +1,7 @@
 package cc.whohow.redis.jcache.codec;
 
-import cc.whohow.redis.buffer.ByteSequence;
-import cc.whohow.redis.io.*;
+import cc.whohow.redis.bytes.ByteSequence;
+import cc.whohow.redis.codec.*;
 import cc.whohow.redis.jcache.ImmutableGeneratedCacheKey;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,7 +32,7 @@ public abstract class ImmutableGeneratedCacheKeyCodec implements Codec<Immutable
             case 1: {
                 switch (cacheKeyTypeCanonicalNames[0]) {
                     case "java.lang.String": {
-                        return new SingletonKeyCodec(UTF8Codec.get());
+                        return new SingletonKeyCodec(StringCodec.UTF8.get());
                     }
                     case "java.lang.Integer": {
                         return SingletonKeyCodec.INTEGER_KEY_CODEC;
@@ -114,7 +114,6 @@ public abstract class ImmutableGeneratedCacheKeyCodec implements Codec<Immutable
         private final JavaType[] types;
 
         private ArrayKeyCodec(String... canonicalName) {
-            super(new ByteBufferAllocator());
             this.types = Arrays.stream(canonicalName)
                     .map(OBJECT_MAPPER.getTypeFactory()::constructFromCanonical)
                     .toArray(JavaType[]::new);

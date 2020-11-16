@@ -2,8 +2,8 @@ package cc.whohow.redis.jcache;
 
 import cc.whohow.redis.RESP;
 import cc.whohow.redis.Redis;
-import cc.whohow.redis.buffer.ByteSequence;
-import cc.whohow.redis.io.Codec;
+import cc.whohow.redis.bytes.ByteSequence;
+import cc.whohow.redis.codec.Codec;
 import cc.whohow.redis.jcache.codec.RedisCacheCodecFactory;
 import cc.whohow.redis.jcache.configuration.RedisCacheConfiguration;
 import cc.whohow.redis.jcache.processor.EntryProcessorResultWrapper;
@@ -55,24 +55,8 @@ public class RedisCache<K, V> implements Cache<K, V> {
         return valueCodec;
     }
 
-    protected ByteSequence encodeKey(K key) {
-        return keyCodec.encode(key);
-    }
-
-    protected ByteSequence encodeValue(V value) {
-        return valueCodec.encode(value);
-    }
-
-    protected K decodeKey(ByteBuffer byteBuffer) {
-        return keyCodec.decode(byteBuffer);
-    }
-
-    protected V decodeValue(ByteBuffer byteBuffer) {
-        return valueCodec.decode(byteBuffer);
-    }
-
     protected CacheValue<V> decodeCacheValue(ByteBuffer byteBuffer) {
-        return wrapCacheValue(decodeValue(byteBuffer));
+        return wrapCacheValue(valueCodec.decode(byteBuffer));
     }
 
     protected CacheValue<V> wrapCacheValue(V value) {
@@ -81,7 +65,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public V get(K key) {
-        CacheValue<V> cacheValue = redis.send(new DecodeOutput<>(this::decodeCacheValue), CommandType.GET, encodeKey(key));
+        CacheValue<V> cacheValue = redis.send(new DecodeOutput<>(this::decodeCacheValue), CommandType.GET, keyCodec.encode(key));
         if (cacheValue != null) {
             cacheStats.cacheHit(1);
             return cacheValue.get();
@@ -97,15 +81,15 @@ public class RedisCache<K, V> implements Cache<K, V> {
             return Collections.emptyMap();
         }
         List<ByteSequence> args = keys.stream()
-                .map(this::encodeKey)
+                .map(keyCodec::encode)
                 .collect(Collectors.toList());
-        List<V> values = redis.send(new ListOutput<>(this::decodeValue), CommandType.MGET, args);
+        List<V> values = redis.send(new ListOutput<>(valueCodec::decode), CommandType.MGET, args);
         return new KeyValues<>(keys, values);
     }
 
     @Override
     public boolean containsKey(K key) {
-        return redis.send(new IntegerOutput(), CommandType.EXISTS, encodeKey(key)) > 0;
+        return redis.send(new IntegerOutput(), CommandType.EXISTS, keyCodec.encode(key)) > 0;
     }
 
     @Override
@@ -115,13 +99,13 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public void put(K key, V value) {
-        redis.send(new VoidOutput(), CommandType.SET, encodeKey(key), encodeValue(value));
+        redis.send(new VoidOutput(), CommandType.SET, keyCodec.encode(key), valueCodec.encode(value));
         cacheStats.cachePut(1);
     }
 
     @Override
     public V getAndPut(K key, V value) {
-        V oldValue = redis.send(new DecodeOutput<>(this::decodeValue), CommandType.GETSET, encodeKey(key), encodeValue(value));
+        V oldValue = redis.send(new DecodeOutput<>(valueCodec::decode), CommandType.GETSET, keyCodec.encode(key), valueCodec.encode(value));
         if (oldValue != null) {
             cacheStats.cacheHit(1);
         } else {
@@ -137,8 +121,8 @@ public class RedisCache<K, V> implements Cache<K, V> {
         }
         List<ByteSequence> args = new ArrayList<>(map.size() * 2);
         for (Map.Entry<? extends K, ? extends V> e : map.entrySet()) {
-            args.add(encodeKey(e.getKey()));
-            args.add(encodeValue(e.getValue()));
+            args.add(keyCodec.encode(e.getKey()));
+            args.add(valueCodec.encode(e.getValue()));
         }
         redis.send(new VoidOutput(), CommandType.MSET, args);
         cacheStats.cachePut(map.size());
@@ -146,7 +130,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public boolean putIfAbsent(K key, V value) {
-        boolean ok = RESP.ok(redis.send(new StatusOutput(), CommandType.SET, encodeKey(key), encodeValue(value), RESP.nx()));
+        boolean ok = RESP.ok(redis.send(new StatusOutput(), CommandType.SET, keyCodec.encode(key), valueCodec.encode(value), RESP.nx()));
         if (ok) {
             cacheStats.cachePut(1);
         }
@@ -155,7 +139,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public boolean remove(K key) {
-        boolean ok = redis.send(new IntegerOutput(), CommandType.DEL, encodeKey(key)) > 0;
+        boolean ok = redis.send(new IntegerOutput(), CommandType.DEL, keyCodec.encode(key)) > 0;
         if (ok) {
             cacheStats.cacheRemove(1);
         }
@@ -179,7 +163,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public boolean replace(K key, V value) {
-        boolean ok = RESP.ok(redis.send(new StatusOutput(), CommandType.SET, encodeKey(key), encodeValue(value), RESP.xx()));
+        boolean ok = RESP.ok(redis.send(new StatusOutput(), CommandType.SET, keyCodec.encode(key), valueCodec.encode(value), RESP.xx()));
         if (ok) {
             cacheStats.cachePut(1);
         }
@@ -197,7 +181,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
             return;
         }
         List<ByteSequence> args = keys.stream()
-                .map(this::encodeKey)
+                .map(keyCodec::encode)
                 .collect(Collectors.toList());
         long n = redis.send(new IntegerOutput(), CommandType.DEL, args);
         cacheStats.cacheRemove((int) n);
@@ -287,7 +271,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
     @Override
     public Iterator<Entry<K, V>> iterator() {
         return new MappingIterator<>(new RedisIterator<>(new RedisKeyScanIterator<>(
-                redis, this::decodeKey, configuration.getRedisKeyPattern(), 0)), this::getEntry);
+                redis, keyCodec::decode, configuration.getRedisKeyPattern(), 0)), this::getEntry);
     }
 
     @Override
@@ -297,7 +281,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public CacheValue<V> getValue(K key) {
-        CacheValue<V> cacheValue = redis.send(new DecodeOutput<>(this::decodeCacheValue), CommandType.GET, encodeKey(key));
+        CacheValue<V> cacheValue = redis.send(new DecodeOutput<>(this::decodeCacheValue), CommandType.GET, keyCodec.encode(key));
         if (cacheValue != null) {
             cacheStats.cacheHit(1);
         } else {
@@ -308,7 +292,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public CacheValue<V> getValue(K key, CacheLoader<K, ? extends V> cacheLoader) {
-        CacheValue<V> cacheValue = redis.send(new DecodeOutput<>(this::decodeCacheValue), CommandType.GET, encodeKey(key));
+        CacheValue<V> cacheValue = redis.send(new DecodeOutput<>(this::decodeCacheValue), CommandType.GET, keyCodec.encode(key));
         if (cacheValue != null) {
             cacheStats.cacheHit(1);
             return cacheValue;

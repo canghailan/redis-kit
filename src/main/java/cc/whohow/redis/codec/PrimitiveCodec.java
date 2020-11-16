@@ -1,6 +1,6 @@
-package cc.whohow.redis.io;
+package cc.whohow.redis.codec;
 
-import cc.whohow.redis.buffer.ByteSequence;
+import cc.whohow.redis.bytes.ByteSequence;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;

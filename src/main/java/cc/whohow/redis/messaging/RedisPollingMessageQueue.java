@@ -1,6 +1,6 @@
 package cc.whohow.redis.messaging;
 
-import cc.whohow.redis.buffer.ByteSequence;
+import cc.whohow.redis.bytes.ByteSequence;
 import cc.whohow.redis.util.RedisKeyspaceNotification;
 
 import java.util.Queue;

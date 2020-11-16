@@ -1,4 +1,4 @@
-package cc.whohow.redis.buffer;
+package cc.whohow.redis.bytes;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,7 +16,7 @@ public class ByteSequenceInputStream extends InputStream {
 
     @Override
     public int read() throws IOException {
-        return (readIndex < length) ? (byteSequence.get(readIndex) & 0xff) : -1;
+        return (readIndex < length) ? (byteSequence.get(readIndex++) & 0xff) : -1;
     }
 
     @Override

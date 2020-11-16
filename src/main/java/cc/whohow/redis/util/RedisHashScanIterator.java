@@ -2,7 +2,7 @@ package cc.whohow.redis.util;
 
 import cc.whohow.redis.RESP;
 import cc.whohow.redis.Redis;
-import cc.whohow.redis.buffer.ByteSequence;
+import cc.whohow.redis.bytes.ByteSequence;
 import cc.whohow.redis.lettuce.ScanHashOutput;
 import io.lettuce.core.protocol.CommandKeyword;
 import io.lettuce.core.protocol.CommandType;

@@ -1,6 +1,6 @@
 package cc.whohow.redis.lettuce;
 
-import cc.whohow.redis.buffer.ByteSequence;
+import cc.whohow.redis.bytes.ByteSequence;
 import io.lettuce.core.codec.RedisCodec;
 import io.lettuce.core.codec.ToByteBufEncoder;
 import io.netty.buffer.ByteBuf;
