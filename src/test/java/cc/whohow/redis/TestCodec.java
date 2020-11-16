@@ -1,7 +1,7 @@
 package cc.whohow.redis;
 
 import cc.whohow.redis.bytes.ByteSequence;
-import cc.whohow.redis.bytes.ByteStatistics;
+import cc.whohow.redis.bytes.ByteSummaryStatistics;
 import cc.whohow.redis.codec.*;
 import cc.whohow.redis.jcache.ImmutableGeneratedCacheKey;
 import cc.whohow.redis.jcache.codec.ImmutableGeneratedCacheKeyCodec;
@@ -25,13 +25,13 @@ import java.util.stream.Collectors;
 public class TestCodec {
     @Test
     public void testCeilingNextPowerOfTwo() {
-        System.out.println(ByteStatistics.ceilingNextPowerOfTwo(0));
-        System.out.println(ByteStatistics.ceilingNextPowerOfTwo(1));
-        System.out.println(ByteStatistics.ceilingNextPowerOfTwo(2));
-        System.out.println(ByteStatistics.ceilingNextPowerOfTwo(3));
-        System.out.println(ByteStatistics.ceilingNextPowerOfTwo(65));
-        System.out.println(ByteStatistics.ceilingNextPowerOfTwo(127));
-        System.out.println(ByteStatistics.ceilingNextPowerOfTwo(128));
+        System.out.println(ByteSummaryStatistics.ceilingNextPowerOfTwo(0));
+        System.out.println(ByteSummaryStatistics.ceilingNextPowerOfTwo(1));
+        System.out.println(ByteSummaryStatistics.ceilingNextPowerOfTwo(2));
+        System.out.println(ByteSummaryStatistics.ceilingNextPowerOfTwo(3));
+        System.out.println(ByteSummaryStatistics.ceilingNextPowerOfTwo(65));
+        System.out.println(ByteSummaryStatistics.ceilingNextPowerOfTwo(127));
+        System.out.println(ByteSummaryStatistics.ceilingNextPowerOfTwo(128));
     }
 
     @Test
