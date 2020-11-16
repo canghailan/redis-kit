@@ -70,9 +70,9 @@ public class RedisTierCacheStatistics implements CacheStatisticsMXBean {
     public float getAverageGetTime() {
         // 加权平均
         long inProcessGets = inProcessCacheStatistics.getCacheGets();
-        float inProcessAverageGetTime = inProcessCacheStatistics.getAverageGetTime();
+        double inProcessAverageGetTime = inProcessCacheStatistics.getAverageGetTime();
         long redisGets = redisCacheStatistics.getCacheGets();
-        float redisAverageGetTime = redisCacheStatistics.getAverageGetTime();
+        double redisAverageGetTime = redisCacheStatistics.getAverageGetTime();
         return divide(inProcessGets * inProcessAverageGetTime + redisGets * redisAverageGetTime, inProcessGets + redisGets);
     }
 
@@ -86,8 +86,8 @@ public class RedisTierCacheStatistics implements CacheStatisticsMXBean {
         return redisCacheStatistics.getAverageRemoveTime();
     }
 
-    private float divide(float a, long b) {
-        return b == 0 ? 0 : a / b;
+    private float divide(double a, long b) {
+        return b == 0 ? 0 : (float) (a / b);
     }
 
     @Override

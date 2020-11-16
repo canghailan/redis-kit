@@ -21,6 +21,26 @@ public class RESP {
     private static final ByteSequence N_INF = ByteSequence.ascii("-inf");
     private static final ByteSequence P_INF = ByteSequence.ascii("+inf");
 
+    public static ByteSequence px() {
+        return PX;
+    }
+
+    public static ByteSequence xx() {
+        return XX;
+    }
+
+    public static ByteSequence nx() {
+        return NX;
+    }
+
+    public static ByteSequence nInf() {
+        return N_INF;
+    }
+
+    public static ByteSequence pInf() {
+        return P_INF;
+    }
+
     public static ByteSequence b(CommandKeyword keyword) {
         return KEYWORDS[keyword.ordinal()];
     }
@@ -63,26 +83,6 @@ public class RESP {
 
     public static String utf8(ByteBuffer bytes) {
         return StandardCharsets.UTF_8.decode(bytes).toString();
-    }
-
-    public static ByteSequence px() {
-        return PX;
-    }
-
-    public static ByteSequence xx() {
-        return XX;
-    }
-
-    public static ByteSequence nx() {
-        return NX;
-    }
-
-    public static ByteSequence nInf() {
-        return N_INF;
-    }
-
-    public static ByteSequence pInf() {
-        return P_INF;
     }
 
     public static boolean ok(String reply) {

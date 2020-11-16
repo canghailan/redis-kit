@@ -8,7 +8,6 @@ public class RedisSnowflakeIdFactory implements RedisIdGeneratorFactory {
 
     public RedisSnowflakeIdFactory(RedisLocal redisLocal) {
         this.redisLocal = redisLocal;
-
     }
 
     @Override

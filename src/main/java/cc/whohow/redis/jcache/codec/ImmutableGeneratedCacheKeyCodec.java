@@ -32,7 +32,7 @@ public abstract class ImmutableGeneratedCacheKeyCodec implements Codec<Immutable
             case 1: {
                 switch (cacheKeyTypeCanonicalNames[0]) {
                     case "java.lang.String": {
-                        return new SingletonKeyCodec(StringCodec.UTF8.get());
+                        return SingletonKeyCodec.STRING_KEY_CODEC;
                     }
                     case "java.lang.Integer": {
                         return SingletonKeyCodec.INTEGER_KEY_CODEC;
@@ -80,6 +80,7 @@ public abstract class ImmutableGeneratedCacheKeyCodec implements Codec<Immutable
 
     @SuppressWarnings("unchecked")
     private static class SingletonKeyCodec implements Codec<ImmutableGeneratedCacheKey> {
+        static final SingletonKeyCodec STRING_KEY_CODEC = new SingletonKeyCodec(StringCodec.UTF8.get());
         static final SingletonKeyCodec INTEGER_KEY_CODEC = new SingletonKeyCodec(PrimitiveCodec.INTEGER);
         static final SingletonKeyCodec LONG_KEY_CODEC = new SingletonKeyCodec(PrimitiveCodec.LONG);
 
