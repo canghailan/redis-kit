@@ -13,6 +13,7 @@ import org.junit.Test;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
@@ -58,15 +59,15 @@ public class TestRedisMessaging {
             RedisPollingMessageQueue<String> mq = redisMessaging.createQueue(name, new StringCodec.UTF8(),
                     (m) -> {
                         try {
-                            long ms = ThreadLocalRandom.current().nextLong(5_000);
-                            Thread.sleep(ms);
-                            System.out.println(Thread.currentThread() + " 消费 " + name + ": " + m + "  " + ms + "ms");
+//                            long ms = ThreadLocalRandom.current().nextLong(5_000);
+//                            Thread.sleep(ms);
+                            System.out.println(new Date() + " " + Thread.currentThread() + " 消费 " + name + ": " + m);
                             System.out.println("counter: " + counter.incrementAndGet());
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
                     });
-            mq.setReady();
+//            mq.setReady();
             mqs.add(mq);
         }
 
@@ -76,7 +77,7 @@ public class TestRedisMessaging {
                 RedisPollingMessageQueue<String> mq = mqs.get(index);
                 String data = mq.getName() + "_" + ThreadLocalRandom.current().nextInt(100);
                 mq.offer(data);
-                System.out.println(Thread.currentThread() + " 生产 " + mq.getName() + ": " + data);
+                System.out.println(new Date() + " " + Thread.currentThread() + " 生产 " + mq.getName() + ": " + data);
             });
             Thread.sleep(ThreadLocalRandom.current().nextLong(1_000));
         }

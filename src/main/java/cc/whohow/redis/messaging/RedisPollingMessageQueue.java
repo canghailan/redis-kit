@@ -1,8 +1,13 @@
 package cc.whohow.redis.messaging;
 
+import cc.whohow.redis.RedisTracking;
 import cc.whohow.redis.bytes.ByteSequence;
-import cc.whohow.redis.util.RedisKeyspaceNotification;
+import io.lettuce.core.RedisChannelHandler;
+import io.lettuce.core.RedisConnectionStateListener;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
+import java.net.SocketAddress;
 import java.util.Queue;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
@@ -10,22 +15,22 @@ import java.util.function.Consumer;
 /**
  * Redis消息队列，基于键空间事件触发轮询
  */
-public class RedisPollingMessageQueue<E>
-        extends PollingMessageQueue<E>
-        implements RedisKeyspaceNotification.Listener, AutoCloseable {
+public class RedisPollingMessageQueue<E> extends PollingMessageQueue<E>
+        implements RedisTracking.Listener, RedisConnectionStateListener, AutoCloseable {
+    private static final Logger log = LogManager.getLogger();
     private final String name;
     private final ExecutorService executor;
-    private final RedisKeyspaceNotification redisKeyspaceNotification;
+    private final RedisTracking redisTracking;
 
     public RedisPollingMessageQueue(Queue<E> queue, String name,
                                     Consumer<E> consumer,
                                     ExecutorService executor,
-                                    RedisKeyspaceNotification redisKeyspaceNotification) {
+                                    RedisTracking redisTracking) {
         super(queue, consumer);
         this.name = name;
         this.executor = executor;
-        this.redisKeyspaceNotification = redisKeyspaceNotification;
-        this.redisKeyspaceNotification.addListener(name, this);
+        this.redisTracking = redisTracking;
+        this.redisTracking.addListener(name, this);
     }
 
     public String getName() {
@@ -43,28 +48,35 @@ public class RedisPollingMessageQueue<E>
         }
     }
 
-//    @Override
-//    public void onKeyEvent(ByteBuffer key) {
-//        // 接收事件通知，触发轮询
-//        start();
-//    }
-//
-//    @Override
-//    public void subscribed() {
-//        // 断线重连，触发轮询
-//        start();
-//    }
+    @Override
+    public void onRedisConnected(RedisChannelHandler<?, ?> connection, SocketAddress socketAddress) {
+        // 断线重连，触发轮询
+        log.debug("RedisConnected, start polling: {}", getName());
+        start();
+    }
+
+    @Override
+    public void onRedisDisconnected(RedisChannelHandler<?, ?> connection) {
+        // 断线，停止轮询
+        log.debug("RedisDisconnected, stop polling: {}", getName());
+        stop();
+    }
+
+    @Override
+    public void onRedisExceptionCaught(RedisChannelHandler<?, ?> connection, Throwable cause) {
+    }
 
     @Override
     public void onInvalidate(ByteSequence key) {
-        // 断线重连，触发轮询
+        // 接收事件通知，触发轮询
+        log.trace("RedisInvalidate, start polling: {}", getName());
         start();
     }
 
     @Override
     public void close() throws Exception {
         // 关闭消息队列，取消监听，停止轮询
-        redisKeyspaceNotification.removeListener(name, this);
+        redisTracking.removeListener(name, this);
         stop();
     }
 

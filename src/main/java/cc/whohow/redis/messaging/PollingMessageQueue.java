@@ -12,7 +12,6 @@ import java.util.function.Consumer;
  * 消息队列轮询任务
  */
 public class PollingMessageQueue<E> implements Callable<Long> {
-    protected static final Logger log = LogManager.getLogger();
     /**
      * 等待数据就绪
      */
@@ -25,7 +24,7 @@ public class PollingMessageQueue<E> implements Callable<Long> {
      * 数据消费中
      */
     protected static final int STATE_RUNNING = 2;
-
+    private static final Logger log = LogManager.getLogger();
     /**
      * 消息队列
      */

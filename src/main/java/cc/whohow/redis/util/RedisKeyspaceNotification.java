@@ -4,6 +4,7 @@ import cc.whohow.redis.RedisTracking;
 import cc.whohow.redis.bytes.ByteSequence;
 import cc.whohow.redis.lettuce.ByteSequenceRedisCodec;
 import io.lettuce.core.RedisClient;
+import io.lettuce.core.RedisConnectionStateListener;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.pubsub.RedisPubSubListener;
 import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
@@ -23,30 +24,34 @@ public class RedisKeyspaceNotification implements
         RedisTracking,
         RedisPubSubListener<ByteSequence, ByteSequence> {
     protected static final Logger log = LogManager.getLogger();
-    protected final ByteSequence keyspace;
     protected final Map<RedisKeyPattern, Set<Listener>> listeners = new ConcurrentHashMap<>();
+    protected final RedisClient redisClient;
+    protected final ByteSequence keyspace;
     protected volatile StatefulRedisPubSubConnection<ByteSequence, ByteSequence> redisPubSubConnection;
 
     public RedisKeyspaceNotification(RedisClient redisClient, RedisURI redisURI) {
         String keyspace = "__keyspace@" + redisURI.getDatabase() + "__:";
+        this.redisClient = redisClient;
         this.keyspace = ByteSequence.ascii(keyspace);
         this.redisPubSubConnection = redisClient.connectPubSub(ByteSequenceRedisCodec.get(), redisURI);
         this.redisPubSubConnection.addListener(this);
         this.redisPubSubConnection.sync().psubscribe(ByteSequence.ascii(keyspace + "*"));
     }
 
-    public void addListener(String pattern, RedisTracking.Listener listener) {
-        addListener(ByteSequence.utf8(pattern), listener);
+    @Override
+    public void addListener(RedisConnectionStateListener listener) {
+        redisClient.addListener(listener);
+    }
+
+    @Override
+    public void removeListener(RedisConnectionStateListener listener) {
+        redisClient.removeListener(listener);
     }
 
     @Override
     public void addListener(ByteSequence pattern, RedisTracking.Listener listener) {
         listeners.computeIfAbsent(new RedisKeyPattern(pattern), key -> new CopyOnWriteArraySet<>())
                 .add(listener);
-    }
-
-    public void removeListener(String pattern, RedisTracking.Listener listener) {
-        removeListener(ByteSequence.utf8(pattern), listener);
     }
 
     @Override
