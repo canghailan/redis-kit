@@ -1,7 +1,6 @@
 package cc.whohow.redis.spring.cache;
 
 import cc.whohow.redis.jcache.Cache;
-import cc.whohow.redis.jcache.CacheValue;
 
 import java.util.concurrent.Callable;
 
@@ -28,11 +27,11 @@ public class CacheAdapter implements org.springframework.cache.Cache {
 
     @Override
     public ValueWrapper get(Object key) {
-        CacheValue cacheValue = cache.getValue(key);
-        if (cacheValue == null) {
+        Object value = cache.get(key);
+        if (value == null) {
             return null;
         }
-        return new CacheValueWrapper<>(cacheValue.get());
+        return new CacheValueWrapper<>(value);
     }
 
     @Override

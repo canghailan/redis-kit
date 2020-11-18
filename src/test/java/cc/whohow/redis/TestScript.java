@@ -3,7 +3,9 @@ package cc.whohow.redis;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -30,5 +32,15 @@ public class TestScript {
     public static void tearDown() throws Exception {
         redis.close();
         redisClient.shutdown();
+    }
+
+    @Test
+    public void test() {
+        RedisScript cas = RedisScript.get("cas");
+        System.out.println(cas);
+        System.out.println(cas.getName());
+        System.out.println(cas.getSha1());
+        System.out.println(cas.getScript());
+        Assert.assertEquals("cas", cas.getName());
     }
 }

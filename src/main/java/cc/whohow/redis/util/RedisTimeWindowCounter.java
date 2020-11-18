@@ -9,10 +9,10 @@ import org.apache.logging.log4j.Logger;
 
 import java.nio.ByteBuffer;
 import java.time.Duration;
-import java.time.ZonedDateTime;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
-import java.util.List;
+import java.util.HashSet;
+import java.util.function.Predicate;
 
 /**
  * 时间窗口计数器（通过accuracy指定时间精度）
@@ -35,33 +35,47 @@ public class RedisTimeWindowCounter extends RedisWindowCounter<Date> {
         return timestamp - timestamp % accuracy.toMillis();
     }
 
+    protected long count(long millis) {
+        return millis / accuracy.toMillis();
+    }
+
     protected long count(Duration duration) {
-        return duration.toMillis() / accuracy.toMillis();
+        return count(duration.toMillis());
     }
 
     protected long count(Date start, Date end) {
-        return (end.getTime() - start.getTime()) / accuracy.toMillis();
+        return count(end.getTime() - start.getTime());
     }
 
-    /**
-     * 指定时间段内计数总数
-     */
-    public long sum(Date startInclusive, Date endExclusive) {
-        Date start = reduceAccuracy(startInclusive);
-        Date end = reduceAccuracy(endExclusive);
-        log.trace("sum({}, {})", start, end);
-        List<Date> list = new ArrayList<>((int) count(start, end));
-        for (Date date = start; date.before(end); date = new Date(date.getTime() + accuracy.toMillis())) {
-            list.add(date);
+    protected Date[] window(Date start, Duration duration) {
+        int n = (int) count(duration);
+        long timestamp = reduceAccuracy(start.getTime());
+        Date[] window = new Date[n];
+        for (int i = 0; i < n; i++) {
+            window[i] = new Date(timestamp + accuracy.toMillis() * i);
         }
-        return sum(list);
+        return window;
+    }
+
+    protected Date[] last(Duration duration) {
+        return last((int) count(duration));
+    }
+
+    protected Date[] last(int n) {
+        long timestamp = reduceAccuracy(System.currentTimeMillis());
+        Date[] window = new Date[n];
+        for (int i = 0; i < n; i++) {
+            window[n - 1 - i] = new Date(timestamp - accuracy.toMillis() * i);
+        }
+        return window;
     }
 
     /**
      * 指定时间段内计数总数
      */
-    public long sum(ZonedDateTime startInclusive, ZonedDateTime endExclusive) {
-        return sum(Date.from(startInclusive.toInstant()), Date.from(endExclusive.toInstant()));
+    public long sum(Date start, Duration duration) {
+        log.trace("sum({}, {})", start, duration);
+        return sum(window(start, duration));
     }
 
     /**
@@ -69,20 +83,7 @@ public class RedisTimeWindowCounter extends RedisWindowCounter<Date> {
      */
     public long sumLast(Duration duration) {
         log.trace("sumLast({})", duration);
-        return sumLast((int) count(duration));
-    }
-
-    /**
-     * 最近N个计数总数
-     */
-    public long sumLast(int n) {
-        log.trace("sumLast({})", n);
-        long timestamp = reduceAccuracy(System.currentTimeMillis());
-        Date[] window = new Date[n];
-        for (int i = 0; i < window.length; i++) {
-            window[i] = new Date(timestamp - accuracy.toMillis() * i);
-        }
-        return sum(window);
+        return sum(last(duration));
     }
 
     /**
@@ -90,15 +91,8 @@ public class RedisTimeWindowCounter extends RedisWindowCounter<Date> {
      */
     public void retainLast(Duration duration) {
         log.trace("retainLast({})", duration);
-        retainAfter(new Date(reduceAccuracy(System.currentTimeMillis() - duration.toMillis())));
-    }
-
-    /**
-     * 仅保留指定时间后计数，移除其他计数窗口
-     */
-    public void retainAfter(Date retain) {
-        log.trace("retainLast({})", retain);
-        removeIf(retain::after);
+        Predicate<Date> isLast = new HashSet<>(Arrays.asList(last(duration)))::contains;
+        removeIf(isLast.negate());
     }
 
     public static class DateAccuracyCodec implements Codec<Date> {

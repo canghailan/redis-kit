@@ -30,7 +30,7 @@ public class TestLock {
             properties = new Properties();
             properties.load(stream);
             redisURI = RedisURI.create(properties.getProperty("uri"));
-            redis = new StandaloneRedis(redisClient, redisURI);
+            redis = new LoggingRedis(new StandaloneRedis(redisClient, redisURI));
 
             executor = Executors.newFixedThreadPool(20);
         }
@@ -38,9 +38,9 @@ public class TestLock {
 
     @AfterClass
     public static void tearDown() throws Exception {
+        executor.shutdownNow();
         redis.close();
         redisClient.shutdown();
-        executor.shutdownNow();
     }
 
     @Test
@@ -48,10 +48,10 @@ public class TestLock {
         RedisLock lock1 = new RedisLock(redis, "lock:test", Duration.ofMinutes(1), Duration.ofMinutes(30));
         RedisLock lock2 = new RedisLock(redis, "lock:test", Duration.ofMinutes(1), Duration.ofMinutes(30));
         for (int i = 0; i < 10; i++) {
-            executor.submit(new Task1(lock1));
+            executor.submit(new Task1(lock2));
         }
         for (int i = 0; i < 10; i++) {
-            executor.submit(new Task1(lock2));
+            executor.submit(new Task1(lock1));
         }
         executor.submit(new Task2(lock1));
         executor.submit(new Task2(lock1));
@@ -70,17 +70,17 @@ public class TestLock {
         public void run() {
             Thread thread = Thread.currentThread();
             if (lock.tryLock()) {
-                System.out.println(thread.getName() + "\t get lock " + lock);
+                System.out.println(lock + " LOCKED  \t" + thread.getName());
                 try {
                     Thread.sleep(5000L);
                 } catch (Throwable e) {
                     e.printStackTrace();
                 } finally {
                     lock.unlock();
-                    System.out.println(thread.getName() + "\t unlock " + lock);
+                    System.out.println(lock + " UNLOCK  \t" + thread.getName());
                 }
             } else {
-                System.out.println(thread.getName() + "\t get lock failed " + lock);
+                System.out.println(lock + " FAILED  \t" + thread.getName());
             }
         }
     }
@@ -95,16 +95,16 @@ public class TestLock {
         @Override
         public void run() {
             Thread thread = Thread.currentThread();
-            System.out.println(thread.getName() + "\t wait lock " + lock);
+            System.out.println(lock + " LOCKING \t" + thread.getName());
             lock.lock();
-            System.out.println(thread.getName() + "\t get lock " + lock);
+            System.out.println(lock + " LOCKED  \t" + thread.getName());
             try {
                 Thread.sleep(5000L);
             } catch (Throwable e) {
                 e.printStackTrace();
             } finally {
                 lock.unlock();
-                System.out.println(thread.getName() + "\t unlock " + lock);
+                System.out.println(lock + " UNLOCK  \t" + thread.getName());
             }
         }
     }

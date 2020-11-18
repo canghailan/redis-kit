@@ -13,4 +13,8 @@ public class VoidOutput extends CommandOutput<ByteSequence, ByteSequence, Void> 
     @Override
     public void set(ByteBuffer bytes) {
     }
+
+    @Override
+    public void set(long integer) {
+    }
 }

@@ -1,5 +1,6 @@
 package cc.whohow.redis;
 
+import cc.whohow.redis.util.RedisLocal;
 import cc.whohow.redis.util.SnowflakeId;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
@@ -27,7 +28,7 @@ public class TestRedisLocal {
             properties = new Properties();
             properties.load(stream);
             redisURI = RedisURI.create(properties.getProperty("uri"));
-            redis = new StandaloneRedis(redisClient, redisURI);
+            redis = new LoggingRedis(new StandaloneRedis(redisClient, redisURI));
         }
         executor = Executors.newScheduledThreadPool(1);
     }
@@ -39,20 +40,24 @@ public class TestRedisLocal {
         executor.shutdownNow();
     }
 
-//    @Test
-//    public void test() throws Exception {
-//        RedisLocal redisLocal = new RedisLocal(redis, executor, "RL");
-//        System.out.println(redisLocal.getId());
-//        System.out.println(redisLocal.getActiveIds());
-//        System.out.println(redisLocal.isLeader());
-//        System.out.println(redisLocal.getLocalMap().orElseThrow(IllegalStateException::new).copy());
-//        Thread.sleep(10_000);
-//        System.out.println(redisLocal.getId());
-//        System.out.println(redisLocal.getActiveIds());
-//        System.out.println(redisLocal.isLeader());
-//        System.out.println(redisLocal.getLocalMap().orElseThrow(IllegalStateException::new).copy());
-//        Thread.sleep(600_000);
-//    }
+    @Test
+    public void test() throws Exception {
+        RedisLocal redisLocal = new RedisLocal(redis, executor, "RL");
+        System.out.println(redisLocal.getId());
+        System.out.println(redisLocal.getActiveIds());
+        System.out.println(redisLocal.isLeader());
+        System.out.println(redisLocal.getLocalMap().orElseThrow(IllegalStateException::new).copy());
+        Thread.sleep(10_000);
+        System.out.println(redisLocal.getId());
+        System.out.println(redisLocal.getActiveIds());
+        System.out.println(redisLocal.isLeader());
+        System.out.println(redisLocal.getLocalMap().orElseThrow(IllegalStateException::new).copy());
+        Thread.sleep(30_000);
+        System.out.println(redisLocal.getId());
+        System.out.println(redisLocal.getActiveIds());
+        System.out.println(redisLocal.isLeader());
+        Thread.sleep(600_000);
+    }
 
     @Test
     public void testSnowflakeId() {
@@ -67,18 +72,18 @@ public class TestRedisLocal {
         }
     }
 
-//    @Test
-//    public void testRedisSnowflakeId() {
-//        SnowflakeId snowflakeId = new RedisSnowflakeIdFactory(
-//                new RedisLocal(redis, executor, "RL")).newI52Generator();
-//
-//        for (int i = 0; i < 10; i++) {
-//            long id = snowflakeId.getAsLong();
-//            System.out.println("ID:\t\t" + id);
-//            System.out.println("时间:\t" + snowflakeId.extractDate(id));
-//            System.out.println("机器:\t" + snowflakeId.extractWorkerId(id));
-//            System.out.println("序列号:\t" + snowflakeId.extractSequence(id));
-//            System.out.println();
-//        }
-//    }
+    @Test
+    public void testRedisSnowflakeId() {
+        SnowflakeId snowflakeId = new RedisSnowflakeIdFactory(
+                new RedisLocal(redis, executor, "RL")).newI52Generator();
+
+        for (int i = 0; i < 10; i++) {
+            long id = snowflakeId.getAsLong();
+            System.out.println("ID:\t\t" + id);
+            System.out.println("时间:\t" + snowflakeId.extractDate(id));
+            System.out.println("机器:\t" + snowflakeId.extractWorkerId(id));
+            System.out.println("序列号:\t" + snowflakeId.extractSequence(id));
+            System.out.println();
+        }
+    }
 }

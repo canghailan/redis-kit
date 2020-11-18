@@ -92,4 +92,22 @@ class EmptyByteSequence implements ByteSequence {
     public String toString() {
         return "";
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == this) {
+            return true;
+        }
+        if (o instanceof ByteSequence) {
+            ByteSequence that = (ByteSequence) o;
+            return that.isEmpty();
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+//        return ByteSequence.hashCode(this);
+        return 1;
+    }
 }

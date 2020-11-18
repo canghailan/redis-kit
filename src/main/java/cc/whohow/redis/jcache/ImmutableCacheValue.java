@@ -6,10 +6,16 @@ import java.util.Objects;
  * 缓存值（不可变）
  */
 public class ImmutableCacheValue<V> implements CacheValue<V> {
+    private static final ImmutableCacheValue<?> EMPTY = new ImmutableCacheValue<>(null);
     protected final V value;
 
-    protected ImmutableCacheValue(V value) {
+    public ImmutableCacheValue(V value) {
         this.value = value;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> ImmutableCacheValue<T> empty() {
+        return (ImmutableCacheValue<T>) EMPTY;
     }
 
     @Override

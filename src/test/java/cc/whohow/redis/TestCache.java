@@ -39,7 +39,7 @@ public class TestCache {
             properties = new Properties();
             properties.load(stream);
             redisURI = RedisURI.create(properties.getProperty("uri"));
-            redis = new StandaloneRedis(redisClient, redisURI);
+            redis = new LoggingRedis(new StandaloneRedis(redisClient, redisURI));
 
             redisTracking = new RedisKeyspaceNotification(redisClient, redisURI);
 
@@ -47,6 +47,7 @@ public class TestCache {
             configuration.setName("c.w.Test");
             configuration.setKeyTypeCanonicalName(new String[]{String.class.getCanonicalName()});
             configuration.setValueTypeCanonicalName(Data.class.getCanonicalName());
+//            configuration.setInProcessCacheEnabled(false);
 
             Map<String, RedisCacheConfiguration> cacheConfigurationMap = new HashMap<>();
             cacheConfigurationMap.put(configuration.getName(), configuration);
@@ -86,6 +87,13 @@ public class TestCache {
         System.out.println(dataA);
 
         Assert.assertEquals(randomA, dataA);
+
+        cache.put(a, null);
+        Assert.assertNull(cache.get(a));
+
+        if (!cache.getConfiguration(RedisCacheConfiguration.class).isInProcessCacheEnabled()) {
+            Assert.assertNotNull(cache.getValue(a));
+        }
     }
 
     @Test
@@ -96,5 +104,16 @@ public class TestCache {
         cache.remove(a);
 
         Assert.assertNull(cache.get(a));
+    }
+
+    @Test
+    public void testClear() {
+        cache.put(ImmutableGeneratedCacheKey.of("a"), random());
+        cache.put(ImmutableGeneratedCacheKey.of("b"), random());
+        cache.put(ImmutableGeneratedCacheKey.of("c"), random());
+        cache.clear();
+        Assert.assertNull(cache.get(ImmutableGeneratedCacheKey.of("a")));
+        Assert.assertNull(cache.get(ImmutableGeneratedCacheKey.of("b")));
+        Assert.assertNull(cache.get(ImmutableGeneratedCacheKey.of("c")));
     }
 }

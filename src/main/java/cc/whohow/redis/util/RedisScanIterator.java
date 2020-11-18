@@ -9,8 +9,8 @@ public abstract class RedisScanIterator<T> implements Iterator<RedisScanIteratio
     protected final Redis redis;
     protected final ByteSequence pattern;
     protected final int count;
-    protected boolean hasNext = true;
     protected String cursor = "0";
+    protected boolean hasNext = true;
 
     public RedisScanIterator(Redis redis) {
         this(redis, null, 0);
@@ -30,6 +30,7 @@ public abstract class RedisScanIterator<T> implements Iterator<RedisScanIteratio
     @Override
     public RedisScanIteration<T> next() {
         RedisScanIteration<T> scanIteration = scan(cursor, pattern, count);
+        cursor = scanIteration.getCursor();
         hasNext = !scanIteration.isTerminate();
         return scanIteration;
     }

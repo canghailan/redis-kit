@@ -1,7 +1,6 @@
 package cc.whohow.redis;
 
 import cc.whohow.redis.bytes.ByteSequence;
-import cc.whohow.redis.bytes.ByteSummaryStatistics;
 import cc.whohow.redis.codec.*;
 import cc.whohow.redis.jcache.ImmutableGeneratedCacheKey;
 import cc.whohow.redis.jcache.codec.ImmutableGeneratedCacheKeyCodec;
@@ -11,6 +10,7 @@ import com.fasterxml.jackson.databind.type.TypeFactory;
 import org.apache.commons.compress.compressors.CompressorStreamFactory;
 import org.apache.commons.compress.compressors.snappy.SnappyCompressorInputStream;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.BufferedReader;
@@ -19,21 +19,10 @@ import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 public class TestCodec {
-    @Test
-    public void testCeilingNextPowerOfTwo() {
-        System.out.println(ByteSummaryStatistics.ceilingNextPowerOfTwo(0));
-        System.out.println(ByteSummaryStatistics.ceilingNextPowerOfTwo(1));
-        System.out.println(ByteSummaryStatistics.ceilingNextPowerOfTwo(2));
-        System.out.println(ByteSummaryStatistics.ceilingNextPowerOfTwo(3));
-        System.out.println(ByteSummaryStatistics.ceilingNextPowerOfTwo(65));
-        System.out.println(ByteSummaryStatistics.ceilingNextPowerOfTwo(127));
-        System.out.println(ByteSummaryStatistics.ceilingNextPowerOfTwo(128));
-    }
-
     @Test
     public void testTypeCanonicalName() {
         System.out.println(String.class.getCanonicalName());
@@ -43,7 +32,6 @@ public class TestCodec {
         System.out.println(long.class.getCanonicalName());
         System.out.println(byte.class.getCanonicalName());
         System.out.println(byte[].class.getCanonicalName());
-        System.out.println("---");
         System.out.println(TypeFactory.defaultInstance().constructType(String.class).toCanonical());
         System.out.println(TypeFactory.defaultInstance().constructType(Integer.class).toCanonical());
         System.out.println(TypeFactory.defaultInstance().constructType(int.class).toCanonical());
@@ -55,33 +43,31 @@ public class TestCodec {
 
     @Test
     public void testPrimitiveCodec() {
-        Random random = new Random();
-
-        ByteSequence b1 = PrimitiveCodec.BOOLEAN.encode(random.nextBoolean());
+        ByteSequence b1 = PrimitiveCodec.BOOLEAN.encode(ThreadLocalRandom.current().nextBoolean());
         System.out.println(b1.toString());
         System.out.println(PrimitiveCodec.BOOLEAN.decode(b1));
 
-        ByteSequence b2 = PrimitiveCodec.BYTE.encode((byte) random.nextInt(Byte.MAX_VALUE));
+        ByteSequence b2 = PrimitiveCodec.BYTE.encode((byte) ThreadLocalRandom.current().nextInt(Byte.MAX_VALUE));
         System.out.println(b2.toString());
         System.out.println(PrimitiveCodec.BYTE.decode(b2));
 
-        ByteSequence b3 = PrimitiveCodec.SHORT.encode((short) random.nextInt(Short.MAX_VALUE));
+        ByteSequence b3 = PrimitiveCodec.SHORT.encode((short) ThreadLocalRandom.current().nextInt(Short.MAX_VALUE));
         System.out.println(b3.toString());
         System.out.println(PrimitiveCodec.SHORT.decode(b3));
 
-        ByteSequence b4 = PrimitiveCodec.INTEGER.encode(random.nextInt());
+        ByteSequence b4 = PrimitiveCodec.INTEGER.encode(ThreadLocalRandom.current().nextInt());
         System.out.println(b4.toString());
         System.out.println(PrimitiveCodec.INTEGER.decode(b4));
 
-        ByteSequence b5 = PrimitiveCodec.LONG.encode(random.nextLong());
+        ByteSequence b5 = PrimitiveCodec.LONG.encode(ThreadLocalRandom.current().nextLong());
         System.out.println(b5.toString());
         System.out.println(PrimitiveCodec.LONG.decode(b5));
 
-        ByteSequence b6 = PrimitiveCodec.FLOAT.encode(random.nextFloat());
+        ByteSequence b6 = PrimitiveCodec.FLOAT.encode(ThreadLocalRandom.current().nextFloat());
         System.out.println(b6.toString());
         System.out.println(PrimitiveCodec.FLOAT.decode(b6));
 
-        ByteSequence b7 = PrimitiveCodec.DOUBLE.encode(random.nextDouble());
+        ByteSequence b7 = PrimitiveCodec.DOUBLE.encode(ThreadLocalRandom.current().nextDouble());
         System.out.println(b7.toString());
         System.out.println(PrimitiveCodec.DOUBLE.decode(b7));
 
@@ -109,28 +95,30 @@ public class TestCodec {
 
     @Test
     public void testGzipCodec() {
-        Random random = new Random();
-        String string = random.ints(100000).mapToObj(Integer::toString).collect(Collectors.joining());
-
         Codec<String> stringCodec = new StringCodec.UTF8();
-        Codec<String> gzipCodec = new GzipCodec<>(stringCodec);
+        GzipCodec<String> gzipCodec = new GzipCodec<>(stringCodec);
 
+        String string = ThreadLocalRandom.current()
+                .ints(ThreadLocalRandom.current().nextInt(100000))
+                .mapToObj(Integer::toString)
+                .collect(Collectors.joining());
         ByteSequence b1 = stringCodec.encode(string);
         ByteSequence b2 = gzipCodec.encode(string);
         String decoded = gzipCodec.decode(b2);
+        Assert.assertEquals(string, decoded);
 
         System.out.println(b1.length());
         System.out.println(b2.length());
-//        System.out.println(string);
-//        System.out.println(decoded);
 
-        Assert.assertEquals(string, decoded);
+        System.out.println(gzipCodec.getByteSummaryStatistics());
     }
 
     @Test
     public void testCompressCodec() throws Exception {
-        Random random = new Random();
-        String string = random.ints(100000).mapToObj(Integer::toString).collect(Collectors.joining());
+        String string = ThreadLocalRandom.current()
+                .ints(100000)
+                .mapToObj(Integer::toString)
+                .collect(Collectors.joining());
 
         Codec<String> stringCodec = new StringCodec.UTF8();
         Codec<String> compressCodec = new CompressCodec<>(CompressorStreamFactory.getGzip(), stringCodec);
@@ -199,6 +187,7 @@ public class TestCodec {
     }
 
     @Test
+    @Ignore
     public void testSnappy() throws Exception {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(new SnappyCompressorInputStream(new FileInputStream(
                 "")), StandardCharsets.UTF_8))) {

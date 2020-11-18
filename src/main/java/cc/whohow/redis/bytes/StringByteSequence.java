@@ -27,6 +27,23 @@ class StringByteSequence extends ByteArraySequence {
         return toString(charset);
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (o == this) {
+            return true;
+        }
+        if (o instanceof ByteSequence) {
+            ByteSequence that = (ByteSequence) o;
+            return contentEquals(that);
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return ByteSequence.hashCode(this);
+    }
+
     static class ASCII extends ByteArraySequence {
         public ASCII(String string) {
             super(StandardCharsets.US_ASCII.encode(string));
@@ -43,6 +60,23 @@ class StringByteSequence extends ByteArraySequence {
         @Override
         public String toString() {
             return toString(StandardCharsets.US_ASCII);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o == this) {
+                return true;
+            }
+            if (o instanceof ByteSequence) {
+                ByteSequence that = (ByteSequence) o;
+                return contentEquals(that);
+            }
+            return false;
+        }
+
+        @Override
+        public int hashCode() {
+            return ByteSequence.hashCode(this);
         }
     }
 
@@ -62,6 +96,23 @@ class StringByteSequence extends ByteArraySequence {
         @Override
         public String toString() {
             return toString(StandardCharsets.UTF_8);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o == this) {
+                return true;
+            }
+            if (o instanceof ByteSequence) {
+                ByteSequence that = (ByteSequence) o;
+                return contentEquals(that);
+            }
+            return false;
+        }
+
+        @Override
+        public int hashCode() {
+            return ByteSequence.hashCode(this);
         }
     }
 }

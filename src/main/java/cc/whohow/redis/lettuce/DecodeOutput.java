@@ -20,6 +20,8 @@ public class DecodeOutput<T> extends CommandOutput<ByteSequence, ByteSequence, T
 
     @Override
     public void set(ByteBuffer bytes) {
-        output = decoder.apply(bytes);
+        if (bytes != null) {
+            output = decoder.apply(bytes);
+        }
     }
 }

@@ -14,6 +14,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 public interface Redis extends AutoCloseable {
     static boolean isNoScript(Throwable e) {
@@ -67,10 +68,10 @@ public interface Redis extends AutoCloseable {
     default <T> T eval(CommandOutput<ByteSequence, ByteSequence, T> output,
                        RedisScript script, List<ByteSequence> keys, List<ByteSequence> args) {
         try {
-            return evalsha(output, ByteSequence.ascii(script.getSha1()), keys, args);
-        } catch (RedisCommandExecutionException e) {
-            if (isNoScript(e)) {
-                return eval(output, ByteSequence.utf8(script.getScript()), keys, args);
+            return evalshaAsync(output, ByteSequence.ascii(script.getSha1()), keys, args).join();
+        } catch (CompletionException e) {
+            if (isNoScript(e.getCause())) {
+                return evalAsync(output, ByteSequence.utf8(script.getScript()), keys, args).join();
             }
             throw e;
         }
@@ -103,7 +104,7 @@ public interface Redis extends AutoCloseable {
         commandArgs.add(RESP.b(keys.size()));
         commandArgs.addAll(keys);
         commandArgs.addAll(args);
-        return sendAsync(output, CommandType.EVAL, commandArgs);
+        return sendAsync(output, CommandType.EVALSHA, commandArgs);
     }
 
     void addListener(RedisConnectionStateListener listener);

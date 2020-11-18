@@ -22,6 +22,10 @@ import java.util.concurrent.locks.LockSupport;
  * https://redis.io/topics/distlock
  */
 public class RedisLock implements Lock {
+    private static final long AWAIT_TIME = 3000; // ms
+    private static final long[] AWAIT_TIME_TABLE = {
+            AWAIT_TIME, AWAIT_TIME, 2 * AWAIT_TIME, 3 * AWAIT_TIME,
+            5 * AWAIT_TIME, 8 * AWAIT_TIME, 13 * AWAIT_TIME, 21 * AWAIT_TIME};
     protected final Redis redis;
 
     /**
@@ -97,7 +101,8 @@ public class RedisLock implements Lock {
      */
     @Override
     public boolean tryLock() {
-        return RESP.ok(redis.send(new StatusOutput(), CommandType.SET, token, RESP.px(), RESP.b(maxLockTimeMillis), RESP.nx()));
+        return RESP.ok(redis.send(new StatusOutput(),
+                CommandType.SET, key, token, RESP.px(), RESP.b(maxLockTimeMillis), RESP.nx()));
     }
 
     /**
@@ -155,12 +160,12 @@ public class RedisLock implements Lock {
     }
 
     /**
-     * 获取重试等待时间，默认Fibonacci级数退避，直到最大锁定时间的一半
+     * 获取重试等待时间
      */
     protected long getRetryWaitingTime(int retryTimes) {
-        long base = 3_000; // ms
-        long[] table = {base, base, 2 * base, 3 * base, 5 * base, 8 * base, 13 * base, 21 * base};
-        long time = retryTimes < table.length ? table[retryTimes] : table[table.length - 1];
+        long time = (retryTimes < AWAIT_TIME_TABLE.length) ?
+                AWAIT_TIME_TABLE[retryTimes] :
+                AWAIT_TIME_TABLE[AWAIT_TIME_TABLE.length - 1];
         return Long.min(time, maxLockTimeMillis / 2);
     }
 

@@ -88,4 +88,21 @@ public class ConcatByteSequence implements ByteSequence {
     public String toString() {
         return head.toString() + tail.toString();
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == this) {
+            return true;
+        }
+        if (o instanceof ByteSequence) {
+            ByteSequence that = (ByteSequence) o;
+            return contentEquals(that);
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return ByteSequence.hashCode(this);
+    }
 }

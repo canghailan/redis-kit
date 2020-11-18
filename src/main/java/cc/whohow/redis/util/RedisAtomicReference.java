@@ -80,10 +80,10 @@ public class RedisAtomicReference<V> {
     }
 
     public boolean compareAndReset(V expect) {
-        return RESP.ok(redis.eval(new StatusOutput(),
+        return redis.eval(new IntegerOutput(),
                 RedisScript.get("cad"),
                 Collections.singletonList(key),
-                Collections.singletonList(encode(expect))));
+                Collections.singletonList(encode(expect))) > 0;
     }
 
     public void reset() {

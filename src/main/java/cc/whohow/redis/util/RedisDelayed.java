@@ -9,7 +9,7 @@ import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
 
 public class RedisDelayed<E> extends AbstractMap.SimpleImmutableEntry<E, Number> implements Delayed {
-    public RedisDelayed(E element, Long timestamp) {
+    public RedisDelayed(E element, long timestamp) {
         super(element, timestamp);
     }
 

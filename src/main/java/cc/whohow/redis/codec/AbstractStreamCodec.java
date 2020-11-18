@@ -18,6 +18,10 @@ import java.nio.ByteBuffer;
 public abstract class AbstractStreamCodec<T> implements Codec<T>, StreamCodec<T> {
     protected final ByteSummaryStatistics byteSummaryStatistics = new ByteSummaryStatistics();
 
+    public ByteSummaryStatistics getByteSummaryStatistics() {
+        return byteSummaryStatistics;
+    }
+
     @Override
     public ByteSequence encode(T value) {
         int bufferSize = (int) byteSummaryStatistics.getAverage();

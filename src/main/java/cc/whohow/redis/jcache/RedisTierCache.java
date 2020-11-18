@@ -262,6 +262,11 @@ public class RedisTierCache<K, V> implements
     }
 
     @Override
+    public CacheValue<V> getValue(K key) {
+        return inProcessCache.getValue(key, redisCache::get);
+    }
+
+    @Override
     public void onRedisConnected(RedisChannelHandler<?, ?> connection, SocketAddress socketAddress) {
         log.info("RedisConnected");
         inProcessCache.removeAll();
@@ -281,7 +286,7 @@ public class RedisTierCache<K, V> implements
     @Override
     public void onInvalidate(ByteSequence key) {
         K k = redisCache.getKeyCodec().decode(key);
-        log.trace("Tracking: {}", k);
+        log.trace("RedisInvalidate: {}", k);
         inProcessCache.remove(k);
     }
 

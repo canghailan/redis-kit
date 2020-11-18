@@ -55,7 +55,7 @@ public class RedisKeyspaceNotification implements
                 .remove(listener);
     }
 
-    public void onKeyEvent(ByteSequence key) {
+    protected void onKeyEvent(ByteSequence key) {
         RedisKeyPattern keyPattern = new RedisKeyPattern(key, false);
         for (Map.Entry<RedisKeyPattern, Set<Listener>> e : listeners.entrySet()) {
             if (e.getKey().match(keyPattern)) {

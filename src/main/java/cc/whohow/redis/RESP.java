@@ -6,6 +6,7 @@ import io.lettuce.core.protocol.CommandKeyword;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.stream.IntStream;
 
 /**
  * REdis Serialization Protocol
@@ -14,6 +15,10 @@ public class RESP {
     private static final ByteSequence[] KEYWORDS = Arrays.stream(CommandKeyword.values())
             .map(CommandKeyword::getBytes)
             .map(ByteSequence::of)
+            .toArray(ByteSequence[]::new);
+    private static final ByteSequence[] INTEGERS = IntStream.rangeClosed(0, 128)
+            .mapToObj(Integer::toString)
+            .map(ByteSequence::ascii)
             .toArray(ByteSequence[]::new);
     private static final ByteSequence PX = ByteSequence.ascii("PX");
     private static final ByteSequence XX = ByteSequence.ascii("XX");
@@ -46,10 +51,16 @@ public class RESP {
     }
 
     public static ByteSequence b(long i64) {
+        if (0 <= i64 && i64 < INTEGERS.length) {
+            return INTEGERS[(int) i64];
+        }
         return b(String.valueOf(i64));
     }
 
     public static ByteSequence b(double f64) {
+        if (f64 == 0) {
+            return INTEGERS[0];
+        }
         return b(String.valueOf(f64));
     }
 

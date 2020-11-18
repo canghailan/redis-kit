@@ -56,19 +56,15 @@ public class RedisCache<K, V> implements Cache<K, V> {
     }
 
     protected CacheValue<V> decodeCacheValue(ByteBuffer byteBuffer) {
-        return wrapCacheValue(valueCodec.decode(byteBuffer));
-    }
-
-    protected CacheValue<V> wrapCacheValue(V value) {
-        return new ImmutableCacheValue<>(value);
+        return new ImmutableCacheValue<>(valueCodec.decode(byteBuffer));
     }
 
     @Override
     public V get(K key) {
-        CacheValue<V> cacheValue = redis.send(new DecodeOutput<>(this::decodeCacheValue), CommandType.GET, keyCodec.encode(key));
-        if (cacheValue != null) {
+        V value = redis.send(new DecodeOutput<>(valueCodec::decode), CommandType.GET, keyCodec.encode(key));
+        if (value != null) {
             cacheStats.cacheHit(1);
-            return cacheValue.get();
+            return value;
         } else {
             cacheStats.cacheMiss(1);
             return null;
@@ -194,8 +190,10 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
         while (iterator.hasNext()) {
             RedisScanIteration<ByteSequence> iteration = iterator.next();
-            redis.send(new VoidOutput(), CommandType.DEL, iteration.getArray());
-            cacheStats.cacheRemove(iteration.getArray().size());
+            if (!iteration.getArray().isEmpty()) {
+                redis.send(new VoidOutput(), CommandType.DEL, iteration.getArray());
+                cacheStats.cacheRemove(iteration.getArray().size());
+            }
         }
     }
 
@@ -281,7 +279,8 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public CacheValue<V> getValue(K key) {
-        CacheValue<V> cacheValue = redis.send(new DecodeOutput<>(this::decodeCacheValue), CommandType.GET, keyCodec.encode(key));
+        CacheValue<V> cacheValue = redis.send(
+                new DecodeOutput<>(this::decodeCacheValue, ImmutableCacheValue.empty()), CommandType.GET, keyCodec.encode(key));
         if (cacheValue != null) {
             cacheStats.cacheHit(1);
         } else {
@@ -292,7 +291,8 @@ public class RedisCache<K, V> implements Cache<K, V> {
 
     @Override
     public CacheValue<V> getValue(K key, CacheLoader<K, ? extends V> cacheLoader) {
-        CacheValue<V> cacheValue = redis.send(new DecodeOutput<>(this::decodeCacheValue), CommandType.GET, keyCodec.encode(key));
+        CacheValue<V> cacheValue = redis.send(
+                new DecodeOutput<>(this::decodeCacheValue, ImmutableCacheValue.empty()), CommandType.GET, keyCodec.encode(key));
         if (cacheValue != null) {
             cacheStats.cacheHit(1);
             return cacheValue;
@@ -300,7 +300,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
             cacheStats.cacheMiss(1);
             V value = cacheLoader.load(key);
             put(key, value);
-            return wrapCacheValue(value);
+            return new ImmutableCacheValue<>(value);
         }
     }
 

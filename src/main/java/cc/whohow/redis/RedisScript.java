@@ -54,7 +54,7 @@ public class RedisScript {
         String lua = name + ".lua";
         try (InputStream stream = Thread.currentThread().getContextClassLoader().getResourceAsStream(lua)) {
             if (stream == null) {
-                throw new IllegalArgumentException(lua + "not found");
+                throw new IllegalArgumentException(lua + " not found");
             }
             return StandardCharsets.UTF_8.decode(IO.read(stream, 1024)).toString();
         } catch (IOException e) {
@@ -92,6 +92,6 @@ public class RedisScript {
 
     @Override
     public String toString() {
-        return script;
+        return name + "#" + sha1;
     }
 }

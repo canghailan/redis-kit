@@ -29,7 +29,7 @@ public class TestRedisFactory {
             properties = new Properties();
             properties.load(stream);
             redisURI = RedisURI.create(properties.getProperty("uri"));
-            redis = new StandaloneRedis(redisClient, redisURI);
+            redis = new LoggingRedis(new StandaloneRedis(redisClient, redisURI));
             redisFactory = new RedisFactory(redis);
         }
     }
@@ -48,6 +48,60 @@ public class TestRedisFactory {
             Thread.sleep(ThreadLocalRandom.current().nextInt(3000));
             System.out.println(new Date(clock.millis()));
         }
+    }
+
+    @Test
+    public void testAtomicLong() {
+        RedisAtomicLong n = redisFactory.newAtomicLong("atomicLong");
+
+        n.set(1);
+        Assert.assertEquals(1, n.get());
+
+        Assert.assertEquals(1, n.getAndSet(2));
+        Assert.assertEquals(2, n.get());
+        Assert.assertEquals(2, n.getAndIncrement());
+        Assert.assertEquals(3, n.getAndAdd(2));
+        Assert.assertEquals(5, n.getAndAdd(-2));
+        Assert.assertEquals(3, n.getAndDecrement());
+        Assert.assertEquals(1, n.decrementAndGet());
+        Assert.assertEquals(2, n.incrementAndGet());
+        Assert.assertEquals(4, n.addAndGet(2));
+    }
+
+    @Test
+    public void testAtomicReference() throws Exception {
+        RedisAtomicReference<String> ref = redisFactory.newAtomicReference("atomicRef", String.class);
+
+        ref.reset();
+        Assert.assertFalse(ref.exists());
+
+        ref.set("a");
+        Assert.assertTrue(ref.exists());
+        Assert.assertEquals("a", ref.get());
+
+        ref.compareAndSet("b", "bb");
+        Assert.assertEquals("a", ref.get());
+
+        ref.compareAndSet("a", "b");
+        Assert.assertEquals("b", ref.get());
+
+        ref.compareAndReset("bb");
+        Assert.assertEquals("b", ref.get());
+
+        ref.compareAndReset("b");
+        Assert.assertNull(ref.get());
+
+        ref.setIfAbsent("c");
+        Assert.assertEquals("c", ref.get());
+
+        ref.setIfAbsent("d");
+        Assert.assertEquals("c", ref.get());
+
+        ref.setIfPresent("d");
+        Assert.assertEquals("d", ref.get());
+
+        Assert.assertEquals("d", ref.getAndSet("e"));
+        Assert.assertEquals("e", ref.get());
     }
 
     @Test
@@ -78,7 +132,7 @@ public class TestRedisFactory {
 
     @Test
     public void testRedisList() {
-        RedisList<String> list = redisFactory.newList("testList", String.class);
+        RedisList<String> list = redisFactory.newList("list", String.class);
         list.clear();
 
         Assert.assertEquals(0, list.size());
@@ -127,7 +181,7 @@ public class TestRedisFactory {
 
     @Test
     public void testRedisSet() {
-        RedisSet<String> set = redisFactory.newSet("testSet", String.class);
+        RedisSet<String> set = redisFactory.newSet("set", String.class);
         set.clear();
 
         Assert.assertEquals(0, set.size());
@@ -161,7 +215,7 @@ public class TestRedisFactory {
 
     @Test
     public void testRedisSortedSet() {
-        RedisSortedSet<String> sortedSet = redisFactory.newSortedSet("testSortedSet", String.class);
+        RedisSortedSet<String> sortedSet = redisFactory.newSortedSet("zset", String.class);
         sortedSet.clear();
 
         Assert.assertEquals(0, sortedSet.size());
@@ -197,8 +251,35 @@ public class TestRedisFactory {
     }
 
     @Test
+    public void testRedisDelayQueue() {
+        RedisDelayQueue<String> delayQueue = redisFactory.newDelayQueue("delayQueue", String.class);
+        delayQueue.clear();
+
+        Assert.assertEquals(0, delayQueue.size());
+
+        delayQueue.add("a", new Date());
+        delayQueue.add("b", new Date());
+        delayQueue.add("c", new Date());
+        Assert.assertEquals(3, delayQueue.size());
+        Assert.assertTrue(delayQueue.containsElement("a"));
+        Assert.assertFalse(delayQueue.containsElement("d"));
+
+        Assert.assertFalse(delayQueue.isEmpty());
+        Assert.assertEquals("a", delayQueue.poll().getKey());
+        Assert.assertFalse(delayQueue.isEmpty());
+        Assert.assertEquals("b", delayQueue.poll().getKey());
+        Assert.assertFalse(delayQueue.isEmpty());
+        Assert.assertEquals("c", delayQueue.poll().getKey());
+
+        delayQueue.add("d", Duration.ofMinutes(3));
+        Assert.assertNull(delayQueue.poll());
+
+        System.out.println(delayQueue.copy());
+    }
+
+    @Test
     public void testRedisMap() {
-        RedisMap<String, String> map = redisFactory.newMap("testMap", String.class, String.class);
+        RedisMap<String, String> map = redisFactory.newMap("map:test", String.class, String.class);
         map.clear();
 
         Assert.assertEquals(0, map.size());
@@ -234,8 +315,7 @@ public class TestRedisFactory {
 
     @Test
     public void testTimeWindowCounter() throws Exception {
-//        RedisTimeWindowCounter counter = new RedisTimeWindowCounter(redis, "testTimeWindowCounter", Duration.ofSeconds(2));
-        RedisTimeWindowCounter counter = null;
+        RedisTimeWindowCounter counter = new RedisTimeWindowCounter(redis, "TimeWindowCounter:test", Duration.ofSeconds(2));
         counter.reset();
 
         Random random = new Random();
@@ -250,10 +330,11 @@ public class TestRedisFactory {
         Assert.assertEquals(100, counter.sum());
 
         System.out.println(new Date());
-        System.out.println(counter.sumLast(Duration.ofMinutes(1)));
+        long sumLast = counter.sumLast(Duration.ofMinutes(1));
         counter.retainLast(Duration.ofMinutes(1));
-        System.out.println(counter.sum());
+        Assert.assertEquals(sumLast, counter.sum());
 
+        System.out.println(sumLast);
         counter.copy().entrySet()
                 .forEach(System.out::println);
     }

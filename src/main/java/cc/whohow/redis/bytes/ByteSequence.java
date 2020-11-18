@@ -4,6 +4,7 @@ import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.PrimitiveIterator;
 import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
@@ -22,42 +23,72 @@ public interface ByteSequence extends Iterable<ByteBuffer>, Comparable<ByteSeque
     }
 
     static ByteSequence of(ByteBuffer byteBuffer) {
+        if (byteBuffer == null) {
+            return null;
+        }
         return new ByteBufferSequence(byteBuffer);
     }
 
     static ByteSequence of(String string, Charset charset) {
+        if (string == null) {
+            return null;
+        }
         return new StringByteSequence(string, charset);
     }
 
     static ByteSequence of(CharSequence charSequence, Charset charset) {
+        if (charSequence == null) {
+            return null;
+        }
         return new StringByteSequence(charSequence, charset);
     }
 
     static ByteSequence of(CharBuffer charBuffer, Charset charset) {
+        if (charBuffer == null) {
+            return null;
+        }
         return new StringByteSequence(charBuffer, charset);
     }
 
     static ByteSequence ascii(String string) {
+        if (string == null) {
+            return null;
+        }
         return new StringByteSequence.ASCII(string);
     }
 
     static ByteSequence ascii(CharSequence charSequence) {
+        if (charSequence == null) {
+            return null;
+        }
         return new StringByteSequence.ASCII(charSequence);
     }
 
     static ByteSequence ascii(CharBuffer charBuffer) {
+        if (charBuffer == null) {
+            return null;
+        }
         return new StringByteSequence.ASCII(charBuffer);
     }
 
     static ByteSequence utf8(String string) {
+        if (string == null) {
+            return null;
+        }
         return new StringByteSequence.UTF8(string);
     }
 
     static ByteSequence utf8(CharSequence charSequence) {
+        if (charSequence == null) {
+            return null;
+        }
         return new StringByteSequence.UTF8(charSequence);
     }
 
     static ByteSequence utf8(CharBuffer charBuffer) {
+        if (charBuffer == null) {
+            return null;
+        }
         return new StringByteSequence.UTF8(charBuffer);
     }
 
@@ -66,6 +97,7 @@ public interface ByteSequence extends Iterable<ByteBuffer>, Comparable<ByteSeque
     }
 
     static ByteSequence copy(ByteBuffer byteBuffer) {
+        Objects.requireNonNull(byteBuffer);
         return of(byteBuffer).copy();
     }
 
@@ -264,11 +296,11 @@ public interface ByteSequence extends Iterable<ByteBuffer>, Comparable<ByteSeque
                 }
                 return c;
             } else {
-                return -1;
+                return 1;
             }
         }
         if (thatBytes.hasNext()) {
-            return 1;
+            return -1;
         } else {
             return 0;
         }
@@ -276,6 +308,8 @@ public interface ByteSequence extends Iterable<ByteBuffer>, Comparable<ByteSeque
 
     /**
      * 检查字节序列内容是否相同
+     *
+     * @see String#contentEquals(CharSequence)
      */
     default boolean contentEquals(ByteSequence that) {
         if (length() != that.length()) {
@@ -297,9 +331,11 @@ public interface ByteSequence extends Iterable<ByteBuffer>, Comparable<ByteSeque
 
     /**
      * 检查字节起始序列
+     *
+     * @see String#startsWith(java.lang.String, int)
      */
     default boolean startsWiths(ByteSequence that) {
-        if (length() > that.length()) {
+        if (length() < that.length()) {
             return false;
         }
         PrimitiveIterator.OfInt thisBytes = byteIterator();
@@ -310,7 +346,7 @@ public interface ByteSequence extends Iterable<ByteBuffer>, Comparable<ByteSeque
                     return false;
                 }
             } else {
-                return false;
+                return true;
             }
         }
         return true;

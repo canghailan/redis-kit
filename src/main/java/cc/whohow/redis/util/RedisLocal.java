@@ -1,6 +1,5 @@
 package cc.whohow.redis.util;
 
-import cc.whohow.redis.RESP;
 import cc.whohow.redis.Redis;
 import cc.whohow.redis.bytes.ByteSequence;
 import cc.whohow.redis.codec.PrimitiveCodec;
@@ -81,7 +80,7 @@ public class RedisLocal implements Runnable {
         this.key = key;
         this.expiresIn = Duration.ofMinutes(3); // ID有效期，3分钟，需及时续期
         this.maxId = 65535L; // 最大ID，4字节
-        this.clock = new RedisClock(null); // 时钟
+        this.clock = new RedisClock(redis); // 时钟
         this.idSet = new RedisSortedSet<>(redis, PrimitiveCodec.LONG, key);
         this.id = new CompletableFuture<>();
 
@@ -175,8 +174,8 @@ public class RedisLocal implements Runnable {
                     this.id.complete(newId); // 注册ID成功
                     log.debug("newId ok: {} @{}", newId, time);
                     this.lock = lock; // 更新实例锁
-                    this.localMap = new RedisMap<>(
-                            redis, StringCodec.UTF8.get(), StringCodec.UTF8.get(), getLocalMapRedisKey(newId)); // 创建实例存储空间
+                    this.localMap = new RedisMap<>(redis, StringCodec.UTF8.get(), StringCodec.UTF8.get(),
+                            getLocalMapRedisKey(newId)); // 创建实例存储空间
                     executor.execute(() -> {
                         Map<String, String> map = localMap;
                         if (map != null) {
@@ -308,7 +307,9 @@ public class RedisLocal implements Runnable {
      */
     private Optional<Long> tryGetLeaderId() {
         Map<Long, Number> ids = getIds(); // 按注册时间排序好的id集合
+        log.trace("ids: {}", ids);
         Set<Long> activeIds = getActiveIds(ids.keySet());
+        log.trace("activeIds: {}", activeIds);
         for (Long id : ids.keySet()) {
             if (activeIds.contains(id)) {
                 log.debug("leaderId: {}", id);
@@ -328,7 +329,10 @@ public class RedisLocal implements Runnable {
         log.debug("gc: {}", ids);
 
         // 回收实例存储空间
-        redis.send(new VoidOutput(), CommandType.DEL, ids.stream().map(RESP::b).collect(Collectors.toList()));
+        redis.send(new VoidOutput(), CommandType.DEL, ids.stream()
+                .map(this::getLocalMapRedisKey)
+                .map(ByteSequence::utf8)
+                .collect(Collectors.toList()));
         idSet.zrem(ids);
     }
 

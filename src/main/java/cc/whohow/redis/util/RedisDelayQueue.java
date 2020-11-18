@@ -8,6 +8,7 @@ import io.lettuce.core.ScoredValue;
 import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -68,7 +69,12 @@ public class RedisDelayQueue<E>
     @Override
     @SuppressWarnings("unchecked")
     public boolean contains(Object o) {
-        return zscore((E) o) != null;
+        RedisDelayed<E> e = (RedisDelayed<E>) o;
+        return containsElement(e.getKey());
+    }
+
+    public boolean containsElement(E element) {
+        return zscore(element) != null;
     }
 
     @Override
@@ -107,16 +113,36 @@ public class RedisDelayQueue<E>
                 .toArray(ArrayType.of(a)::newInstance);
     }
 
+    public boolean add(E element, long millis) {
+        return add(new RedisDelayed<>(element, millis));
+    }
+
+    public boolean add(E element, Instant instant) {
+        return add(new RedisDelayed<>(element, instant));
+    }
+
+    public boolean add(E element, Date date) {
+        return add(new RedisDelayed<>(element, date));
+    }
+
+    public boolean add(E element, Duration delay) {
+        return add(new RedisDelayed<>(element, delay, clock));
+    }
+
     @Override
     public boolean add(RedisDelayed<E> e) {
         return zadd(e.getDelay(TimeUnit.MILLISECONDS), e.getKey()) > 0;
+    }
+
+    public boolean removeElement(E element) {
+        return zrem(element) > 0;
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public boolean remove(Object o) {
         RedisDelayed<E> e = (RedisDelayed<E>) o;
-        return zrem(e.getKey()) > 0;
+        return removeElement(e.getKey());
     }
 
     /**

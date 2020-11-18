@@ -104,4 +104,21 @@ public class SubByteSequence implements ByteSequence {
     public String toString() {
         return toString(StandardCharsets.ISO_8859_1);
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == this) {
+            return true;
+        }
+        if (o instanceof ByteSequence) {
+            ByteSequence that = (ByteSequence) o;
+            return contentEquals(that);
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return ByteSequence.hashCode(this);
+    }
 }
